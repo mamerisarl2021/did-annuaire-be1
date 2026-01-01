@@ -113,9 +113,7 @@ node_modules/
 
 # VS Code
 .vscode
-*.lock
 README.md
-pyproject.toml
 .python-version
 
 .ruff_cache/
