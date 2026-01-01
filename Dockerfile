@@ -14,7 +14,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
     build-essential \
+    curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
 
 RUN python -m venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH
