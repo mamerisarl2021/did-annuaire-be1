@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -euo pipefail
+set -eu
 
 CONFIG="config"
 APP_DIR="/app"
@@ -8,7 +8,7 @@ APP_DIR="/app"
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONUNBUFFERED=1
 
-source /opt/venv/bin/activate
+. /opt/venv/bin/activate
 
 RUNTIME_PORT=${PORT:-8899}
 RUNTIME_HOST=${HOST:-0.0.0.0}
