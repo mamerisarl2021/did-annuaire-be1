@@ -52,10 +52,10 @@ ENV VIRTUAL_ENV=/opt/venv
 WORKDIR /app
 
 COPY --from=builder /app .
-COPY --chown=appuser:appuser ./src .
-COPY --chown=appuser:appuser ./config .
-COPY --chown=appuser:appuser ./gunicorn.conf.py .
-COPY --chown=appuser:appuser ./entrypoint.sh .
+COPY --chown=appuser:appuser src .
+COPY --chown=appuser:appuser config .
+COPY --chown=appuser:appuser gunicorn.conf.py .
+COPY --chown=appuser:appuser entrypoint.sh .
 RUN chmod +x /app/entrypoint.sh
 
 USER appuser
