@@ -60,9 +60,9 @@ WORKDIR /app
 COPY --from=builder /app .
 COPY --chown=appuser:appuser src /app/src
 COPY --chown=appuser:appuser config /app/config
-COPY --chown=appuser:appuser gunicorn.conf.py .
-COPY --chown=appuser:appuser entrypoint.sh .
-COPY --chown=appuser:appuser manage.py .
+COPY --chown=appuser:appuser gunicorn.conf.py /app/gunicorn.conf.py
+COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
+COPY --chown=appuser:appuser manage.py /app/manage.py
 RUN chmod +x /app/entrypoint.sh
 
 USER appuser
