@@ -62,10 +62,11 @@ COPY --chown=appuser:appuser src /app/src
 COPY --chown=appuser:appuser config /app/config
 COPY --chown=appuser:appuser gunicorn.conf.py .
 COPY --chown=appuser:appuser entrypoint.sh .
-RUN chmod +x entrypoint.sh
+COPY --chown=appuser:appuser manage.py .
+RUN chmod +x /app/entrypoint.sh
 
 USER appuser
 
 EXPOSE 8899
 
-CMD ["entrypoint.sh"]
+CMD ["/app/entrypoint.sh"]
