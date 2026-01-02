@@ -4,7 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 env = environ.Env()
 
 BASE_DIR = environ.Path(__file__) - 2
-APPS_DIR = BASE_DIR.path('src')
+APPS_DIR = BASE_DIR.path("src")
 
 
 def env_to_enum(enum_cls, value):
@@ -13,5 +13,5 @@ def env_to_enum(enum_cls, value):
             return x
 
     raise ImproperlyConfigured(
-        f'Env value {repr(value)} could not be found in {repr(enum_cls)}'
+        f"Env value {repr(value)} could not be found in {repr(enum_cls)}"
     )

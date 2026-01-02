@@ -28,8 +28,7 @@ accesslog = "-"
 # Exemple de ligne :
 # 192.168.1.1 - user [27/Dec/2025:17:30:00 +0000] "GET /path HTTP/1.1" 200 123 "-" "curl/8.0" host="api.example.com"
 access_log_format = (
-    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s '
-    '"%(f)s" "%(a)s" host="%({Host}i)s"'
+    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" host="%({Host}i)s"'
 )
 
 
@@ -47,15 +46,15 @@ def combined_logformat(logger, name, event_dict):
         message = event_dict.get("event", "")
 
         parts = [
-            r"(?P<host>\S+)",           # %h
-            r"\S+",                     # %l (unused)
-            r"(?P<user>\S+)",           # %u
-            r"\[(?P<time>.+)\]",        # %t
-            r'"(?P<request>.+)"',       # "%r"
-            r"(?P<status>[0-9]+)",      # %s
-            r"(?P<size>\S+)",           # %b
-            r'"(?P<referer>.*)"',       # "%{Referer}i"
-            r'"(?P<agent>.*)"',         # "%{User-agent}i"
+            r"(?P<host>\S+)",  # %h
+            r"\S+",  # %l (unused)
+            r"(?P<user>\S+)",  # %u
+            r"\[(?P<time>.+)\]",  # %t
+            r'"(?P<request>.+)"',  # "%r"
+            r"(?P<status>[0-9]+)",  # %s
+            r"(?P<size>\S+)",  # %b
+            r'"(?P<referer>.*)"',  # "%{Referer}i"
+            r'"(?P<agent>.*)"',  # "%{User-agent}i"
             r'host="(?P<host_header>.*)"',  # "%({Host}i)s"
         ]
         pattern = re.compile(r"\s+".join(parts) + r"\s*\Z")
