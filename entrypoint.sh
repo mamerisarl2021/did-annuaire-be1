@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-set -eu
+set -euo pipefail
 
 CONFIG="config"
 APP_DIR="/app"
@@ -8,14 +8,17 @@ APP_DIR="/app"
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONUNBUFFERED=1
 
-. /opt/venv/bin/activate
+source /opt/venv/bin/activate
+
+cd $APP_DIR
+
+#echo "contkldkfdf"
+#ls .
 
 RUNTIME_PORT=${PORT:-8899}
 RUNTIME_HOST=${HOST:-0.0.0.0}
 
-cd "$APP_DIR"
-
-DJANGO_ENV=production
+export DJANGO_ENV=production
 
 python -u manage.py collectstatic --noinput
 

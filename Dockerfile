@@ -9,7 +9,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
@@ -43,12 +42,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
+    libpq5 bash\
     && rm -rf /var/lib/apt/lists/*
 
-
 RUN useradd -m -r appuser && \
-    mkdir -p /app  && \
+    mkdir -p /app  /app/staticfiles /app/mediafiles && \
     chown -R appuser:appuser /app
 
 COPY --from=builder /opt/venv /opt/venv
@@ -60,9 +58,9 @@ WORKDIR /app
 COPY --from=builder /app .
 COPY --chown=appuser:appuser src /app/src
 COPY --chown=appuser:appuser config /app/config
-COPY --chown=appuser:appuser gunicorn.conf.py /app/gunicorn.conf.py
-COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
-COPY --chown=appuser:appuser manage.py /app/manage.py
+COPY --chown=appuser:appuser gunicorn.conf.py .
+COPY --chown=appuser:appuser entrypoint.sh .
+COPY --chown=appuser:appuser manage.py .
 RUN chmod +x /app/entrypoint.sh
 
 USER appuser

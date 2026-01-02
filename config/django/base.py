@@ -37,7 +37,9 @@ LOCAL_APPS = [
     "src.seeders",
 ]
 
-THIRD_PARTY_APPS = []
+THIRD_PARTY_APPS = [
+    "django_extensions",
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -97,6 +99,10 @@ DATABASES = {
         default="postgresql://postgres:alex@123@localhost:5432/annuaire_did",
     ),
 }
+
+SESSION_COOKIE_SECURE=env.bool("SESSION_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SECURE=env.bool("CSRF_COOKIE_SECURE", default=True)
+CSRF_TRUSTED_ORIGINS=env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
