@@ -1,4 +1,29 @@
 services:
+  openbao:
+    image: openbao/openbao:2.1.0
+    container_name: annuaire-openbao
+    cap_add:
+      - IPC_LOCK
+    command: ['server', '-config=/openbao/config/bao.conf']
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+      - VAULT_DISABLE_MLOCK=true
+      - VAULT_PG_CONNECTION_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://127.0.0.1:8200/v1/sys/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./bao.conf:/openbao/config/bao.conf
+    networks:
+      - annuaire_staging_net
+
   nginx:
     image: nginx:1.28-alpine
     container_name: annuaire-nginx
@@ -20,20 +45,20 @@ services:
     container_name: annuaire-frontend
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.frontend
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
     expose:
       - "3000"
     networks:
       - annuaire_staging_net
 
   annuaire-backend:
-    build: .
+    image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-backend
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles
@@ -54,7 +79,7 @@ services:
     image: postgres:18
     container_name: annuaire-db
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -79,7 +104,7 @@ services:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - rabbitmq_data:/var/lib/rabbitmq
     env_file:
-      - .env
+      - .env.backend
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -95,11 +120,11 @@ services:
       - annuaire_staging_net
 
   celery:
-    build: .
+    image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-celery
     #command: celery -A src.tasks worker -l info --without-gossip --without-mingle --without-heartbeat
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles
@@ -118,11 +143,11 @@ services:
       - annuaire_staging_net
 
   celery-beat:
-    build: .
+    image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-celery-beat
     #command: celery -A src.tasks beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles

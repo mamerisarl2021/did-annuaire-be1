@@ -12,8 +12,6 @@ source /opt/venv/bin/activate
 
 cd $APP_DIR
 
-#echo "contkldkfdf"
-#ls .
 
 RUNTIME_PORT=${PORT:-8899}
 RUNTIME_HOST=${HOST:-0.0.0.0}
