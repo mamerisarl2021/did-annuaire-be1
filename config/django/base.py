@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-from config.env import APPS_DIR, BASE_DIR, env
+from django.conf.global_settings import MANAGERS, ADMINS
+import dj_database_url
+
+from config.env import APPS_DIR, BASE_DIR, env, env_get
 
 env.read_env(os.path.join(BASE_DIR, ".env"))
 
@@ -21,13 +24,9 @@ env.read_env(os.path.join(BASE_DIR, ".env"))
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env.str(
-    "SECRET_KEY",
-    default="django-insecure-q2m%6pach+q1u7+8re2@_u88vu&d=zk1zc0wyv%sjavy^88&h+",
-)
+SECRET_KEY = env_get(name="DJANGO_SECRET_KEY", default="django-insecure-q2m%6pach+q1u7+8re2@_u88vu&d=zk1zc0wyv%sjavy^88&h+")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DEBUG", default=False)
+DEBUG = env_get(name="DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
@@ -93,15 +92,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 #    }
 # }
 
-DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default="postgresql://postgres:alex@123@localhost:5432/annuaire_did",
-    ),
-}
+DATABASE_URL = env_get(name="DATABASE_URL", default="")
+DATABASES = {"default": dj_database_url.parse(DATABASE_URL)}
 
-SESSION_COOKIE_SECURE=env.bool("SESSION_COOKIE_SECURE", default=True)
-CSRF_COOKIE_SECURE=env.bool("CSRF_COOKIE_SECURE", default=True)
+SESSION_COOKIE_SECURE=env_get(name="SESSION_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SECURE=env_get("CSRF_COOKIE_SECURE", default=True)
 CSRF_TRUSTED_ORIGINS=env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -124,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# AUTH_USER_MODEL = "users.BaseUser"
+# AUTH_USER_MODEL = "users.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
@@ -147,7 +142,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
-APP_DOMAIN = env("APP_DOMAIN", default="http://localhost:8000")
+FR_APP_DOMAIN = env_get("FR_APP_DOMAIN", default="http://localhost:8000")
 
 from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
@@ -158,18 +153,19 @@ LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
 
-# from config.settings.email_sending import *  # noqa
-# from config.settings.files_and_storages import *  # noqa
-# from config.settings.google_oauth2 import *  # noqa
-# from config.settings.jwt import *  # noqa
+from config.settings.email_sending import *  # noqa
+from config.settings.files_and_storages import *  # noqa
+from config.settings.google_oauth2 import *  # noqa
+from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-# from config.settings.sessions import *  # noqa
+from config.settings.sessions import *  # noqa
 
 from config.settings.debug_toolbar.settings import *  # noqa
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
+DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
 
 # STORAGES = {
 #    "default": {
