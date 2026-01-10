@@ -1,0 +1,23 @@
+{% extends "webui/base.html" %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="card">
+  <div class="card-header">OTP e‑mail (test)</div>
+  <div class="card-body">
+    <p>Utilisateur: <strong>{{ user.email }}</strong></p>
+    <form method="post" class="mb-3">
+      {% csrf_token %}
+      <button name="generate" class="btn btn-outline-primary">Générer / Renvoyer un OTP</button>
+    </form>
+    <hr/>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Saisir le code OTP reçu par e‑mail</label>
+        {{ form.code|add_class:"form-control" }}
+      </div>
+      <button name="verify" class="btn btn-success">Vérifier</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

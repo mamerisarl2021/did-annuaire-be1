@@ -1,0 +1,22 @@
+{% extends "webui/base.html" %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="card">
+  <div class="card-header">Configurer l’authentificateur</div>
+  <div class="card-body">
+    <p>Scannez ce QR avec votre application (Google Authenticator, etc.), puis entrez le code ci-dessous.</p>
+    <div class="text-center mb-3">
+      <img src="{{ totp_qr }}" alt="QR TOTP" style="max-width: 240px;">
+    </div>
+    <form method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="totp_qr" value="{{ totp_qr }}">
+      <div class="mb-3">
+        <label class="form-label">Code TOTP</label>
+        {{ form.code|add_class:"form-control" }}
+      </div>
+      <button class="btn btn-success">Vérifier</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

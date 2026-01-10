@@ -10,6 +10,7 @@ except Exception as e:
 
 LOG = logging.getLogger(__name__)
 
+
 def _parse_dotenv(path: str) -> dict[str, str]:
     data: dict[str, str] = {}
     try:
@@ -28,6 +29,7 @@ def _parse_dotenv(path: str) -> dict[str, str]:
         pass
     return data
 
+
 def _mask(val: str | None) -> str:
     if val is None:
         return "None"
@@ -38,27 +40,52 @@ def _mask(val: str | None) -> str:
         return "*" * n
     return val[:2] + "*" * (n - 4) + val[-2:]
 
+
 class Command(BaseCommand):
     help = "Check OpenBao KV v2 secrets vs environment (exits non-zero if required keys are missing)."
 
     def add_arguments(self, parser):
-        parser.add_argument("--addr", default=os.getenv("OPENBAO_ADDR", "http://127.0.0.1:8200"),
-                            help="OpenBao address (OPENBAO_ADDR).")
-        parser.add_argument("--token", default=os.getenv("OPENBAO_TOKEN", ""),
-                            help="OpenBao token (dev/simple). Prefer AppRole in prod.")
-        parser.add_argument("--role-id", default=os.getenv("OPENBAO_ROLE_ID", ""),
-                            help="AppRole RoleID (prod).")
-        parser.add_argument("--secret-id", default=os.getenv("OPENBAO_SECRET_ID", ""),
-                            help="AppRole SecretID (prod).")
-        parser.add_argument("--mount", default=os.getenv("OPENBAO_KV_MOUNT", "secret"),
-                            help="KV v2 mount point (default: secret).")
-        parser.add_argument("--path", default=os.getenv("OPENBAO_KV_PATH", "django"),
-                            help="KV v2 path (default: django).")
-        parser.add_argument("--required", nargs="+",
-                            default=(os.getenv("OPENBAO_REQUIRED", "DJANGO_SECRET_KEY").split(",")),
-                            help="Required keys list. Example: --required DJANGO_SECRET_KEY DATABASE_URL")
-        parser.add_argument("--dotenv", default=os.getenv("ENV_FILE", ""),
-                            help="Optional dotenv file to read (ex: ./config.env).")
+        parser.add_argument(
+            "--addr",
+            default=os.getenv("OPENBAO_ADDR", "http://127.0.0.1:8200"),
+            help="OpenBao address (OPENBAO_ADDR).",
+        )
+        parser.add_argument(
+            "--token",
+            default=os.getenv("OPENBAO_TOKEN", ""),
+            help="OpenBao token (dev/simple). Prefer AppRole in prod.",
+        )
+        parser.add_argument(
+            "--role-id",
+            default=os.getenv("OPENBAO_ROLE_ID", ""),
+            help="AppRole RoleID (prod).",
+        )
+        parser.add_argument(
+            "--secret-id",
+            default=os.getenv("OPENBAO_SECRET_ID", ""),
+            help="AppRole SecretID (prod).",
+        )
+        parser.add_argument(
+            "--mount",
+            default=os.getenv("OPENBAO_KV_MOUNT", "secret"),
+            help="KV v2 mount point (default: secret).",
+        )
+        parser.add_argument(
+            "--path",
+            default=os.getenv("OPENBAO_KV_PATH", "django"),
+            help="KV v2 path (default: django).",
+        )
+        parser.add_argument(
+            "--required",
+            nargs="+",
+            default=(os.getenv("OPENBAO_REQUIRED", "DJANGO_SECRET_KEY").split(",")),
+            help="Required keys list. Example: --required DJANGO_SECRET_KEY DATABASE_URL",
+        )
+        parser.add_argument(
+            "--dotenv",
+            default=os.getenv("ENV_FILE", ""),
+            help="Optional dotenv file to read (ex: ./config.env).",
+        )
         parser.add_argument("--json", action="store_true", help="Print JSON report.")
 
     def handle(self, *args, **opts):
@@ -94,6 +121,7 @@ class Command(BaseCommand):
         except Exception as e:
             if as_json:
                 import json
+
                 print(json.dumps({"ok": False, "error": f"auth_failed: {str(e)}"}))
                 sys.exit(1)
             raise CommandError(f"OpenBao auth failed: {e}")
@@ -103,7 +131,9 @@ class Command(BaseCommand):
         kv_ok = False
         kv_err: str | None = None
         try:
-            resp = client.secrets.kv.v2.read_secret_version(mount_point=mount, path=path)
+            resp = client.secrets.kv.v2.read_secret_version(
+                mount_point=mount, path=path
+            )
             kv_data = resp["data"]["data"] or {}
             kv_ok = True
         except Exception as e:
@@ -130,27 +160,55 @@ class Command(BaseCommand):
         # Output
         if as_json:
             import json
+
             out = {
-                "openbao": {"addr": addr, "auth": auth_method, "kv_ok": kv_ok, "mount": mount, "path": path,
-                            "error": kv_err},
+                "openbao": {
+                    "addr": addr,
+                    "auth": auth_method,
+                    "kv_ok": kv_ok,
+                    "mount": mount,
+                    "path": path,
+                    "error": kv_err,
+                },
                 "dotenv": {"path": dotenv_path or None, "loaded": bool(dotenv_map)},
                 "required": required,
-                "report": [{"key": r["key"], "source": r["source"], "value_masked": _mask(r["value"])} for r in report],
+                "report": [
+                    {
+                        "key": r["key"],
+                        "source": r["source"],
+                        "value_masked": _mask(r["value"]),
+                    }
+                    for r in report
+                ],
                 "missing": missing,
                 "ok": len(missing) == 0,
             }
             print(json.dumps(out, ensure_ascii=False, indent=2))
         else:
-            self.stdout.write(self.style.NOTICE(f"OpenBao: addr={addr} auth={auth_method} mount={mount} path={path} kv_ok={kv_ok}"))
+            self.stdout.write(
+                self.style.NOTICE(
+                    f"OpenBao: addr={addr} auth={auth_method} mount={mount} path={path} kv_ok={kv_ok}"
+                )
+            )
             if kv_err:
-                self.stderr.write(self.style.WARNING(f"OpenBao KV read error: {kv_err}"))
+                self.stderr.write(
+                    self.style.WARNING(f"OpenBao KV read error: {kv_err}")
+                )
             if dotenv_path:
-                self.stdout.write(self.style.NOTICE(f"Dotenv: {dotenv_path} loaded={bool(dotenv_map)}"))
+                self.stdout.write(
+                    self.style.NOTICE(
+                        f"Dotenv: {dotenv_path} loaded={bool(dotenv_map)}"
+                    )
+                )
             self.stdout.write(self.style.SUCCESS("Required keys status:"))
             for r in report:
-                self.stdout.write(f"  {r['key']:>24}  {r['source']:<7}  {_mask(r['value'])}")
+                self.stdout.write(
+                    f"  {r['key']:>24}  {r['source']:<7}  {_mask(r['value'])}"
+                )
             if missing:
-                self.stderr.write(self.style.ERROR(f"Missing required: {', '.join(missing)}"))
+                self.stderr.write(
+                    self.style.ERROR(f"Missing required: {', '.join(missing)}")
+                )
 
         if missing:
             sys.exit(1)
