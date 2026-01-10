@@ -91,9 +91,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
 # }
-
-DATABASE_URL = env_get(name="DATABASE_URL", default="")
-DATABASES = {"default": dj_database_url.parse(DATABASE_URL)}
+DATABASE_URL = env_get("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
+if DATABASE_URL.startswith('postgres://') or DATABASE_URL.startswith('postgresql://'):
+        DATABASES = {
+            "default" : dj_database_url.config(
+                default=DATABASE_URL,
+            )
+        }
 
 SESSION_COOKIE_SECURE=env_get(name="SESSION_COOKIE_SECURE", default=True)
 CSRF_COOKIE_SECURE=env_get("CSRF_COOKIE_SECURE", default=True)
@@ -153,12 +157,12 @@ LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
 
-from config.settings.email_sending import *  # noqa
-from config.settings.files_and_storages import *  # noqa
-from config.settings.google_oauth2 import *  # noqa
-from config.settings.jwt import *  # noqa
+#from config.settings.email_sending import *  # noqa
+#from config.settings.files_and_storages import *  # noqa
+#from config.settings.google_oauth2 import *  # noqa
+#from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-from config.settings.sessions import *  # noqa
+#from config.settings.sessions import *  # noqa
 
 from config.settings.debug_toolbar.settings import *  # noqa
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
