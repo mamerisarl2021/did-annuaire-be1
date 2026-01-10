@@ -1,3 +1,4 @@
+# src/seeders/management/commands/superuser.py
 import os
 from getpass import getpass
 
@@ -23,13 +24,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         User = get_user_model()
 
-        email = (
-            options.get("email")
-            or os.getenv("ADMIN_USER_EMAIL")
-        )
+        email = options.get("email") or os.getenv("ADMIN_USER_EMAIL")
         password = options.get("password") or os.getenv("ADMIN_USER_PASSWORD")
-        first_name = options.get("first_name") or os.getenv("ADMIN_USER_FIRST_NAME", "Super")
-        last_name = options.get("last_name") or os.getenv("ADMIN_USER_LAST_NAME", "User")
+        first_name = options.get("first_name") or os.getenv(
+            "ADMIN_USER_FIRST_NAME", "Super"
+        )
+        last_name = options.get("last_name") or os.getenv(
+            "ADMIN_USER_LAST_NAME", "User"
+        )
 
         if not email:
             raise CommandError("Provide --email or set ADMIN_USER_EMAIL.")
@@ -71,7 +73,9 @@ class Command(BaseCommand):
             set_optional_fields(existing)
             existing.set_password(password)
             existing.save()
-            self.stdout.write(self.style.SUCCESS(f"Updated existing superuser: {email}"))
+            self.stdout.write(
+                self.style.SUCCESS(f"Updated existing superuser: {email}")
+            )
         else:
             # Create a brand new superuser (email is USERNAME_FIELD)
             kwargs = dict(
