@@ -54,7 +54,7 @@ services:
       - annuaire_staging_net
 
   annuaire-backend:
-    image: ctrldaviddee/annuaire_did_be:staging-latest
+    build: .
     container_name: annuaire-backend
     restart: unless-stopped
     env_file:
@@ -120,7 +120,7 @@ services:
       - annuaire_staging_net
 
   celery:
-    image: ctrldaviddee/annuaire_did_be:staging-latest
+    build: .
     container_name: annuaire-celery
     #command: celery -A src.tasks worker -l info --without-gossip --without-mingle --without-heartbeat
     env_file:
@@ -143,7 +143,7 @@ services:
       - annuaire_staging_net
 
   celery-beat:
-    image: ctrldaviddee/annuaire_did_be:staging-latest
+    build: .
     container_name: annuaire-celery-beat
     #command: celery -A src.tasks beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file:
