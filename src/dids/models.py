@@ -176,19 +176,21 @@ class Certificate(BaseModel):
 class UploadedPublicKey(BaseModel):
     """
     Cryptographic material used in DID Documents.
+    A given (did, key_id) can have several versions over time (rotation).
     """
-
-    class KeyType(models.TextChoices):
-        JSON_WEB_KEY_2020 = 'JsonWebKey2020', 'JsonWebKey2020'
-
     did = models.ForeignKey(DID, on_delete=models.CASCADE, related_name='keys')
 
     key_id = models.CharField(max_length=100, help_text="Fragment id, e.g. key-1")
+
+    class KeyType(models.TextChoices):
+        JSON_WEB_KEY_2020 = 'JsonWebKey2020', 'JsonWebKey2020'
 
     key_type = models.CharField(
         max_length=50,
         choices=KeyType.choices  # JWK (EC P-256/P-384, RSA 2048/3072)
     )
+
+    version = models.PositiveIntegerField(default=1, db_index=True)
 
     certificate = models.ForeignKey(
         Certificate,
@@ -216,13 +218,11 @@ class UploadedPublicKey(BaseModel):
         verbose_name = 'Public Key'
         verbose_name_plural = 'Public Keys'
         constraints = [
-            models.UniqueConstraint(fields=["did", "key_id"], name="did_key_ref_unique"),
+            models.UniqueConstraint(fields=["did", "key_id", "version"], name="did_keyid_version_unique"),
         ]
 
     def __str__(self):
-        return f"{self.did.did}#{self.key_id}"
-
-# --- append to src/dids/models.py ---
+        return f"{self.did.did}#{self.key_id}@v{self.version}"
 
 class PublishRequest(BaseModel):
     """
@@ -253,3 +253,19 @@ class PublishRequest(BaseModel):
 
     def __str__(self):
         return f"PublishRequest(did={self.did_id}, env={self.environment}, status={self.status})"
+
+
+
+class DidDocumentKeyBinding(BaseModel):
+    did_document = models.ForeignKey('dids.DIDDocument', on_delete=models.CASCADE, related_name='key_bindings')
+    uploaded_public_key = models.ForeignKey('dids.UploadedPublicKey', on_delete=models.CASCADE, related_name='doc_bindings')
+    purposes_snapshot = models.JSONField(default=list)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["did_document", "uploaded_public_key"], name="doc_keybinding_unique")
+        ]
+
+    def __str__(self):
+        return f"Doc {self.did_document_id} uses {self.uploaded_public_key_id}"
+
