@@ -1,106 +1,98 @@
+# src/seeders/management/commands/superuser.py
 import os
-from typing import Any
+from getpass import getpass
 
+from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
-from django.db import IntegrityError
+from django.db import transaction
+
+
+def _model_has_field(model, field_name: str) -> bool:
+    return any(f.name == field_name for f in model._meta.get_fields())
 
 
 class Command(BaseCommand):
-    help = "Create or update a superuser from environment variables"
+    help = "Create or update a platform superuser (email-only custom user model)."
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--force",
-            action="store_true",
-            help="Force the creation of the admin user or update password if exists",
-        )
+        parser.add_argument("--email", dest="email", help="Superuser email")
+        parser.add_argument("--password", dest="password", help="Superuser password")
+        parser.add_argument("--first-name", dest="first_name", default="Admin")
+        parser.add_argument("--last-name", dest="last_name", default="User")
 
-    def handle(self, *args: Any, **options: Any):
-        force = options.get("force", False)
+    @transaction.atomic
+    def handle(self, *args, **options):
         User = get_user_model()
 
-        # Get credentials from environment
-        admin_username = os.getenv("DJANGO_SUPERUSER_NAME")
-        admin_password = os.getenv("DJANGO_SUPERUSER_PASSWORD")
-        admin_email = os.getenv("DJANGO_SUPERUSER_EMAIL")
+        email = options.get("email") or os.getenv("ADMIN_USER_EMAIL")
+        password = options.get("password") or os.getenv("ADMIN_USER_PASSWORD")
+        first_name = options.get("first_name") or os.getenv(
+            "ADMIN_USER_FIRST_NAME", "Super"
+        )
+        last_name = options.get("last_name") or os.getenv(
+            "ADMIN_USER_LAST_NAME", "User"
+        )
 
-        # Validate all required fields
-        if not admin_username:
-            self.stderr.write(
-                self.style.ERROR(
-                    "DJANGO_SUPERUSER_NAME environment variable is required."
-                )
-            )
-            return
+        if not email:
+            raise CommandError("Provide --email or set ADMIN_USER_EMAIL.")
 
-        if not admin_email:
-            self.stderr.write(
-                self.style.ERROR(
-                    "DJANGO_SUPERUSER_EMAIL environment variable is required."
-                )
-            )
-            return
+        # Optional interactive password prompt if not provided via args/env
+        if not password:
+            self.stdout.write(self.style.WARNING("No password provided."))
+            password = getpass("Enter superuser password: ").strip()
+            if not password:
+                raise CommandError("Password is required.")
 
-        if not admin_password:
-            self.stderr.write(
-                self.style.ERROR(
-                    "DJANGO_SUPERUSER_PASSWORD environment variable is required."
-                )
-            )
-            return
+        # IMPORTANT: filter by email only (no 'username' on custom user)
+        existing = User.objects.filter(email__iexact=email).first()
 
-        # Check if User exists (by username or email)
-        existing_user = User.objects.filter(username=admin_username).first()
+        # Helper to set optional fields only if the model has them
+        def set_optional_fields(u):
+            if _model_has_field(User, "first_name"):
+                u.first_name = first_name
+            if _model_has_field(User, "last_name"):
+                u.last_name = last_name
+            # If your model has 'role' & 'status', set them but only if they exist
+            if _model_has_field(User, "role"):
+                try:
+                    # Align with your choices if applicable; otherwise skip silently
+                    u.role = "SUPERUSER"
+                except Exception:
+                    pass
+            if _model_has_field(User, "status"):
+                try:
+                    u.status = "ACTIVE"
+                except Exception:
+                    pass
+            return u
 
-        if existing_user and not force:
+        if existing:
+            # Upgrade existing user to superuser/staff and update password
+            existing.is_superuser = True
+            existing.is_staff = True
+            set_optional_fields(existing)
+            existing.set_password(password)
+            existing.save()
             self.stdout.write(
-                self.style.WARNING(
-                    f"Admin User '{admin_username}' already exists. Use --force to update password."
-                )
+                self.style.SUCCESS(f"Updated existing superuser: {email}")
             )
-            return
+        else:
+            # Create a brand new superuser (email is USERNAME_FIELD)
+            kwargs = dict(
+                email=email,
+                password=password,
+                is_staff=True,
+                is_superuser=True,
+            )
+            # Add optional fields if present
+            if _model_has_field(User, "first_name"):
+                kwargs["first_name"] = first_name
+            if _model_has_field(User, "last_name"):
+                kwargs["last_name"] = last_name
+            if _model_has_field(User, "role"):
+                kwargs["role"] = "SUPERUSER"
+            if _model_has_field(User, "status"):
+                kwargs["status"] = "ACTIVE"
 
-        if existing_user and force:
-            # Update existing User's password
-            existing_user.set_password(admin_password)
-            existing_user.email = admin_email  # Update email as well
-            existing_user.is_superuser = True
-            existing_user.is_staff = True
-            existing_user.is_active = True
-            existing_user.save()
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Successfully updated admin User '{admin_username}' with new password and email."
-                )
-            )
-            return
-
-        # Create new superuser
-        try:
-            User.objects.create_superuser(
-                username=admin_username,
-                email=admin_email,
-                password=admin_password,
-            )
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Successfully created admin User:\n"
-                    f"  Username: {admin_username}\n"
-                    f"  Email: {admin_email}"
-                )
-            )
-        except IntegrityError as e:
-            self.stderr.write(
-                self.style.ERROR(
-                    f"Failed to create admin User. A User with this username or email may already exist.\n"
-                    f"Error: {str(e)}"
-                )
-            )
-        except Exception as e:
-            import traceback
-
-            self.stderr.write(
-                self.style.ERROR(f"Unexpected error creating admin User: {e!s}")
-            )
-            self.stderr.write(traceback.format_exc())
+            user = User.objects.create_superuser(**kwargs)
+            self.stdout.write(self.style.SUCCESS(f"Created superuser: {user.email}"))

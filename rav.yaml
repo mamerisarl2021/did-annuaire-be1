@@ -1,3 +1,3 @@
 scripts:
   server:
-    - cd /home/davieddee/Bureau/did-annuaire-be1 && python manage.py runserver 8000
+    -

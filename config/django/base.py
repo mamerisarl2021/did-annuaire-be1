@@ -12,33 +12,46 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-from config.env import APPS_DIR, BASE_DIR, env
+from django.conf.global_settings import MANAGERS, ADMINS
+import dj_database_url
+
+from config.env import APPS_DIR, BASE_DIR, env, env_get
 
 env.read_env(os.path.join(BASE_DIR, ".env"))
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env.str(
-    "SECRET_KEY",
+SECRET_KEY = env_get(
+    name="DJANGO_SECRET_KEY",
     default="django-insecure-q2m%6pach+q1u7+8re2@_u88vu&d=zk1zc0wyv%sjavy^88&h+",
 )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DEBUG", default=False)
+DEBUG = env_get(name="DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
-
-# Application definition
 LOCAL_APPS = [
+    "src.api.apps.ApiConfig",
+    "src.api_keys.apps.ApiKeysConfig",
+    "src.auditaction.apps.AuditactionConfig",
+    "src.common.apps.CommonConfig",
+    "src.dids.apps.DidsConfig",
+    "src.emails.apps.EmailsConfig",
+    "src.files.apps.FilesConfig",
+    "src.organizations.apps.OrganizationsConfig",
     "src.seeders",
+    "src.tasks.apps.TasksConfig",
+    "src.users.apps.UsersConfig",
 ]
 
 THIRD_PARTY_APPS = [
+    "django_celery_results",
+    "django_celery_beat",
     "django_extensions",
+    "ninja_extra",
+    "ninja_jwt",
+    "ninja_jwt.token_blacklist",
+    # 'widget_tweaks',
+    # 'corsheaders',
 ]
 
 INSTALLED_APPS = [
@@ -54,6 +67,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # 'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -76,15 +90,15 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
+           # "libraries": {
+            #    "widget_tweaks": "widget_tweaks.templatetags.widget_tweaks",
+            #},
         },
     },
 ]
 
+
 WSGI_APPLICATION = "config.wsgi.application"
-
-
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 # DATABASES = {
 #    'default': {
@@ -92,22 +106,19 @@ WSGI_APPLICATION = "config.wsgi.application"
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
 # }
+DATABASE_URL = env_get("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
+if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+        )
+    }
 
-DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default="postgresql://postgres:alex@123@localhost:5432/annuaire_did",
-    ),
-}
-
-SESSION_COOKIE_SECURE=env.bool("SESSION_COOKIE_SECURE", default=True)
-CSRF_COOKIE_SECURE=env.bool("CSRF_COOKIE_SECURE", default=True)
-CSRF_TRUSTED_ORIGINS=env.list("CSRF_TRUSTED_ORIGINS", default=[])
+SESSION_COOKIE_SECURE = env_get(name="SESSION_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SECURE = env_get("CSRF_COOKIE_SECURE", default=True)
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
-
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -124,10 +135,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# AUTH_USER_MODEL = "users.BaseUser"
-
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+AUTH_USER_MODEL = "users.User"
 
 LANGUAGE_CODE = "fr-fr"
 
@@ -138,16 +146,13 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
-APP_DOMAIN = env("APP_DOMAIN", default="http://localhost:8000")
+FR_APP_DOMAIN = env_get("FR_APP_DOMAIN", default="http://localhost:8000")
 
 from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
@@ -157,20 +162,21 @@ LoggersSetup.setup_structlog()
 LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
-
-# from config.settings.email_sending import *  # noqa
-# from config.settings.files_and_storages import *  # noqa
-# from config.settings.google_oauth2 import *  # noqa
-# from config.settings.jwt import *  # noqa
+from config.settings.email_sending import *  # noqa
+from config.settings.files_and_storages import *  # noqa
+from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-# from config.settings.sessions import *  # noqa
+from config.settings.sessions import *  # noqa
+# from config.settings.google_oauth2 import *  # noqa
 
 from config.settings.debug_toolbar.settings import *  # noqa
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
+DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
 
+# SITE_ID = 2
 # STORAGES = {
 #    "default": {
 #        "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -179,3 +185,9 @@ INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDL
 #        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
 #    },
 # }
+
+MANAGERS = []
+ADMINS = []
+if all([ADMIN_USER_NAME, ADMIN_USER_EMAIL]):
+    ADMINS += [(f"{ADMIN_USER_NAME}", f"{ADMIN_USER_EMAIL}")]
+    MANAGERS = ADMINS

@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://annuairedid-fe.qcdigitalhub.com/specs/did-document.schema.json.",
+  "title": "DID Document (did:web)",
+  "type": "object",
+  "required": ["@context",  "id",  "verificationMethod"],
+  "properties": {
+    "@context": {
+      "type": "array",
+      "items": {"type": "string",  "enum": [
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/suites/jws-2020/v1"
+      ]
+    },
+      "minItems": 1,
+       "contains": { "const": "https://www.w3.org/ns/did/v1" }
+    },
+
+    "id": {"type": "string",  "pattern": "^did:web:"},
+
+    "controller": {"type": ["string", "array"], "items": {"type": "string"}},
+
+    "verificationMethod": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id",  "type",  "controller", "publicKeyJwk"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^#"},
+          "type": { "type": "string",  "const": "JsonWebKey2020"},
+          "controller": { "type": "string", "pattern": "^did:web:" },
+          "publicKeyJwk": {
+            "type": "object",
+            "required": ["kty"],
+            "properties": {
+              "kty": { "type": "string" },
+              "crv": { "type": "string" },
+              "x": { "type": "string" },
+              "y": { "type": "string" },
+              "n": { "type": "string" },
+              "e": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "authentication": { "type": "array",  "items": { "type": "string", "pattern": "^#" } },
+
+    "assertionMethod": { "type": "array",  "items": { "type": "string",  "pattern": "^#" } },
+
+    "keyAgreement": {"type": "array", "items": { "type": "string", "pattern": "^#" } },
+
+    "capabilityInvocation": { "type": "array",  "items": { "type": "string", "pattern": "^#" } },
+
+    "capabilityDelegation": { "type": "array",  "items": { "type": "string", "pattern": "^#" } },
+
+    "service": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "serviceEndpoint"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "serviceEndpoint": { "type": ["string", "object", "array"] }
+        }
+      }
+    },
+
+    "proof": {
+      "type": "object",
+      "required": [ "type",  "created",  "verificationMethod", "proofPurpose", "jws"],
+      "properties": {
+        "type": { "type": "string", "const": "JsonWebSignature2020"},
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verificationMethod": { "type": "string",  "pattern": "^#"},
+        "proofPurpose": { "type": "string" },
+        "jws": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "deactivated": { "type": "boolean"}
+  },
+
+  "additionalProperties": false
+}
