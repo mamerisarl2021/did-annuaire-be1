@@ -16,7 +16,9 @@ import dj_database_url
 
 from config.env import APPS_DIR, BASE_DIR, env, env_get
 
-env.read_env(os.path.join(BASE_DIR, ".env"))
+env_path = os.path.join(BASE_DIR, ".env")
+if os.path.exists(env_path):
+    env.read_env(env_path)
 
 
 SECRET_KEY = env_get(

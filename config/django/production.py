@@ -1,5 +1,7 @@
 from .base import *  # noqa
 
+env.read_env(os.path.join(BASE_DIR, ".env.backend"))
+
 DEBUG = env_get("DEBUG", default=False)
 
 SECRET_KEY = env_get("DJANGO_SECRET_KEY")
