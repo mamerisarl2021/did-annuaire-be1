@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-from django.conf.global_settings import MANAGERS, ADMINS
 import dj_database_url
 
 from config.env import APPS_DIR, BASE_DIR, env, env_get
@@ -185,7 +184,8 @@ DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR
 #        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
 #    },
 # }
-
+ADMIN_USER_NAME = env_get("ADMIN_USER_NAME")
+ADMIN_USER_EMAIL = env_get("ADMIN_USER_EMAIL")
 MANAGERS = []
 ADMINS = []
 if all([ADMIN_USER_NAME, ADMIN_USER_EMAIL]):
