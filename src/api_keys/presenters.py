@@ -10,7 +10,6 @@ def api_key_to_list_dto(key) -> dict:
         "created_at": key.created_at.isoformat(),
     }
 
-
 def api_key_created_dto(key, plain_key: str) -> dict:
     return {
         "id": key.id,

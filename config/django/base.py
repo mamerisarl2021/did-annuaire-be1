@@ -29,12 +29,10 @@ DEBUG = env_get(name="DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
-# Application definition
 LOCAL_APPS = [
     "src.api.apps.ApiConfig",
     "src.api_keys.apps.ApiKeysConfig",
     "src.auditaction.apps.AuditactionConfig",
-    "src.authentication.apps.AuthenticationConfig",
     "src.common.apps.CommonConfig",
     "src.dids.apps.DidsConfig",
     "src.emails.apps.EmailsConfig",
@@ -43,7 +41,6 @@ LOCAL_APPS = [
     "src.seeders",
     "src.tasks.apps.TasksConfig",
     "src.users.apps.UsersConfig",
-    "src.webui.apps.WebuiConfig",
 ]
 
 THIRD_PARTY_APPS = [
@@ -93,9 +90,13 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
+           # "libraries": {
+            #    "widget_tweaks": "widget_tweaks.templatetags.widget_tweaks",
+            #},
         },
     },
 ]
+
 
 WSGI_APPLICATION = "config.wsgi.application"
 
@@ -161,24 +162,21 @@ LoggersSetup.setup_structlog()
 LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
-
 from config.settings.email_sending import *  # noqa
 from config.settings.files_and_storages import *  # noqa
-
-# from config.settings.google_oauth2 import *  # noqa
 from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
 from config.settings.sessions import *  # noqa
+# from config.settings.google_oauth2 import *  # noqa
 
 from config.settings.debug_toolbar.settings import *  # noqa
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DID_DOCUMENTS_ROOT = env_get(
-    "DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage")
-)
+DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
 
+# SITE_ID = 2
 # STORAGES = {
 #    "default": {
 #        "BACKEND": "django.core.files.storage.FileSystemStorage",

@@ -8,24 +8,17 @@ from src.core.exceptions import ValidationError
 
 def validate_pdf_only(value):
     ext = os.path.splitext(value.name)[1].lower()
-    if ext != ".pdf":
-        raise ValidationError("Only PDF files are allowed.")
-    if hasattr(value, "content_type") and value.content_type != "application/pdf":
-        raise ValidationError("File must be a valid PDF document.")
-
-
-class OrganizationType(models.TextChoices):
-    ADMINISTRATION = "ADMINISTRATION", "Administration"
-    ENTREPRISE = "ENTREPRISE", "Entreprise"
-    PSCE = "PSCE", "PSCE"
-    OTHER = "OTHER", "Autre"
+    if ext != '.pdf':
+        raise ValidationError('Only PDF files are allowed.')
+    if hasattr(value, 'content_type') and value.content_type != 'application/pdf':
+        raise ValidationError('File must be a valid PDF document.')
 
 
 class OrganizationStatus(models.TextChoices):
-    PENDING = "PENDING", "En attente"
-    ACTIVE = "ACTIVE", "Actif"
-    REFUSED = "REFUSED", "Refusé"
-    SUSPENDED = "SUSPENDED", "Suspendu"
+    PENDING = 'PENDING', 'En attente'
+    ACTIVE = 'ACTIVE', 'Actif'
+    REFUSED = 'REFUSED', 'Refusé'
+    SUSPENDED = 'SUSPENDED', 'Suspendu'
 
 
 class Organization(BaseModel):
@@ -34,58 +27,40 @@ class Organization(BaseModel):
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
 
     # Type et pays
-    type = models.CharField(max_length=50, choices=OrganizationType.choices)
+    type = models.CharField(max_length=50, choices={'ADMINISTRATION': 'Administration',
+                                                    'ENTREPRISE': 'Enterprise',
+                                                    'PSCE': 'PSCE',
+                                                    'OTHER': 'Other',
+                                                    }, default='Other',)
     country = models.CharField(max_length=50)  # CODE ISO
 
     # Contact
     email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=50, blank=True)
+    phone = models.CharField(max_length=50, blank=True, default='')
     address = models.TextField(blank=True)
 
     # Domaines email autorisés
-    allowed_email_domains = models.JSONField(
-        default=list, help_text="Liste des domaines email autorisées"
-    )
+    allowed_email_domains = models.JSONField(default=list, help_text="Liste des domaines email autorisées")
 
     # Documents
-    justification_document = models.FileField(
-        upload_to="organizations/justifications/",
-        blank=True,
-        null=True,
-        help_text="Document de justification",
-        validators=[validate_pdf_only],
-    )
-    authorization_document = models.FileField(
-        upload_to="organizations/authorizations/",
-        validators=[validate_pdf_only],
-    )
+    justification_document = models.FileField(upload_to='organizations/justifications/', blank=True, null=True,
+                                              help_text="Document de justification", validators=[validate_pdf_only], )
+    authorization_document = models.FileField(upload_to='organizations/authorizations/',
+                                              validators=[validate_pdf_only], )
 
     # Statut
-    status = models.CharField(
-        max_length=20,
-        choices=OrganizationStatus.choices,
-        default=OrganizationStatus.PENDING,
-        db_index=True,
-    )
+    status = models.CharField(max_length=20, choices=OrganizationStatus.choices, default=OrganizationStatus.PENDING,
+                              db_index=True)
 
     # Validation
     validated_at = models.DateTimeField(null=True, blank=True)
-    validated_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="validated_organizations",
-    )  # Ask coderabbit why not related_name='+'
+    validated_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='validated_organizations')  # Ask coderabbit why not related_name='+'
 
     # Refus
     refused_at = models.DateTimeField(null=True, blank=True)
-    refused_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="refused_organizations",
-    )  # Ask coderabbit why not related_name='+'
+    refused_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True,
+                                   related_name='refused_organizations')  # Ask coderabbit why not related_name='+'
     refusal_reason = models.TextField(blank=True)
 
     # Limites
@@ -93,9 +68,9 @@ class Organization(BaseModel):
     max_applications = models.IntegerField(default=5)
 
     class Meta:
-        db_table = "organizations"
-        verbose_name = "Organisation"
-        verbose_name_plural = "Organisations"
+        db_table = 'organizations'
+        verbose_name = 'Organisation'
+        verbose_name_plural = 'Organisations'
         constraints = [
             models.UniqueConstraint(fields=["email"], name="org_email_unique"),
             models.UniqueConstraint(fields=["slug"], name="org_slug_unique"),

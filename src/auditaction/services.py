@@ -29,10 +29,10 @@ def _extract_request_meta(request: HttpRequest | None) -> tuple[str | None, str,
     ip = (xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR")) or None
     ua = request.META.get("HTTP_USER_AGENT", "")
     req_id = (
-        request.headers.get("X-Request-Id")
-        or request.META.get("HTTP_X_REQUEST_ID")
-        or getattr(request, "id", "")  # some middleware attach a UUID here
-        or ""
+            request.headers.get("X-Request-Id")
+            or request.META.get("HTTP_X_REQUEST_ID")
+            or getattr(request, "id", "")  # some middleware attach a UUID here
+            or ""
     )
     # Coerce UUID to str if needed
     if isinstance(req_id, uuid.UUID):
@@ -67,18 +67,17 @@ def _json_sanitize(obj: Any) -> Any:
 
 
 @transaction.atomic
-def audit_action_create(
-    *,
-    user,
-    action: str,
-    details: dict[str, any] | None = None,
-    category: str | None = None,
-    organization=None,
-    target_type: str = "",
-    target_id: int | None = None,
-    severity: str = Severity.INFO,
-    request: HttpRequest | None = None,
-) -> AuditLog:
+def audit_action_create(*,
+                        user,
+                        action: str,
+                        details: dict[str, any] | None = None,
+                        category: str | None = None,
+                        organization=None,
+                        target_type: str = "",
+                        target_id: int | None = None,
+                        severity: str = Severity.INFO,
+                        request: HttpRequest | None = None,
+                        ) -> AuditLog:
     """
     Create a single audit entry. Safe to call from anywhere.
     - If category is None, inferred from action prefix.
@@ -86,22 +85,11 @@ def audit_action_create(
     - If request is provided, IP, UA and request_id are captured.
     """
     resolved_category = category or _infer_category_from_action(action)
-    resolved_org = organization or (
-        getattr(user, "organization", None) if user else None
-    )
+    resolved_org = organization or (getattr(user, "organization", None) if user else None)
     ip, ua, req_id = _extract_request_meta(request)
     details = _json_sanitize(details or {})
-    entry = AuditLog.objects.create(
-        user=user if getattr(user, "pk", None) else None,
-        organization=resolved_org,
-        category=resolved_category,
-        action=action,
-        target_type=target_type,
-        target_id=target_id,
-        details=details or {},
-        severity=severity,
-        ip_address=ip,
-        user_agent=ua,
-        request_id=req_id or "",
-    )
+    entry = AuditLog.objects.create(user=user if getattr(user, "pk", None) else None,
+                                    organization=resolved_org, category=resolved_category, action=action,
+                                    target_type=target_type, target_id=target_id, details=details or {},
+                                    severity=severity, ip_address=ip, user_agent=ua, request_id=req_id or "",)
     return entry

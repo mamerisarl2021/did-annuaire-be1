@@ -1,11 +1,11 @@
-# from django.contrib import admin
+#from django.contrib import admin
 
-# from src.emails.models import Email
-# from src.emails.services import email_send_all
+#from src.emails.models import Email
+#from src.emails.services import email_send_all
 
 
-# @admin.register(Email)
-# class EmailAdmin(admin.ModelAdmin):
+#@admin.register(Email)
+#class EmailAdmin(admin.ModelAdmin):
 #    list_display = ["id", "subject", "to", "status", "sent_at"]
 #    actions = ["send_email"]
 

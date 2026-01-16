@@ -17,9 +17,11 @@ class File(BaseModel):
 
     upload_finished_at = models.DateTimeField(blank=True, null=True)
 
-    uploaded_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name="uploaded_files"
-    )
+    uploaded_by = models.ForeignKey(User,
+                                    on_delete=models.SET_NULL,
+                                    null=True,
+                                    related_name='uploaded_files'
+                                    )
 
     @property
     def is_valid(self) -> bool:

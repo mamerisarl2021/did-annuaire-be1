@@ -1,0 +1,1 @@
+# Validation (schéma + hash JCS), publication preprod/prod, calcul d’URL.

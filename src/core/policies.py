@@ -4,9 +4,7 @@ from src.users.models import UserRole
 
 def ensure_superuser(user) -> None:
     if getattr(user, "role", None) != UserRole.SUPERUSER:
-        raise APIError(
-            message="Only SUPERUSER can access this", code="FORBIDDEN", status=403
-        )
+        raise APIError(message="Only SUPERUSER can access this", code="FORBIDDEN", status=403)
 
 
 def ensure_org_member(user, org_id) -> None:

@@ -73,6 +73,7 @@ class UserActivatePayload(Schema):
     token: str
     password: str
     enable_totp: bool = False
+    code: str | None = None
 
     @field_validator("token")
     @classmethod
@@ -88,14 +89,11 @@ class UserActivatePayload(Schema):
             raise ValueError("password must be at least 8 characters")
         return v
 
-
 class OTPVerifyPayload(Schema):
     code: str
 
-
 class UserFilterParams(Schema):
     """Paramètres de filtrage et recherche"""
-
     status: str | None = None
     role: str | None = None
     search: str | None = None

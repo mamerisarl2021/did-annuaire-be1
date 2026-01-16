@@ -1,25 +1,21 @@
 from src.common.models import BaseModel
 
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    PermissionsMixin,
-    BaseUserManager,
-)
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 
 
 class UserRole(models.TextChoices):
-    SUPERUSER = "SUPERUSER", "Super Utilisateur"
-    ORG_ADMIN = "ORG_ADMIN", "Admin Organisation"
-    ORG_MEMBER = "ORG_MEMBER", "Membre Organisation"
-    AUDITOR = "AUDITOR", "Auditeur"
+    SUPERUSER = 'SUPERUSER', 'Super Utilisateur'
+    ORG_ADMIN = 'ORG_ADMIN', 'Admin Organisation'
+    ORG_MEMBER = 'ORG_MEMBER', 'Membre Organisation'
+    AUDITOR = 'AUDITOR', 'Auditeur'
 
 
 class UserStatus(models.TextChoices):
     PENDING = "PENDING", "En Attente"
-    INVITED = "INVITED", "Invité"
-    ACTIVE = "ACTIVE", "Actif"
-    DEACTIVATED = "SUSPENDED", "Désactivé"
+    INVITED = 'INVITED', 'Invité'
+    ACTIVE = 'ACTIVE', 'Actif'
+    DEACTIVATED = 'SUSPENDED', 'Désactivé'
 
 
 class UserManager(BaseUserManager):
@@ -40,8 +36,8 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
-        extra_fields.setdefault("role", UserRole.SUPERUSER)
-        extra_fields.setdefault("status", UserStatus.ACTIVE)
+        extra_fields.setdefault('role', UserRole.SUPERUSER)
+        extra_fields.setdefault('status', UserStatus.ACTIVE)
 
         return self.create_user(email=email, password=password, **extra_fields)
 
@@ -56,36 +52,18 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     phone = models.CharField(max_length=50, blank=True)
 
     # Organization
-    organization = models.ForeignKey(
-        "organizations.Organization",
-        on_delete=models.CASCADE,
-        related_name="users",
-        null=True,
-        blank=True,
-    )  # Null pour SuperUser
+    organization = models.ForeignKey('organizations.Organization', on_delete=models.CASCADE, related_name='users',
+                                     null=True, blank=True) # Null pour SuperUser
 
     # Rôle et statut
-    role = models.CharField(
-        max_length=20,
-        choices=UserRole.choices,
-        default=UserRole.ORG_MEMBER,
-        db_index=True,
-    )
-    status = models.CharField(
-        max_length=20, choices=UserStatus.choices, default=UserStatus.PENDING
-    )
+    role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.ORG_MEMBER, db_index=True)
+    status = models.CharField(max_length=20, choices=UserStatus.choices, default=UserStatus.PENDING)
 
     # Invitation
     invitation_token = models.CharField(max_length=255, blank=True, db_index=True)
     invitation_sent_at = models.DateTimeField(null=True, blank=True)
     invitation_accepted_at = models.DateTimeField(null=True, blank=True)
-    invited_by = models.ForeignKey(
-        "self",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="invited_users",
-    )
+    invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='invited_users')
 
     # 2FA -TOTP (Google Authenticator)
     totp_secret = models.CharField(max_length=255, blank=True)
@@ -113,12 +91,12 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name"]
+    REQUIRED_FIELDS = ['first_name', 'last_name']
 
     class Meta:
-        db_table = "users"
-        verbose_name = "User"
-        verbose_name_plural = "Users"
+        db_table = 'users'
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
         constraints = [
             models.UniqueConstraint(fields=["email"], name="user_email_unique"),
         ]

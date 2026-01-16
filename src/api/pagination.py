@@ -53,14 +53,8 @@ class Paginator:
         )
     """
 
-    def __init__(
-        self,
-        *,
-        page_param: str = "page",
-        page_size_param: str = "page_size",
-        default_page_size: int = 20,
-        max_page_size: int = 100,
-    ):
+    def __init__(self, *, page_param: str = "page", page_size_param: str = "page_size", default_page_size: int = 20,
+                 max_page_size: int = 100,):
         self.page_param = page_param
         self.page_size_param = page_size_param
         self.default_page_size = default_page_size
@@ -90,19 +84,15 @@ class Paginator:
         has_next = page < total_pages
 
         meta = {
-            "count": total,
-            "page": page,
-            "page_size": size,
-            "total_pages": total_pages,
-            "has_next": has_next,
-            "has_prev": has_prev,
-            "next_page": page + 1 if has_next else None,
-            "prev_page": page - 1 if has_prev else None,
-            "next_url": _with_query(request, **{self.page_param: page + 1})
-            if has_next
-            else None,
-            "prev_url": _with_query(request, **{self.page_param: page - 1})
-            if has_prev
-            else None,
-        }
+                "count": total,
+                "page": page,
+                "page_size": size,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev,
+                "next_page": page + 1 if has_next else None,
+                "prev_page": page - 1 if has_prev else None,
+                "next_url": _with_query(request, **{self.page_param: page + 1}) if has_next else None,
+                "prev_url": _with_query(request, **{self.page_param: page - 1}) if has_prev else None,
+            }
         return page_items, meta

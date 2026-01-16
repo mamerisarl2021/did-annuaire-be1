@@ -17,27 +17,15 @@ urlpatterns = [
         include(
             (
                 [
-                    path("standard/", FileStandardUploadApi, name="standard"),
+                    path("standard/", FileStandardUploadApi.as_view(), name="standard"),
                     path(
                         "direct/",
                         include(
                             (
                                 [
-                                    path(
-                                        "start/",
-                                        FileDirectUploadStartApi,
-                                        name="start",
-                                    ),
-                                    path(
-                                        "finish/",
-                                        FileDirectUploadFinishApi,
-                                        name="finish",
-                                    ),
-                                    path(
-                                        "local/<str:file_id>/",
-                                        FileDirectUploadLocalApi,
-                                        name="local",
-                                    ),
+                                    path("start/", FileDirectUploadStartApi.as_view(), name="start"),
+                                    path("finish/", FileDirectUploadFinishApi.as_view(), name="finish"),
+                                    path("local/<str:file_id>/", FileDirectUploadLocalApi.as_view(), name="local"),
                                 ],
                                 "direct",
                             )

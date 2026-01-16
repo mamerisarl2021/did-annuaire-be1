@@ -43,15 +43,12 @@ class Command(BaseCommand):
         timezone = get_default_timezone_name()
 
         for periodic_task in periodic_tasks_data:
-            print(f"Setting up {periodic_task['task'].name}")
+            print(f'Setting up {periodic_task["task"].name}')
 
-            cron = CrontabSchedule.objects.create(
-                timezone=timezone, **periodic_task["cron"]
-            )
+            cron = CrontabSchedule.objects.create(timezone=timezone, **periodic_task["cron"])
 
-            PeriodicTask.objects.create(
-                name=periodic_task["name"],
-                task=periodic_task["task"].name,
-                crontab=cron,
-                enabled=periodic_task["enabled"],
-            )
+            PeriodicTask.objects.create(name=periodic_task["name"],
+                                        task=periodic_task["task"].name,
+                                        crontab=cron,
+                                        enabled=periodic_task["enabled"],
+                                        )

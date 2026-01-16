@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from src.api.pagination import Paginator
 from src.common.utils import validate_uuid
 from src.core.apis import BaseAPIController
+from src.core.exceptions import DomainValidationError
 from src.core.policies import ensure_role_in
 from src.users.models import User, UserRole
 from src.users import services, selectors
@@ -14,22 +15,18 @@ from src.users.schemas import (
     UserCreatePayload,
     UserActivatePayload,
     UserUpdatePayload,
-    OTPVerifyPayload,
-    UserFilterParams,
+    OTPVerifyPayload, UserFilterParams,
 )
 
 
 @api_controller("/users", tags=["Users"], auth=JWTAuth())
 class UserController(BaseAPIController):
+
     @route.post("/")
     def create_user(self, payload: UserCreatePayload = Form(...)):
         current_user = self.context.request.auth
         if current_user.role != UserRole.ORG_ADMIN:
-            return self.create_response(
-                message="Only ORG_ADMIN can create users",
-                status_code=403,
-                code="FORBIDDEN",
-            )
+            return self.create_response(message="Only ORG_ADMIN can create users", status_code=403, code="FORBIDDEN")
 
         user = services.user_create_by_admin(
             organization=current_user.organization,
@@ -54,7 +51,7 @@ class UserController(BaseAPIController):
             status_code=201,
         )
 
-    @route.get("/")
+    @route.get('/')
     def list_users(self, filters: Query[UserFilterParams]):  # ← MODIFIÉ
         """
         Liste les utilisateurs de mon organisation
@@ -67,7 +64,7 @@ class UserController(BaseAPIController):
             organization=current_user.organization,
             status=filters.status,
             role=filters.role,
-            search=filters.search,
+            search=filters.search
         )
 
         # ← PAGINATION AJOUTÉE
@@ -78,16 +75,13 @@ class UserController(BaseAPIController):
         return self.create_response(
             message="Users fetched",
             data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-            status_code=200,
+            status_code=200
         )
 
-    @route.get("/me")
+    @route.get('/me')
     def get_current_user(self):
-        return self.create_response(
-            message="Current user",
-            data=user_to_detail_dto(self.context.request.auth),
-            status_code=200,
-        )
+        return self.create_response(message="Current user", data=user_to_detail_dto(self.context.request.auth),
+                                    status_code=200)
 
     @route.post("/{user_id}/invite")
     def send_invitation(self, user_id: str):
@@ -95,32 +89,73 @@ class UserController(BaseAPIController):
         current_user = self.context.request.auth
         ensure_role_in(current_user, UserRole.ORG_ADMIN)
 
-        user = get_object_or_404(
-            User, id=user_id, organization=current_user.organization
-        )
+        user = get_object_or_404(User, id=user_id, organization=current_user.organization)
         services.user_send_invitation(user=user, invited_by=current_user)
-        return self.create_response(
-            message="Invitation sent successfully", status_code=200
-        )
+        return self.create_response(message="Invitation sent successfully", status_code=200)
 
     @route.post("/activate", auth=None)
     def activate_account(self, payload: UserActivatePayload):
+        """
+        Flux:
+          - enable_totp=False -> activation directe.
+          - enable_totp=True et pas de code -> préparer TOTP (si nécessaire) et renvoyer le QR (202 TOTP_REQUIRED).
+          - enable_totp=True et code -> vérifier TOTP puis activer.
+        """
         try:
+            # Récupérer l’utilisateur invité et vérifier l’expiration du lien
+            user = services.user_get_invited_by_token(token=payload.token)
+
+            if payload.enable_totp:
+                # S'assurer que le secret existe; si pas encore initialisé, le générer et renvoyer le QR sans activer
+                if not user.totp_secret:
+                    # Génère le secret si absent (user_generate_totp_qr crée le secret si besoin)
+                    qr = services.user_generate_totp_qr(user=user)
+                    return self.create_response(
+                        message="TOTP requis: scannez le QR et renvoyez le code pour activer",
+                        data={"totp_qr": qr},
+                        status_code=202,
+                        code="TOTP_REQUIRED",
+                    )
+
+                # Si un code est fourni, on le vérifie, puis on active
+                if payload.code:
+                    services.user_verify_totp_or_raise(user=user, code=payload.code)
+                    user = services.user_activate_account(
+                        token=payload.token,
+                        password=payload.password,
+                        enable_totp=True,
+                    )
+                    return self.create_response(
+                        message="Account activated successfully",
+                        data={"user": {"email": user.email, "full_name": user.full_name}},
+                        status_code=201,
+                    )
+
+                # Secret déjà présent mais pas de code -> renvoyer le QR (toujours sans activer)
+                qr = services.user_generate_totp_qr(user=user)
+                return self.create_response(
+                    message="TOTP requis: scannez le QR et renvoyez le code pour activer",
+                    data={"totp_qr": qr},
+                    status_code=202,
+                    code="TOTP_REQUIRED",
+                )
+
+            # Cas sans TOTP -> activation directe
             user = services.user_activate_account(
                 token=payload.token,
                 password=payload.password,
-                enable_totp=payload.enable_totp,
+                enable_totp=False,
             )
-            data = {"user": {"email": user.email, "full_name": user.full_name}}
-            if payload.enable_totp:
-                data["totp_qr"] = services.user_generate_totp_qr(user=user)
             return self.create_response(
-                message="Account activated successfully", data=data, status_code=201
+                message="Account activated successfully",
+                data={"user": {"email": user.email, "full_name": user.full_name}},
+                status_code=201,
             )
+
+        except DomainValidationError as e:
+            return self.create_response(message=e.message, status_code=400, code=e.code)
         except ValueError as e:
-            return self.create_response(
-                message=str(e), status_code=400, code="BAD_REQUEST"
-            )
+            return self.create_response(message=str(e), status_code=400, code="BAD_REQUEST")
 
     @route.post("/{user_id}/deactivate")
     def deactivate_user(self, user_id: str):
@@ -129,9 +164,7 @@ class UserController(BaseAPIController):
         ensure_role_in(current_user, UserRole.ORG_ADMIN, UserRole.SUPERUSER)
 
         services.user_deactivate(user_id=user_id, deactivated_by=current_user)
-        return self.create_response(
-            message="User deactivated successfully", status_code=200
-        )
+        return self.create_response(message="User deactivated successfully", status_code=200)
 
     @route.patch("/{user_id}/update")
     def update_user(self, user_id: str, payload: UserUpdatePayload):
@@ -182,3 +215,4 @@ class UserController(BaseAPIController):
         # Will raise DomainValidationError("OTP_EXPIRED"/"OTP_INVALID") if not OK
         services.user_verify_email_otp(user=u, code=payload.code)
         return self.create_response(message="OTP verified", status_code=200)
+

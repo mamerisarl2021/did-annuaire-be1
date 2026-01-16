@@ -16,12 +16,7 @@ class AuditActionAdmin(admin.ModelAdmin):
         "ip_address",
     )
     list_filter = ("category", "severity", "organization")
-    search_fields = (
-        "action",
-        "organization__users__email",
-        "organization__name",
-        "target_type",
-    )
+    search_fields = ("action", "organization__users__email", "organization__name", "target_type")
     readonly_fields = (
         "created_at",
         "updated_at",

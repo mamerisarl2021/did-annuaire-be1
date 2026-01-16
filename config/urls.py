@@ -20,14 +20,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from src.api.urls import api
-from src.webui.views import activation_redirect
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
-    path("ui/", include("src.webui.urls")),
-    path("activate", activation_redirect),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa

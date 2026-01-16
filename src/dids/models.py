@@ -1,176 +1,255 @@
 from django.db import models
+from django.db.models import Q
 
 from src.common.models import BaseModel
+from src.organizations.models import Organization
 
 
-class Application(BaseModel):
-    """Cas d'usage pour lequel un DID est créé"""
+class DID(BaseModel):
+    """
+    Stable decentralized identifier (did:web).
+    Does not change once created.
+    """
 
-    name = models.CharField(max_length=255)  # Ex: "ePassport", "DriverLicense"
-    slug = models.SlugField(max_length=100)  # Pour le DID path
-    description = models.TextField(blank=True)
+    class DIDStatus(models.TextChoices):
+        DRAFT = 'DRAFT', 'Draft'
+        ACTIVE = 'ACTIVE', 'Active'
+        DEACTIVATED = 'DEACTIVATED', 'Deactivated'
 
-    organization = models.ForeignKey(
-        "organizations.Organization",
-        on_delete=models.CASCADE,
-        related_name="applications",
-    )
-    created_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="created_applications",
-    )
+    did = models.CharField(max_length=500, unique=True, help_text="did:web:domain:{org}:{user}:{document_type}")
 
-    is_active = models.BooleanField(default=True)
+    method = models.CharField(max_length=20, default="web", help_text="DID method")
 
-    class Meta:
-        db_table = "applications"
-        unique_together = [["organization", "slug"]]
-        verbose_name = "Application"
-        verbose_name_plural = "Applications"
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="dids")
 
-    def __str__(self):
-        return f"{self.organization.name} - {self.name}"
+    owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name="owned_dids")
 
-
-class DIDDocument(BaseModel):
-    """Document DID W3C généré automatiquement par la plateforme"""
-
-    # DID complet: did:web:annuairedid-fe.qcdigitalhub.com:org:user:app
-    did = models.CharField(max_length=500, unique=True, db_index=True)
-
-    application = models.ForeignKey(
-        Application, on_delete=models.CASCADE, related_name="did_documents"
-    )
-    created_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="created_did_documents",
+    document_type = models.CharField(
+        max_length=150,
+        help_text="Logical document identifier (e.g. permis_conduite_qrcode)"
     )
 
-    # Input utilisateur (usage futur non défini)
-    domain = models.CharField(
-        max_length=255, help_text="Domaine saisi par l'utilisateur (usage futur)"
-    )
-
-    # Contenu
-    document = models.JSONField()  # Le DID Document W3C complet
-    version = models.IntegerField(default=1)
-
-    # Statuts
     status = models.CharField(
         max_length=20,
-        choices=[
-            ("DRAFT", "Brouillon"),
-            ("PREPROD", "Pré-production"),
-            ("PUBLISHED", "Publié"),
-            ("REVOKED", "Révoqué"),
-        ],
-        default="DRAFT",
+        choices=DIDStatus.choices,
+        default=DIDStatus.DRAFT,
         db_index=True,
     )
 
-    # Workflow preprod
-    preprod_published_at = models.DateTimeField(null=True, blank=True)
-    preprod_published_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="preprod_published_dids",
-    )
-
-    # Validation admin org
-    validated_at = models.DateTimeField(null=True, blank=True)
-    validated_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="validated_dids",
-    )
-
-    # Publication production
-    prod_published_at = models.DateTimeField(null=True, blank=True)
-    prod_published_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="prod_published_dids",
-    )
-
-    # Révocation
-    revoked_at = models.DateTimeField(null=True, blank=True)
-    revoked_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="revoked_dids",
-    )
-    revocation_reason = models.TextField(blank=True)
-
     class Meta:
-        db_table = "did_documents"
-        ordering = ["-created_at"]
-        verbose_name = "DID Document"
-        verbose_name_plural = "DID Documents"
-        constraints = [
-            models.UniqueConstraint(fields=["did"], name="did_document_did_unique"),
-        ]
+        #verbose_name = "DIDs"
+        pass
 
     def __str__(self):
         return self.did
 
 
-class PublicKey(BaseModel):
-    """Clés publiques/certificats uploadés par les utilisateurs"""
-
-    did_document = models.ForeignKey(
-        DIDDocument, on_delete=models.CASCADE, related_name="public_keys"
+class DIDDocument(BaseModel):
+    """
+    Versioned W3C DID Document.
+    Immutable once published.
+    """
+    did = models.ForeignKey(
+        DID,
+        on_delete=models.CASCADE,
+        related_name="documents"
     )
 
-    key_id = models.CharField(max_length=100)  # Ex: "#key-1"
+    version = models.PositiveIntegerField(
+        help_text="Monotonically increasing version number"
+    )
+
+    document = models.JSONField(
+        help_text="Canonical W3C DID Document JSON"
+    )
+
+    proof = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Cryptographic proof added before publication (Linked Data Proof) JsonWebSignature2020 proof"
+    )
+
+    environment = models.CharField(
+        max_length=20,
+        choices={
+            'DRAFT': 'Draft',
+            'PREPROD': 'Pré-production',
+            'PROD': 'Production',
+        },
+        default='DRAFT'
+    )
+
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        'users.User',
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='published_documents'
+    )
+
+    is_active = models.BooleanField(
+        default=False,
+        help_text="Only one active document per DID & environment"
+    )
+
+    # Publication metadata & integrity
+    canonical_sha256 = models.CharField(
+        max_length=64, null=True, blank=True,
+        help_text="JCS (RFC8785) SHA-256 of the JSON document in DRAFT"
+    )
+    file_sha256 = models.CharField(
+        max_length=64, null=True, blank=True,
+        help_text="SHA-256 of published did.json (PREPROD/PROD)"
+    )
+    file_etag = models.CharField(
+        max_length=128, null=True, blank=True,
+        help_text="ETag of did.json if available"
+    )
+    published_relpath = models.TextField(
+        null=True, blank=True,
+        help_text="Relative path under /.well-known (e.g., preprod/{org}/{user}/{type}/did.json)"
+    )
+
+    class Meta:
+        ordering = ['-version']
+        constraints = [
+            models.UniqueConstraint(
+                fields=["did", "version"],
+                name="did_document_version_unique"
+            ),
+            models.UniqueConstraint(
+                fields=["did", "environment"],
+                condition=Q(is_active=True),
+                name="unique_active_diddoc_per_env",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.did.did}@v{self.version}({self.environment})"
+
+
+class Certificate(BaseModel):
+    """
+    Certificat ou conteneur cryptographique fourni par l’utilisateur.
+    Sert uniquement à extraire une clé publique JWK.
+    """
+
+    class CertFormat(models.TextChoices):
+        PEM = 'PEM', 'PEM'
+        DER = 'DER', 'DER'
+        PKCS7 = 'PKCS7', 'PKCS#7'
+        PKCS12 = 'PKCS12', 'PKCS#12'
+
+    owner = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name="certificates"
+    )
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE
+    )
+
+    file = models.FileField(
+        upload_to="certificates/%Y/%m/"
+    )
+
+    format = models.CharField(
+        max_length=20,
+        choices=CertFormat.choices
+    )
+
+    extracted_jwk = models.JSONField(
+        help_text="Clé publique normalisée au format JWK"
+    )
+
+    fingerprint = models.CharField(
+        max_length=128,
+        unique=True,
+        help_text="SHA-256 fingerprint"
+    )
+
+    is_revoked = models.BooleanField(default=False)
+
+
+class UploadedPublicKey(BaseModel):
+    """
+    Cryptographic material used in DID Documents.
+    """
+
+    class KeyType(models.TextChoices):
+        JSON_WEB_KEY_2020 = 'JsonWebKey2020', 'JsonWebKey2020'
+
+    did = models.ForeignKey(DID, on_delete=models.CASCADE, related_name='keys')
+
+    key_id = models.CharField(max_length=100, help_text="Fragment id, e.g. key-1")
+
     key_type = models.CharField(
         max_length=50,
-        choices=[
-            ("Ed25519VerificationKey2020", "Ed25519"),
-            ("JsonWebKey2020", "JWK (RSA/EC)"),
-            ("EcdsaSecp256k1VerificationKey2019", "secp256k1"),
-            ("RsaVerificationKey2018", "RSA"),
-        ],
+        choices=KeyType.choices  # JWK (EC P-256/P-384, RSA 2048/3072)
     )
 
-    # Formats de clé publique
-    public_key_pem = models.TextField(blank=True)
-    public_key_jwk = models.JSONField(null=True, blank=True)
-    public_key_multibase = models.TextField(blank=True)
-
-    # Certificat original
-    certificate_file = models.FileField(
-        upload_to="certificates/%Y/%m/", help_text="Fichier certificat original uploadé"
+    certificate = models.ForeignKey(
+        Certificate,
+        on_delete=models.CASCADE,
+        related_name='did_keys'
     )
 
-    # Métadonnées
-    controller = models.CharField(max_length=500)
+    public_key_jwk = models.JSONField(
+        help_text="Normalized public key (JWK only)"
+    )
+
+    public_key_jwk_snapshot = models.JSONField(
+        help_text="Frozen copy of the JWK as used in a specific DID Document version"
+    )
+
     purposes = models.JSONField(
-        default=list, help_text="['authentication', 'assertionMethod', etc.]"
+        default=list,
+        help_text="authentication, assertionMethod, keyAgreement, etc."
     )
 
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        db_table = "public_keys"
-        verbose_name = "Public Key"
-        verbose_name_plural = "Public Keys"
+        db_table = 'public_keys'
+        verbose_name = 'Public Key'
+        verbose_name_plural = 'Public Keys'
         constraints = [
-            models.UniqueConstraint(
-                fields=["did_document", "key_id"], name="did_key_ref_unique"
-            ),
+            models.UniqueConstraint(fields=["did", "key_id"], name="did_key_ref_unique"),
         ]
 
     def __str__(self):
-        return f"{self.did_document.did}{self.key_id}"
+        return f"{self.did.did}#{self.key_id}"
+
+# --- append to src/dids/models.py ---
+
+class PublishRequest(BaseModel):
+    """
+    User request to publish a DIDDocument to PREPROD/PROD requiring approval.
+    """
+    class Env(models.TextChoices):
+        PREPROD = "PREPROD", "Pre-production"
+        PROD = "PROD", "Production"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+
+    did = models.ForeignKey(DID, on_delete=models.CASCADE, related_name="publish_requests")
+    did_document = models.ForeignKey(DIDDocument, on_delete=models.CASCADE, related_name="publish_requests")
+    environment = models.CharField(max_length=10, choices=Env.choices)
+    requested_by = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='requested_publish')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey('users.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='decided_publish')
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.TextField(blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["did", "environment", "status"]),
+        ]
+
+    def __str__(self):
+        return f"PublishRequest(did={self.did_id}, env={self.environment}, status={self.status})"
