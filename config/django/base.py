@@ -14,19 +14,19 @@ import os
 
 import dj_database_url
 
-from config.env import APPS_DIR, BASE_DIR, env, env_get
+from config.env import APPS_DIR, BASE_DIR, env
 
 env_path = os.path.join(BASE_DIR, ".env")
 if os.path.exists(env_path):
     env.read_env(env_path)
 
 
-SECRET_KEY = env_get(
-    name="DJANGO_SECRET_KEY",
+SECRET_KEY = env.str(
+    "DJANGO_SECRET_KEY",
     default="django-insecure-q2m%6pach+q1u7+8re2@_u88vu&d=zk1zc0wyv%sjavy^88&h+",
 )
 
-DEBUG = env_get(name="DEBUG", default=False)
+DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
@@ -107,7 +107,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
 # }
-DATABASE_URL = env_get("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
+DATABASE_URL = env.str("DATABASE_URL", "postgres://user:pass@localhost:5432/db"); print(DATABASE_URL)
 if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
     DATABASES = {
         "default": dj_database_url.config(
@@ -115,8 +115,8 @@ if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql
         )
     }
 
-SESSION_COOKIE_SECURE = env_get(name="SESSION_COOKIE_SECURE", default=True)
-CSRF_COOKIE_SECURE = env_get("CSRF_COOKIE_SECURE", default=True)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=True)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -153,7 +153,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
-FR_APP_DOMAIN = env_get("FR_APP_DOMAIN", default="http://localhost:8000")
+FR_APP_DOMAIN = env("FR_APP_DOMAIN", default="http://localhost:8000")
 
 from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
@@ -175,7 +175,7 @@ from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
+DID_DOCUMENTS_ROOT = env("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
 
 # SITE_ID = 2
 # STORAGES = {
@@ -186,8 +186,8 @@ DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR
 #        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
 #    },
 # }
-ADMIN_USER_NAME = env_get("ADMIN_USER_NAME")
-ADMIN_USER_EMAIL = env_get("ADMIN_USER_EMAIL")
+ADMIN_USER_NAME = env("ADMIN_USER_NAME")
+ADMIN_USER_EMAIL = env("ADMIN_USER_EMAIL")
 MANAGERS = []
 ADMINS = []
 if all([ADMIN_USER_NAME, ADMIN_USER_EMAIL]):
