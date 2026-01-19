@@ -107,7 +107,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
 # }
-DATABASE_URL = env.str("DATABASE_URL", "postgres://user:pass@localhost:5432/db"); print(DATABASE_URL)
+DATABASE_URL = env.str("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
 if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
     DATABASES = {
         "default": dj_database_url.config(

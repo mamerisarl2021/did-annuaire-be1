@@ -3,15 +3,6 @@ import os
 from django.db import models
 
 from src.common.models import BaseModel
-from src.core.exceptions import ValidationError
-
-
-def validate_pdf_only(value):
-    ext = os.path.splitext(value.name)[1].lower()
-    if ext != '.pdf':
-        raise ValidationError('Only PDF files are allowed.')
-    if hasattr(value, 'content_type') and value.content_type != 'application/pdf':
-        raise ValidationError('File must be a valid PDF document.')
 
 
 class OrganizationStatus(models.TextChoices):
@@ -44,9 +35,8 @@ class Organization(BaseModel):
 
     # Documents
     justification_document = models.FileField(upload_to='organizations/justifications/', blank=True, null=True,
-                                              help_text="Document de justification", validators=[validate_pdf_only], )
-    authorization_document = models.FileField(upload_to='organizations/authorizations/',
-                                              validators=[validate_pdf_only], )
+                                              help_text="Document de justification",)
+    authorization_document = models.FileField(upload_to='organizations/authorizations/',)
 
     # Statut
     status = models.CharField(max_length=20, choices=OrganizationStatus.choices, default=OrganizationStatus.PENDING,
