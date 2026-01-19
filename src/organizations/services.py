@@ -17,49 +17,88 @@ from src.auditaction.services import audit_action_create
 
 
 @transaction.atomic
-def organization_create(*, name: str, org_type: str, country: str, email: str, phone: str, address: str,
-                        allowed_email_domains: list[str], admin_email: str, admin_first_name: str,
-                        admin_last_name: str, admin_phone: str, functions: str,
-                        authorization_document, justification_document=None) -> Organization:
+def organization_create(
+    *,
+    name: str,
+    org_type: str,
+    country: str,
+    email: str,
+    phone: str,
+    address: str,
+    allowed_email_domains: list[str],
+    admin_email: str,
+    admin_first_name: str,
+    admin_last_name: str,
+    admin_phone: str,
+    functions: str,
+    authorization_document,
+    justification_document=None,
+) -> Organization:
     """Créer une nouvelle organisation (en attente de validation)"""
 
     slug = slugify(name)
 
     # Vérifier unicité
     if Organization.objects.filter(slug=slug).exists():
-        raise DomainConflictError(message="Organization name is not available", code="ORG_NAME_TAKEN",
-                                  errors={"name": ["already taken"]})
+        raise DomainConflictError(
+            message="Organization name is not available",
+            code="ORG_NAME_TAKEN",
+            errors={"name": ["already taken"]},
+        )
     if Organization.objects.filter(email=email).exists():
-        raise DomainConflictError(message="Organization email already in use", code="ORG_EMAIL_TAKEN",
-                                  errors={"email": ["already taken"]})
+        raise DomainConflictError(
+            message="Organization email already in use",
+            code="ORG_EMAIL_TAKEN",
+            errors={"email": ["already taken"]},
+        )
     if User.objects.filter(email=admin_email).exists():
-        raise DomainConflictError(message="Admin email already in use", code="ADMIN_EMAIL_TAKEN",
-                                  errors={"admin_email": ["already taken"]})
+        raise DomainConflictError(
+            message="Admin email already in use",
+            code="ADMIN_EMAIL_TAKEN",
+            errors={"admin_email": ["already taken"]},
+        )
 
     # Créer l'organisation
-    org = Organization.objects.create(name=name, slug=slug, type=org_type, country=country, email=email, phone=phone,
-                                      address=address, allowed_email_domains=allowed_email_domains,
-                                      authorization_document=authorization_document,
-                                      justification_document=justification_document or None,
-                                      status=OrganizationStatus.PENDING)
+    org = Organization.objects.create(
+        name=name,
+        slug=slug,
+        type=org_type,
+        country=country,
+        email=email,
+        phone=phone,
+        address=address,
+        allowed_email_domains=allowed_email_domains,
+        authorization_document=authorization_document,
+        justification_document=justification_document or None,
+        status=OrganizationStatus.PENDING,
+    )
 
     # Créer l'admin (statut PENDING)
-    admin = User.objects.create_user(email=admin_email, first_name=admin_first_name, last_name=admin_last_name,
-                                     phone=admin_phone, organization=org, functions=functions, role=UserRole.ORG_ADMIN,
-                                     status=UserStatus.PENDING)
+    admin = User.objects.create_user(
+        email=admin_email,
+        first_name=admin_first_name,
+        last_name=admin_last_name,
+        phone=admin_phone,
+        organization=org,
+        functions=functions,
+        role=UserRole.ORG_ADMIN,
+        status=UserStatus.PENDING,
+    )
 
     # Notifier les super admins
     _notify_super_admins_new_org(org)
 
     # Audit
-    audit_action_create(user=None,
-                        action=AuditAction.ORG_CREATED,
-                        details={'organization_id': org.id,
-                                 'organization_name': org.name,
-                                 'admin_email': admin_email
-                                 },
-                        category=AuditCategory.ORGANIZATION,
-                        )
+    audit_action_create(
+        user=None,
+        action=AuditAction.ORG_CREATED,
+        details={
+            "organization_id": org.id,
+            "organization_name": org.name,
+            "admin_email": admin_email,
+        },
+        category=AuditCategory.ORGANIZATION,
+    )
 
     return org
 
@@ -70,15 +109,18 @@ def organization_delete(*, organization_id: uuid.UUID, deleted_by: User) -> None
     org_name = org.name
     org_id = org.id
     org.delete()  # hard delete; ensure FK cascades are intended
-    audit_action_create(user=deleted_by,
-                        action=AuditAction.ORG_SUSPENDED,
-                        details={"organization_id": str(org_id), "organization_name": org_name},
-                        category=AuditCategory.ORGANIZATION,
-                        )
+    audit_action_create(
+        user=deleted_by,
+        action=AuditAction.ORG_SUSPENDED,
+        details={"organization_id": str(org_id), "organization_name": org_name},
+        category=AuditCategory.ORGANIZATION,
+    )
 
 
 @transaction.atomic
-def organization_toggle_activation(*, organization_id: uuid.UUID, toggled_by: User) -> Organization:
+def organization_toggle_activation(
+    *, organization_id: uuid.UUID, toggled_by: User
+) -> Organization:
     org = Organization.objects.get(id=organization_id)
     if org.status == OrganizationStatus.ACTIVE:
         org.status = OrganizationStatus.SUSPENDED
@@ -87,15 +129,19 @@ def organization_toggle_activation(*, organization_id: uuid.UUID, toggled_by: Us
     else:
         raise ValueError(f"Only ACTIVE/SUSPENDED can be toggled (current={org.status})")
     org.save(update_fields=["status", "updated_at"])
-    audit_action_create(user=toggled_by,
-                        action=AuditAction.ORGANIZATION_TOGGLED_ACTIVATION,
-                        details={"organization_id": str(org.id), "new_status": org.status},
-                        category="ORGANIZATION", )
+    audit_action_create(
+        user=toggled_by,
+        action=AuditAction.ORGANIZATION_TOGGLED_ACTIVATION,
+        details={"organization_id": str(org.id), "new_status": org.status},
+        category="ORGANIZATION",
+    )
     return org
 
 
 @transaction.atomic
-def organization_validate(*, organization_id: uuid.UUID, validated_by: User) -> Organization:
+def organization_validate(
+    *, organization_id: uuid.UUID, validated_by: User
+) -> Organization:
     """Super admin valide une organisation"""
 
     org = Organization.objects.get(id=organization_id)
@@ -115,19 +161,19 @@ def organization_validate(*, organization_id: uuid.UUID, validated_by: User) -> 
         user_send_invitation(user=admin, invited_by=validated_by)
 
     # Audit
-    audit_action_create(user=validated_by,
-                        action=AuditAction.ORG_VALIDATED,
-                        details={
-                            'organization_id': org.id,
-                            'organization_name': org.name
-                        }
-                    )
+    audit_action_create(
+        user=validated_by,
+        action=AuditAction.ORG_VALIDATED,
+        details={"organization_id": org.id, "organization_name": org.name},
+    )
 
     return org
 
 
 @transaction.atomic
-def organization_refuse(*, organization_id: uuid.UUID, refused_by: User, reason: str) -> Organization:
+def organization_refuse(
+    *, organization_id: uuid.UUID, refused_by: User, reason: str
+) -> Organization:
     """Super admin refuse une organisation"""
 
     org = Organization.objects.get(id=organization_id)
@@ -158,22 +204,25 @@ def organization_refuse(*, organization_id: uuid.UUID, refused_by: User, reason:
                         Ce message est automatique. Merci de ne pas y répondre directement.
                     </p>
                 </div>
-            """
+            """,
         )
 
         # Audit
-    audit_action_create(user=refused_by,
-                        action=AuditAction.ORG_REFUSED,
-                        details={
-                            'organization_id': org.id,
-                            'organization_name': org.name,
-                            'reason': reason
-                        }
-                        )
+    audit_action_create(
+        user=refused_by,
+        action=AuditAction.ORG_REFUSED,
+        details={
+            "organization_id": org.id,
+            "organization_name": org.name,
+            "reason": reason,
+        },
+    )
 
     return org
 
+
 # TODO: Organization Update
+
 
 def _notify_super_admins_new_org(org: Organization):
     """Notifier les super admins d'une nouvelle organisation"""
@@ -204,5 +253,5 @@ def _notify_super_admins_new_org(org: Organization):
                         Ce message est automatique. Merci de ne pas y répondre directement.
                     </p>
                 </div>
-            """
+            """,
         )

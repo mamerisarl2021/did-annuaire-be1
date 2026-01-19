@@ -29,13 +29,17 @@ app.autodiscover_tasks()
 
 
 @setup_logging.connect
-def receiver_setup_logging(loglevel, logfile, format, colorize, **kwargs):  # pragma: no cover
+def receiver_setup_logging(
+    loglevel, logfile, format, colorize, **kwargs
+):  # pragma: no cover
     LoggersSetup.setup_structlog()
     logging.config.dictConfig(LoggersSetup.setup_logging())
 
 
 @receiver(signals.bind_extra_task_metadata)
-def receiver_bind_extra_request_metadata(sender, signal, task=None, logger=None, **kwargs):
+def receiver_bind_extra_request_metadata(
+    sender, signal, task=None, logger=None, **kwargs
+):
     # We want to add the task name to the task_succeeded event
     if task is not None:
         structlog.contextvars.bind_contextvars(task=task.name)

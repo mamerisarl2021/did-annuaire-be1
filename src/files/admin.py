@@ -1,7 +1,6 @@
 from django.contrib import admin
 
 from src.files.models import File
-from src.files.services import FileStandardUploadService
 
 
 @admin.register(File)

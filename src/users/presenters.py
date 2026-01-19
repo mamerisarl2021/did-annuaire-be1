@@ -5,8 +5,11 @@ def user_to_list_dto(u) -> dict:
         "full_name": u.full_name,
         "role": u.role,
         "status": u.status,
-        "created_at": u.created_at.isoformat() if getattr(u, "created_at", None) else None,
+        "created_at": u.created_at.isoformat()
+        if getattr(u, "created_at", None)
+        else None,
     }
+
 
 def user_to_detail_dto(u) -> dict:
     return {

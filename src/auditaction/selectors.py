@@ -19,17 +19,18 @@ def _parse_dt(value: str | None) -> datetime | None:
         return None
 
 
-def audit_actions_queryset(*,
-                           organization_id: int | None,
-                           category: str | None,
-                           action: str | None,
-                           user_id: int | None,
-                           severity: str | None,
-                           date_from: str | None,
-                           date_to: str | None,
-                           q: str | None,
-                           base_qs: QuerySet[AuditLog] | None = None,
-                           ) -> QuerySet[AuditLog]:
+def audit_actions_queryset(
+    *,
+    organization_id: int | None,
+    category: str | None,
+    action: str | None,
+    user_id: int | None,
+    severity: str | None,
+    date_from: str | None,
+    date_to: str | None,
+    q: str | None,
+    base_qs: QuerySet[AuditLog] | None = None,
+) -> QuerySet[AuditLog]:
     qs = base_qs or AuditLog.objects.select_related("user", "organization")
 
     if organization_id:
@@ -60,45 +61,49 @@ def audit_actions_queryset(*,
     return qs.order_by("-created_at")
 
 
-def audit_actions_list_paginated(*,
-                                 organization_id: int | None,
-                                 category: str | None,
-                                 action: str | None,
-                                 user_id: int | None,
-                                 severity: str | None,
-                                 date_from: str | None,
-                                 date_to: str | None,
-                                 q: str | None,
-                                 limit: int = 50,
-                                 offset: int = 0,
-                                 ) -> tuple[int, list[AuditLog]]:
-    qs = audit_actions_queryset(organization_id=organization_id,
-                                category=category,
-                                action=action,
-                                user_id=user_id,
-                                severity=severity,
-                                date_from=date_from,
-                                date_to=date_to,
-                                q=q,
-                                )
+def audit_actions_list_paginated(
+    *,
+    organization_id: int | None,
+    category: str | None,
+    action: str | None,
+    user_id: int | None,
+    severity: str | None,
+    date_from: str | None,
+    date_to: str | None,
+    q: str | None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[int, list[AuditLog]]:
+    qs = audit_actions_queryset(
+        organization_id=organization_id,
+        category=category,
+        action=action,
+        user_id=user_id,
+        severity=severity,
+        date_from=date_from,
+        date_to=date_to,
+        q=q,
+    )
     total = qs.count()
-    items = list(qs[offset: offset + limit])
+    items = list(qs[offset : offset + limit])
     return total, items
 
 
-def audit_stats_by_category(*,
-                            organization_id: int | None,
-                            date_from: str | None = None,
-                            date_to: str | None = None,
-                            ) -> list[dict[str, any]]:
-    qs = audit_actions_queryset(organization_id=organization_id,
-                                category=None,
-                                action=None,
-                                user_id=None,
-                                severity=None,
-                                date_from=date_from,
-                                date_to=date_to,
-                                q=None,
-                                )
+def audit_stats_by_category(
+    *,
+    organization_id: int | None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> list[dict[str, any]]:
+    qs = audit_actions_queryset(
+        organization_id=organization_id,
+        category=None,
+        action=None,
+        user_id=None,
+        severity=None,
+        date_from=date_from,
+        date_to=date_to,
+        q=None,
+    )
     data = qs.values("category").annotate(count=Count("id")).order_by("-count")
     return list(data)

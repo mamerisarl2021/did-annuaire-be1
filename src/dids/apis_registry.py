@@ -27,14 +27,22 @@ def _pr_out(pr: PublishRequest) -> PublishRequestOut:
         note=pr.note or None,
     )
 
+
 def _now_utc():
     return datetime.now(dj_tz.utc)
+
 
 @api_controller("/registry", tags=["DID Registry"])
 class RegistryController:
     # TODO: protéger via auth (decorator ou middleware)
     @route.post("/dids/{did}/publish")
-    def publish(self, request, did: str, env: str = Query(..., pattern="^(preprod|prod)$"), version: int | None = None):
+    def publish(
+        self,
+        request,
+        did: str,
+        env: str = Query(..., pattern="^(preprod|prod)$"),
+        version: int | None = None,
+    ):
         did_obj = get_object_or_404(DID, did=did)
         user = request.user
 
@@ -43,10 +51,20 @@ class RegistryController:
             doc = get_object_or_404(DIDDocument, did=did_obj, version=version)
         else:
             if env == "preprod":
-                doc = did_obj.documents.filter(environment="DRAFT").order_by("-version").first()
+                doc = (
+                    did_obj.documents.filter(environment="DRAFT")
+                    .order_by("-version")
+                    .first()
+                )
             else:
-                doc = did_obj.documents.filter(environment="PREPROD").order_by("-version").first() \
-                      or did_obj.documents.filter(environment="DRAFT").order_by("-version").first()
+                doc = (
+                    did_obj.documents.filter(environment="PREPROD")
+                    .order_by("-version")
+                    .first()
+                    or did_obj.documents.filter(environment="DRAFT")
+                    .order_by("-version")
+                    .first()
+                )
         if not doc:
             raise HttpError(404, "No document to publish for the requested environment")
 
@@ -67,7 +85,11 @@ class RegistryController:
                     "location": url,
                 },
                 did_reg_meta={"method": "web"},
-                did_doc_meta={"versionId": str(doc.version), "environment": "PREPROD", "published": True},
+                did_doc_meta={
+                    "versionId": str(doc.version),
+                    "environment": "PREPROD",
+                    "published": True,
+                },
                 status=200,
             )
 
@@ -84,14 +106,21 @@ class RegistryController:
                     "location": url,
                 },
                 did_reg_meta={"method": "web"},
-                did_doc_meta={"versionId": str(doc.version), "environment": "PROD", "published": True},
+                did_doc_meta={
+                    "versionId": str(doc.version),
+                    "environment": "PROD",
+                    "published": True,
+                },
                 status=200,
             )
 
         # Pas autorisé → demande d’approbation
         pr = PublishRequest.objects.create(
-            did=did_obj, did_document=doc, environment="PROD",
-            requested_by=user, status=PublishRequest.Status.PENDING
+            did=did_obj,
+            did_document=doc,
+            environment="PROD",
+            requested_by=user,
+            status=PublishRequest.Status.PENDING,
         )
         send_publish_request_notification(pr)
         return registrar_ok(
@@ -104,10 +133,13 @@ class RegistryController:
                 "publishRequestId": pr.id,
             },
             did_reg_meta={"method": "web"},
-            did_doc_meta={"versionId": str(doc.version), "environment": "PROD", "published": False},
+            did_doc_meta={
+                "versionId": str(doc.version),
+                "environment": "PROD",
+                "published": False,
+            },
             status=202,
         )
-
 
     @route.post("/dids/{did}/validate", response=ValidateResponse)
     def validate(self, request, did: str, version: int | None = None):
@@ -131,20 +163,24 @@ class RegistryController:
             doc.canonical_sha256 = digest
             doc.save(update_fields=["canonical_sha256"])
 
-        return ValidateResponse(did=did_obj.did, version=doc.version, valid=True, canonical_sha256=digest)
+        return ValidateResponse(
+            did=did_obj.did, version=doc.version, valid=True, canonical_sha256=digest
+        )
 
     @route.get("/publish-requests", response=list[PublishRequestOut])
     def list_publish_requests(
-            self, request,
-            org_id: int,
-            status: str | None = None,
-            offset: int = 0,
-            limit: int = 50,
+        self,
+        request,
+        org_id: int,
+        status: str | None = None,
+        offset: int = 0,
+        limit: int = 50,
     ):
         # AuthZ: seul ORG_ADMIN de l'org peut lister
         # On récupère l'org via un PR au moins; sinon 404
-        qs = PublishRequest.objects.select_related("did", "did__organization", "requested_by", "did_document") \
-            .filter(did__organization_id=org_id)
+        qs = PublishRequest.objects.select_related(
+            "did", "did__organization", "requested_by", "did_document"
+        ).filter(did__organization_id=org_id)
         sample_org = None
         sample = qs.first()
         if sample:
@@ -152,20 +188,25 @@ class RegistryController:
         else:
             # si aucune PR, on charge l'org via dids si besoin (facultatif)
             from src.organizations.models import Organization
+
             sample_org = get_object_or_404(Organization, pk=org_id)
         if not is_org_admin(request.user, sample_org):
             raise HttpError(403, "Not allowed")
 
         if status:
             qs = qs.filter(status=status)
-        qs = qs.order_by("-created_at")[offset: offset + min(200, limit)]
+        qs = qs.order_by("-created_at")[offset : offset + min(200, limit)]
 
         return [_pr_out(pr) for pr in qs]
 
     @route.post("/publish-requests/{pr_id}/approve", response=PublishResponse)
     def approve_publish_request(self, request, pr_id: int, note: str | None = None):
-        pr = get_object_or_404(PublishRequest.objects.select_related("did", "did_document", "did__organization"),
-                               pk=pr_id)
+        pr = get_object_or_404(
+            PublishRequest.objects.select_related(
+                "did", "did_document", "did__organization"
+            ),
+            pk=pr_id,
+        )
         org = pr.did.organization
         if not is_org_admin(request.user, org):
             raise HttpError(403, "Not allowed")
@@ -195,8 +236,12 @@ class RegistryController:
 
     @route.post("/publish-requests/{pr_id}/reject", response=PublishResponse)
     def reject_publish_request(self, request, pr_id: int, note: str | None = None):
-        pr = get_object_or_404(PublishRequest.objects.select_related("did", "did_document", "did__organization"),
-                               pk=pr_id)
+        pr = get_object_or_404(
+            PublishRequest.objects.select_related(
+                "did", "did_document", "did__organization"
+            ),
+            pk=pr_id,
+        )
         org = pr.did.organization
         if not is_org_admin(request.user, org):
             raise HttpError(403, "Not allowed")
@@ -219,4 +264,3 @@ class RegistryController:
             url=None,
             state="rejected",
         )
-

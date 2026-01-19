@@ -6,32 +6,51 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='APIKey',
+            name="APIKey",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=255)),
-                ('key_prefix', models.CharField(db_index=True, max_length=12, unique=True)),
-                ('key_hash', models.CharField(max_length=255, unique=True)),
-                ('permissions', models.JSONField(default=list, help_text="['did:read', 'did:resolve']")),
-                ('rate_limit_per_hour', models.IntegerField(default=1000)),
-                ('is_active', models.BooleanField(default=True)),
-                ('expires_at', models.DateTimeField(blank=True, null=True)),
-                ('last_used_at', models.DateTimeField(blank=True, null=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        db_index=True, default=django.utils.timezone.now
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "key_prefix",
+                    models.CharField(db_index=True, max_length=12, unique=True),
+                ),
+                ("key_hash", models.CharField(max_length=255, unique=True)),
+                (
+                    "permissions",
+                    models.JSONField(
+                        default=list, help_text="['did:read', 'did:resolve']"
+                    ),
+                ),
+                ("rate_limit_per_hour", models.IntegerField(default=1000)),
+                ("is_active", models.BooleanField(default=True)),
+                ("expires_at", models.DateTimeField(blank=True, null=True)),
+                ("last_used_at", models.DateTimeField(blank=True, null=True)),
             ],
             options={
-                'verbose_name': 'API Key',
-                'verbose_name_plural': 'API Keys',
-                'db_table': 'api_keys',
+                "verbose_name": "API Key",
+                "verbose_name_plural": "API Keys",
+                "db_table": "api_keys",
             },
         ),
     ]
