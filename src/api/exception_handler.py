@@ -1,6 +1,3 @@
-# src/api/exception_handler.py
-from __future__ import annotations
-
 import traceback
 
 from django.conf import settings
@@ -16,16 +13,7 @@ from src.core.exceptions import APIError
 
 
 def attach_exception_handlers(api: NinjaExtraAPI) -> None:
-    def _envelope(
-        request,
-        *,
-        message: str,
-        status: int,
-        code: str,
-        data=None,
-        errors=None,
-        extra=None,
-    ):
+    def _envelope(request, *, message: str, status: int, code: str, data=None, errors=None, extra=None,):
         return api.create_response(
             request,
             {

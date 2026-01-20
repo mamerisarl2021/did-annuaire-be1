@@ -1,17 +1,16 @@
 from django.db.models import QuerySet
 from src.users.models import User, UserStatus
 
-from typing import Optional
 from django.db.models import Q
 from src.organizations.models import Organization
 
 
 def user_list(
     *,
-    organization: Optional[Organization] = None,
-    status: Optional[str] = None,
-    role: Optional[str] = None,
-    search: Optional[str] = None,
+    organization: Organization | None = None,
+    status: str | None = None,
+    role: str | None = None,
+    search: str | None = None,
 ) -> QuerySet[User]:
     """
     Liste les utilisateurs avec filtres optionnels
