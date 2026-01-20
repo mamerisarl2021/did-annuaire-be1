@@ -2,11 +2,13 @@ import uuid
 
 from ninja import Schema
 
+
 class DidDocument1(Schema):
     didRecordId: str | None = None
     did: str
     documentContent: dict
     documentMetadata: dict | None = None
+
 
 class DidVersion(Schema):
     didRecordId: str | None = None
@@ -15,12 +17,14 @@ class DidVersion(Schema):
     versionTime: int | None = None
     versionMetadata: dict | None = None
 
+
 class DidState1(Schema):
     didRecordId: str = None
     did: str
     state: str
     stateTime: int | None = None
     stateMetadata: dict | None = None
+
 
 class DidRecord(Schema):
     id: str | None = None
@@ -31,13 +35,15 @@ class DidRecord(Schema):
     didVersion: DidVersion | None = None
     didState: DidState1 | None = None
 
+
 ########################################################################################3
 
 
 class CreateRequest(Schema):
     didDocument: dict
     options: dict | None = None
-    secret: dict | None= None
+    secret: dict | None = None
+
 
 class RegistrarState(Schema):
     jobId: str | None = None
@@ -45,20 +51,18 @@ class RegistrarState(Schema):
     didRegistrationMetadata: dict | None = None
     didDocumentMetadata: dict | None = None
 
+
 class UpdateRequest(Schema):
     did: str
     didDocumentOperation: list[str]
     didDocument: list[dict]
 
+
 class DeactivateRequest(Schema):
     did: str
 
 
-
-
-
 ##########################################################################
-
 
 
 class PublishResponse(Schema):
@@ -68,11 +72,13 @@ class PublishResponse(Schema):
     url: str | None = None
     state: str
 
+
 class ValidateResponse(Schema):
     did: str
     version: int
     valid: bool
     canonical_sha256: str
+
 
 class PublishRequestOut(Schema):
     id: int
@@ -88,6 +94,7 @@ class PublishRequestOut(Schema):
 
 ###########################################################
 
+
 class CertificateOut(Schema):
     id: uuid.UUID
     format: str
@@ -97,12 +104,15 @@ class CertificateOut(Schema):
 
 ###########################################################
 
+
 class KeyInput(Schema):
     certificate_id: uuid.UUID
     key_id: str
     purposes: list[str] | None = None
 
+
 ###############################################################
+
 
 class CreateDIDRequest(Schema):
     organization_id: uuid.UUID
@@ -123,7 +133,9 @@ class CreateDIDResponse(Schema):
     environment: str
     uploaded_public_key_id: uuid.UUID
 
+
 ########################################################
+
 
 class PreviewDIDResponse(Schema):
     did: str
@@ -140,6 +152,7 @@ class PreviewDIDResponse(Schema):
     # Index de la vm clé utilisée (utile au FE)
     key_id: str
 
+
 class PreviewDIDRequest(Schema):
     organization_id: uuid.UUID
     document_type: str
@@ -149,7 +162,3 @@ class PreviewDIDRequest(Schema):
     purposes: list[str] | None = None
     # or multi:
     keys: list[KeyInput] | None = None
-
-
-
-

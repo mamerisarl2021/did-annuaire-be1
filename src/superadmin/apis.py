@@ -24,7 +24,6 @@ from src.users.schemas import UserFilterParams
 
 @api_controller("/superadmin", tags=["Super Admin"], auth=JWTAuth())
 class SuperAdminController(BaseAPIController):
-
     @route.get("/organizations")
     def list_organizations(self, filters: Query[OrgFilterParams]):  # ← MODIFIÉ
         """
@@ -35,8 +34,7 @@ class SuperAdminController(BaseAPIController):
         ensure_superuser(user)
 
         qs = org_selectors.organization_list_with_admins(
-            status=filters.status,
-            search=filters.search
+            status=filters.status, search=filters.search
         )
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
@@ -56,9 +54,7 @@ class SuperAdminController(BaseAPIController):
             message += f" ({', '.join(msg_parts)})"
 
         return self.create_response(
-            message=message,
-            data={"items": data, "pagination": meta},
-            status_code=200
+            message=message, data={"items": data, "pagination": meta}, status_code=200
         )
 
     @route.get("/organizations/{org_id}")
@@ -67,8 +63,11 @@ class SuperAdminController(BaseAPIController):
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
         org = org_selectors.organization_get_with_admin(org_id=org_uuid)
-        return self.create_response(message="Organization details", data=org_to_detail_dto_superadmin(org),
-                                    status_code=200)
+        return self.create_response(
+            message="Organization details",
+            data=org_to_detail_dto_superadmin(org),
+            status_code=200,
+        )
 
     @route.post("/organizations/{org_id}/validate")
     def validate(self, org_id: str):
@@ -76,14 +75,18 @@ class SuperAdminController(BaseAPIController):
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
         sa_services.org_validate(organization_id=org_uuid, validated_by=user)
-        return self.create_response(message="Organization validated successfully", status_code=200)
+        return self.create_response(
+            message="Organization validated successfully", status_code=200
+        )
 
     @route.post("/organizations/{org_id}/refuse")
     def refuse(self, org_id: str, payload: RefusePayload):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        sa_services.org_refuse(organization_id=org_uuid, refused_by=user, reason=payload.reason)
+        sa_services.org_refuse(
+            organization_id=org_uuid, refused_by=user, reason=payload.reason
+        )
         return self.create_response(message="Organization refused", status_code=200)
 
     @route.patch("/organizations/{org_id}/toggle-activation")
@@ -91,9 +94,14 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        org = sa_services.org_toggle_activation(organization_id=org_uuid, toggled_by=user)
-        return self.create_response(message="Organization status updated", data={"id": org.id, "status": org.status},
-                                    status_code=200)
+        org = sa_services.org_toggle_activation(
+            organization_id=org_uuid, toggled_by=user
+        )
+        return self.create_response(
+            message="Organization status updated",
+            data={"id": org.id, "status": org.status},
+            status_code=200,
+        )
 
     @route.delete("/organizations/{org_id}")
     def delete_org(self, org_id: str):
@@ -103,7 +111,7 @@ class SuperAdminController(BaseAPIController):
         sa_services.org_delete(organization_id=org_uuid, deleted_by=user)
         return self.create_response(message="Organization deleted", status_code=200)
 
-    @route.get('/organizations/users')
+    @route.get("/organizations/users")
     def list_all_users(self, filters: Query[UserFilterParams]):
         """
         Liste TOUS les utilisateurs (toutes organisations)
@@ -114,9 +122,7 @@ class SuperAdminController(BaseAPIController):
         ensure_superuser(current_user)
 
         qs = user_selectors.user_list(
-            status=filters.status,
-            role=filters.role,
-            search=filters.search
+            status=filters.status, role=filters.role, search=filters.search
         )
 
         paginator = Paginator(default_page_size=10, max_page_size=100)
@@ -126,10 +132,10 @@ class SuperAdminController(BaseAPIController):
         return self.create_response(
             message="All users fetched",
             data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-            status_code=200
+            status_code=200,
         )
 
-    @route.get('/organizations/{org_id}/users')
+    @route.get("/organizations/{org_id}/users")
     def list_organization_users(self, org_id: str, filters: Query[UserFilterParams]):
         """
         Liste les utilisateurs d'UNE organisation spécifique
@@ -146,7 +152,7 @@ class SuperAdminController(BaseAPIController):
             organization=organization,
             status=filters.status,
             role=filters.role,
-            search=filters.search
+            search=filters.search,
         )
 
         paginator = Paginator(default_page_size=10, max_page_size=100)
@@ -156,14 +162,16 @@ class SuperAdminController(BaseAPIController):
         return self.create_response(
             message=f"Users from {organization.name} fetched",
             data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-            status_code=200
+            status_code=200,
         )
 
     @route.post("/users/{user_id}/resend-invite")
     def resend_invite(self, user_id: str):
         user = self.context.request.auth
         ensure_superuser(user)
-        sa_services.user_resend_invite(user_id=validate_uuid(user_id), requested_by=user)
+        sa_services.user_resend_invite(
+            user_id=validate_uuid(user_id), requested_by=user
+        )
         return self.create_response(message="Invitation re-sent", status_code=200)
 
     @route.get("/organizations/stats")
@@ -179,10 +187,20 @@ class SuperAdminController(BaseAPIController):
 
         stats = {
             "all": Organization.objects.count(),
-            "pending": Organization.objects.filter(status=OrganizationStatus.PENDING).count(),
-            "active": Organization.objects.filter(status=OrganizationStatus.ACTIVE).count(),
-            "suspended": Organization.objects.filter(status=OrganizationStatus.SUSPENDED).count(),
-            "refused": Organization.objects.filter(status=OrganizationStatus.REFUSED).count(),
+            "pending": Organization.objects.filter(
+                status=OrganizationStatus.PENDING
+            ).count(),
+            "active": Organization.objects.filter(
+                status=OrganizationStatus.ACTIVE
+            ).count(),
+            "suspended": Organization.objects.filter(
+                status=OrganizationStatus.SUSPENDED
+            ).count(),
+            "refused": Organization.objects.filter(
+                status=OrganizationStatus.REFUSED
+            ).count(),
         }
 
-        return self.create_response(message="Organizations statistics", data=stats, status_code=200)
+        return self.create_response(
+            message="Organizations statistics", data=stats, status_code=200
+        )

@@ -19,26 +19,29 @@ class OrgCreatePayload(Schema):
     admin_phone: str
     functions: str
 
-    @field_validator('allowed_email_domains')
+    @field_validator("allowed_email_domains")
     @classmethod
     def parse_domains(cls, v):
         if isinstance(v, str):
-            return [domain.strip() for domain in v.split(',') if domain.strip()]
+            return [domain.strip() for domain in v.split(",") if domain.strip()]
         return v
 
-    @field_validator('allowed_email_domains')
+    @field_validator("allowed_email_domains")
     @classmethod
     def validate_email_domains(cls, v):
         if not v:
-            raise ValueError('At least one email domain is required')
+            raise ValueError("At least one email domain is required")
 
         validated_domains = []
         domain_pattern = re.compile(
-            r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$')
+            r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
+        )
 
         for domain in v:
             if not domain_pattern.match(domain):
-                raise ValueError(f'Invalid domain format: "{domain}". Must be like "example.com"')
+                raise ValueError(
+                    f'Invalid domain format: "{domain}". Must be like "example.com"'
+                )
             validated_domains.append(domain)
 
         return validated_domains
@@ -50,6 +53,7 @@ class OrgRefusePayload(Schema):
 
 class OrgFilterParams(Schema):
     """Paramètres de filtrage et recherche pour organisations"""
+
     status: str | None = None
     search: str | None = None
 

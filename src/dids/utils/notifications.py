@@ -2,11 +2,14 @@ from __future__ import annotations
 from django.conf import settings
 from django.core.mail import send_mail, mail_admins
 
+
 def _safe_from_email() -> str:
     return getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@localhost")
 
+
 def _user_email(user) -> str:
     return getattr(user, "email", None) or ""
+
 
 def _org_admin_emails(organization) -> list[str]:
     """
@@ -44,6 +47,7 @@ def _org_admin_emails(organization) -> list[str]:
     # Unicité
     return sorted(set(emails))
 
+
 def send_publish_request_notification(publish_request) -> None:
     """
     Notifie les ORG_ADMIN qu'une demande de publication PROD est en attente.
@@ -67,6 +71,7 @@ def send_publish_request_notification(publish_request) -> None:
         except Exception:
             mail_admins(subject, body, fail_silently=True)
 
+
 def send_publish_decision_notification(publish_request) -> None:
     """
     Notifie le demandeur de la décision (APPROVED/REJECTED).
@@ -84,6 +89,10 @@ def send_publish_decision_notification(publish_request) -> None:
     recipient = _user_email(publish_request.requested_by)
     if recipient:
         try:
-            send_mail(subject, body, _safe_from_email(), [recipient], fail_silently=True)
+            send_mail(
+                subject, body, _safe_from_email(), [recipient], fail_silently=True
+            )
         except Exception:
-            mail_admins(subject, f"(Delivery to requester failed)\n\n{body}", fail_silently=True)
+            mail_admins(
+                subject, f"(Delivery to requester failed)\n\n{body}", fail_silently=True
+            )

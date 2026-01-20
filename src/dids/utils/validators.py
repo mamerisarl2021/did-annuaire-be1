@@ -1,15 +1,21 @@
 from __future__ import annotations
-import json, os, pathlib
+import json
+import os
+import pathlib
 from jsonschema import Draft7Validator
 
-_DEFAULT_SCHEMA_PATH = pathlib.Path(__file__).resolve().parent / "schemas" / "did-document.schema.json"
+_DEFAULT_SCHEMA_PATH = (
+    pathlib.Path(__file__).resolve().parent / "schemas" / "did-document.schema.json"
+)
 _SCHEMA = None
+
 
 def load_schema() -> dict:
     override = os.environ.get("DID_DOCUMENT_SCHEMA_PATH")
     p = pathlib.Path(override) if override else _DEFAULT_SCHEMA_PATH
     with open(p, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 def validate_did_document(document: dict) -> None:
     global _SCHEMA

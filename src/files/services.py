@@ -36,7 +36,9 @@ class FileStandardUploadService:
         self.user = user
         self.file_obj = file_obj
 
-    def _infer_file_name_and_type(self, file_name: str = "", file_type: str = "") -> tuple[str, str]:
+    def _infer_file_name_and_type(
+        self, file_name: str = "", file_type: str = ""
+    ) -> tuple[str, str]:
         if not file_name:
             file_name = getattr(self.file_obj, "name", "") or "upload.bin"
 

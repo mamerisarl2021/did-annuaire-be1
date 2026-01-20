@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class AuditactionConfig(AppConfig):
-    name = 'src.auditaction'
+    name = "src.auditaction"
 
     def ready(self):
         # Connect auth signals → audit entries

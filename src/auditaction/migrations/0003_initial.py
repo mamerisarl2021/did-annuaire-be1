@@ -6,38 +6,51 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('auditaction', '0002_initial'),
+        ("auditaction", "0002_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='auditlog',
-            name='user',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='audit_actions', to=settings.AUTH_USER_MODEL),
+            model_name="auditlog",
+            name="user",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="audit_actions",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['organization', '-created_at'], name='audit_logs_organiz_86ff70_idx'),
+            model_name="auditlog",
+            index=models.Index(
+                fields=["organization", "-created_at"],
+                name="audit_logs_organiz_86ff70_idx",
+            ),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['category', '-created_at'], name='audit_logs_categor_d000e9_idx'),
+            model_name="auditlog",
+            index=models.Index(
+                fields=["category", "-created_at"], name="audit_logs_categor_d000e9_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['action'], name='audit_logs_action_31f574_idx'),
+            model_name="auditlog",
+            index=models.Index(fields=["action"], name="audit_logs_action_31f574_idx"),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['user'], name='audit_logs_user_id_73c422_idx'),
+            model_name="auditlog",
+            index=models.Index(fields=["user"], name="audit_logs_user_id_73c422_idx"),
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['target_type', 'target_id'], name='audit_logs_target__9fc8de_idx'),
+            model_name="auditlog",
+            index=models.Index(
+                fields=["target_type", "target_id"],
+                name="audit_logs_target__9fc8de_idx",
+            ),
         ),
     ]

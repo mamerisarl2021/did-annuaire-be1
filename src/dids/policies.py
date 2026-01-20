@@ -5,15 +5,19 @@ from django.contrib.auth.models import AbstractBaseUser
 
 from src.users.models import UserRole
 
+
 def parse_did_segments(did: str) -> Tuple[str, str, str, str]:
     # did:web:{host}:{org}:{user}:{type}
     parts = did.split(":")
-    assert len(parts) >= 6 and parts[0] == "did" and parts[1] == "web", "Unsupported DID format"
+    assert len(parts) >= 6 and parts[0] == "did" and parts[1] == "web", (
+        "Unsupported DID format"
+    )
     host = parts[2]
     org = parts[3]
     user = parts[4]
     doc_type = ":".join(parts[5:])
     return host, org, user, doc_type
+
 
 def _user_has_role(user: AbstractBaseUser, role: str) -> bool:
     # Superuser natif
@@ -30,6 +34,7 @@ def _user_has_role(user: AbstractBaseUser, role: str) -> bool:
     if role == UserRole.ORG_ADMIN and getattr(user, "is_org_admin", False):
         return True
     return False
+
 
 def is_org_admin(user: AbstractBaseUser, organization) -> bool:
     # SUPERUSER autorisé partout
@@ -54,9 +59,12 @@ def is_org_admin(user: AbstractBaseUser, organization) -> bool:
         return organization.admins.filter(pk=getattr(user, "pk", 0)).exists()
     return False
 
+
 def can_publish_prod(user: AbstractBaseUser, organization) -> bool:
     # SUPERUSER et ORG_ADMIN autorisés
-    if _user_has_role(user, UserRole.SUPERUSER) or _user_has_role(user, UserRole.ORG_ADMIN):
+    if _user_has_role(user, UserRole.SUPERUSER) or _user_has_role(
+        user, UserRole.ORG_ADMIN
+    ):
         return True
     # Droit spécifique booléen
     if getattr(user, "can_publish_prod", False):

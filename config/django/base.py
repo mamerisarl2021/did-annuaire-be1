@@ -91,9 +91,9 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
-           # "libraries": {
+            # "libraries": {
             #    "widget_tweaks": "widget_tweaks.templatetags.widget_tweaks",
-            #},
+            # },
         },
     },
 ]
@@ -175,7 +175,9 @@ from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DID_DOCUMENTS_ROOT = env("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
+DID_DOCUMENTS_ROOT = env(
+    "DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage")
+)
 
 # SITE_ID = 2
 # STORAGES = {

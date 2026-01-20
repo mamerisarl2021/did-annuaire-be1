@@ -20,7 +20,7 @@ services:
     container_name: annuaire-frontend
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.frontend
     environment:
       - NODE_ENV=production
     expose:
@@ -29,11 +29,11 @@ services:
       - annuaire_staging_net
 
   annuaire-backend:
-    build: .
+    image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-backend
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles
@@ -54,7 +54,7 @@ services:
     image: postgres:18
     container_name: annuaire-db
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -79,7 +79,7 @@ services:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - rabbitmq_data:/var/lib/rabbitmq
     env_file:
-      - .env
+      - .env.backend
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -95,11 +95,11 @@ services:
       - annuaire_staging_net
 
   celery:
-    build: .
+    image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-celery
     #command: celery -A src.tasks worker -l info --without-gossip --without-mingle --without-heartbeat
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles
@@ -118,11 +118,11 @@ services:
       - annuaire_staging_net
 
   celery-beat:
-    build: .
+    image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-celery-beat
     #command: celery -A src.tasks beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file:
-      - .env
+      - .env.backend
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles

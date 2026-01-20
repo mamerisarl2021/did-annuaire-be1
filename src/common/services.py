@@ -7,7 +7,11 @@ from .types import DjangoModelType
 
 
 def model_update(
-    *, instance: DjangoModelType, fields: list[str], data: dict[str, Any], auto_updated_at=True,
+    *,
+    instance: DjangoModelType,
+    fields: list[str],
+    data: dict[str, Any],
+    auto_updated_at=True,
 ) -> tuple[DjangoModelType, bool]:
     """
     Generic update service meant to be reused in local update services.

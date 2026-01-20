@@ -3,6 +3,7 @@ from src.dids.models import DIDDocument
 from src.dids.utils.validators import validate_did_document
 from src.dids.services import jcs_canonical_bytes, sha256_hex
 
+
 class Command(BaseCommand):
     help = "Validate DID Document against platform schema and print JCS SHA-256"
 

@@ -6,32 +6,44 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('api_keys', '0001_initial'),
-        ('organizations', '0001_initial'),
+        ("api_keys", "0001_initial"),
+        ("organizations", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='apikey',
-            name='created_by',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_api_keys', to=settings.AUTH_USER_MODEL),
+            model_name="apikey",
+            name="created_by",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="created_api_keys",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='apikey',
-            name='organization',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='api_keys', to='organizations.organization'),
+            model_name="apikey",
+            name="organization",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="api_keys",
+                to="organizations.organization",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='apikey',
-            constraint=models.UniqueConstraint(fields=('key_prefix',), name='api_key_prefix_unique'),
+            model_name="apikey",
+            constraint=models.UniqueConstraint(
+                fields=("key_prefix",), name="api_key_prefix_unique"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='apikey',
-            constraint=models.UniqueConstraint(fields=('key_hash',), name='api_key_hash_unique'),
+            model_name="apikey",
+            constraint=models.UniqueConstraint(
+                fields=("key_hash",), name="api_key_hash_unique"
+            ),
         ),
     ]
