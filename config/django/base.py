@@ -51,6 +51,7 @@ THIRD_PARTY_APPS = [
     "ninja_extra",
     "ninja_jwt",
     "ninja_jwt.token_blacklist",
+    "orbit",
     # 'widget_tweaks',
     # 'corsheaders',
 ]
@@ -68,6 +69,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "orbit.middleware.OrbitMiddleware",
     # 'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -98,6 +100,37 @@ TEMPLATES = [
     },
 ]
 
+# CORS_ALLOW_CREDENTIALS = True
+
+ORBIT_CONFIG = {
+    'ENABLED': True,
+    'SLOW_QUERY_THRESHOLD_MS': 500,
+    'STORAGE_LIMIT': 1000,
+
+    # Core watchers
+    'RECORD_REQUESTS': True,
+    'RECORD_QUERIES': True,
+    'RECORD_LOGS': True,
+    'RECORD_EXCEPTIONS': True,
+
+    # Extended watchers
+    'RECORD_COMMANDS': True,
+    'RECORD_CACHE': True,
+    'RECORD_MODELS': True,
+    'RECORD_HTTP_CLIENT': True,
+    'RECORD_MAIL': True,
+    'RECORD_SIGNALS': True,
+
+    # Advanced watchers (v0.5.0+)
+    'RECORD_JOBS': True,
+    'RECORD_REDIS': True,
+    'RECORD_GATES': True,
+
+    # Security
+    'AUTH_CHECK': lambda request: request.user.is_staff,
+    'IGNORE_PATHS': ['/orbit/', '/static/', '/media/'],
+}
+
 
 WSGI_APPLICATION = "config.wsgi.application"
 
@@ -116,7 +149,6 @@ if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql
     }
 
 CSRF_COOKIE_HTTPONLY = True
-CSRF_USE_SESSIONS = False
 CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
@@ -168,13 +200,13 @@ from config.settings.email_sending import *  # noqa
 from config.settings.files_and_storages import *  # noqa
 from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-from config.settings.sessions import *  # noqa
+#from config.settings.sessions import *  # noqa
 # from config.settings.google_oauth2 import *  # noqa
 
-from config.settings.debug_toolbar.settings import *  # noqa
-from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
+# from config.settings.debug_toolbar.settings import *  # noqa
+# from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
-INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
+# INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
 DID_DOCUMENTS_ROOT = env(
     "DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage")
