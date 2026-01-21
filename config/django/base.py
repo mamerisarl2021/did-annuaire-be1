@@ -115,9 +115,11 @@ if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql
         )
     }
 
-SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
-CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=True)
+CSRF_COOKIE_HTTPONLY = True
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_FAILURE_VIEW = None
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
