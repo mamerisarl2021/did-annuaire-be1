@@ -53,7 +53,7 @@ THIRD_PARTY_APPS = [
     "ninja_jwt.token_blacklist",
     "orbit",
     # 'widget_tweaks',
-    # 'corsheaders',
+    'corsheaders',
 ]
 
 INSTALLED_APPS = [
@@ -70,7 +70,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
-    # 'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -201,7 +201,7 @@ from config.settings.email_sending import *  # noqa
 from config.settings.files_and_storages import *  # noqa
 from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-from config.settings.cors import *
+from config.settings.cors import * # noqa
 # from config.settings.sessions import *  # noqa
 # from config.settings.google_oauth2 import *  # noqa
 
