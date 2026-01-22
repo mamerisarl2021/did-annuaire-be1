@@ -28,7 +28,7 @@ SECRET_KEY = env.str(
 
 DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
+ALLOWED_HOSTS = ["*"] if DEBUG else env.list("ALLOWED_HOSTS", default=[])   
 
 LOCAL_APPS = [
     "src.api.apps.ApiConfig",
@@ -51,7 +51,7 @@ THIRD_PARTY_APPS = [
     "ninja_extra",
     "ninja_jwt",
     "ninja_jwt.token_blacklist",
-    # "orbit",
+    "orbit",
     # 'widget_tweaks',
     # 'corsheaders',
 ]
@@ -69,7 +69,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # "orbit.middleware.OrbitMiddleware",
+    "orbit.middleware.OrbitMiddleware",
     # 'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -101,34 +101,34 @@ TEMPLATES = [
 ]
 
 
-# ORBIT_CONFIG = {
-#     'ENABLED': True,
-#     'SLOW_QUERY_THRESHOLD_MS': 500,
-#     'STORAGE_LIMIT': 1000,
+ORBIT_CONFIG = {
+    'ENABLED': True,
+    'SLOW_QUERY_THRESHOLD_MS': 500,
+    'STORAGE_LIMIT': 1000,
 
-#     # Core watchers
-#     'RECORD_REQUESTS': True,
-#     'RECORD_QUERIES': True,
-#     'RECORD_LOGS': True,
-#     'RECORD_EXCEPTIONS': True,
+    # Core watchers
+    'RECORD_REQUESTS': True,
+    'RECORD_QUERIES': True,
+    'RECORD_LOGS': True,
+    'RECORD_EXCEPTIONS': True,
 
-#     # Extended watchers
-#     'RECORD_COMMANDS': True,
-#     'RECORD_CACHE': True,
-#     'RECORD_MODELS': True,
-#     'RECORD_HTTP_CLIENT': True,
-#     'RECORD_MAIL': True,
-#     'RECORD_SIGNALS': True,
+    # Extended watchers
+    'RECORD_COMMANDS': False,
+    'RECORD_CACHE': True,
+    'RECORD_MODELS': True,
+    'RECORD_HTTP_CLIENT': True,
+    'RECORD_MAIL': True,
+    'RECORD_SIGNALS': True,
 
-#     # Advanced watchers (v0.5.0+)
-#     'RECORD_JOBS': True,
-#     'RECORD_REDIS': True,
-#     'RECORD_GATES': True,
+    # Advanced watchers (v0.5.0+)
+    'RECORD_JOBS': True,
+    'RECORD_REDIS': True,
+    'RECORD_GATES': True,
 
-#     # Security
-#     'AUTH_CHECK': lambda request: request.user.is_staff,
-#     'IGNORE_PATHS': ['/orbit/', '/static/', '/media/'],
-# }
+    # Security
+    'AUTH_CHECK': lambda request: request.user.is_staff,
+    'IGNORE_PATHS': ['/orbit/', '/static/', '/media/'],
+}
 
 
 WSGI_APPLICATION = "config.wsgi.application"
@@ -144,6 +144,8 @@ if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql
     DATABASES = {
         "default": dj_database_url.config(
             default=DATABASE_URL,
+            conn_max_age=500,
+            conn_health_checks=True,
         )
     }
 
@@ -199,6 +201,7 @@ from config.settings.email_sending import *  # noqa
 from config.settings.files_and_storages import *  # noqa
 from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
+from config.settings.cors import *
 # from config.settings.sessions import *  # noqa
 # from config.settings.google_oauth2 import *  # noqa
 
@@ -222,8 +225,10 @@ DID_DOCUMENTS_ROOT = env(
 # }
 ADMIN_USER_NAME = env("ADMIN_USER_NAME")
 ADMIN_USER_EMAIL = env("ADMIN_USER_EMAIL")
-MANAGERS = []
+
 ADMINS = []
-if all([ADMIN_USER_NAME, ADMIN_USER_EMAIL]):
-    ADMINS += [(f"{ADMIN_USER_NAME}", f"{ADMIN_USER_EMAIL}")]
-    MANAGERS = ADMINS
+
+if ADMIN_USER_NAME and ADMIN_USER_EMAIL:
+    ADMINS.append(ADMIN_USER_EMAIL)  # Only add the email string
+
+MANAGERS = ADMINS
