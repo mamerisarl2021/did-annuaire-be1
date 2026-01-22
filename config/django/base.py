@@ -69,7 +69,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "orbit.middleware.OrbitMiddleware",
+    # "orbit.middleware.OrbitMiddleware",
     # 'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -101,34 +101,34 @@ TEMPLATES = [
 ]
 
 
-ORBIT_CONFIG = {
-    'ENABLED': True,
-    'SLOW_QUERY_THRESHOLD_MS': 500,
-    'STORAGE_LIMIT': 1000,
+# ORBIT_CONFIG = {
+#     'ENABLED': True,
+#     'SLOW_QUERY_THRESHOLD_MS': 500,
+#     'STORAGE_LIMIT': 1000,
 
-    # Core watchers
-    'RECORD_REQUESTS': True,
-    'RECORD_QUERIES': True,
-    'RECORD_LOGS': True,
-    'RECORD_EXCEPTIONS': True,
+#     # Core watchers
+#     'RECORD_REQUESTS': True,
+#     'RECORD_QUERIES': True,
+#     'RECORD_LOGS': True,
+#     'RECORD_EXCEPTIONS': True,
 
-    # Extended watchers
-    'RECORD_COMMANDS': True,
-    'RECORD_CACHE': True,
-    'RECORD_MODELS': True,
-    'RECORD_HTTP_CLIENT': True,
-    'RECORD_MAIL': True,
-    'RECORD_SIGNALS': True,
+#     # Extended watchers
+#     'RECORD_COMMANDS': True,
+#     'RECORD_CACHE': True,
+#     'RECORD_MODELS': True,
+#     'RECORD_HTTP_CLIENT': True,
+#     'RECORD_MAIL': True,
+#     'RECORD_SIGNALS': True,
 
-    # Advanced watchers (v0.5.0+)
-    'RECORD_JOBS': True,
-    'RECORD_REDIS': True,
-    'RECORD_GATES': True,
+#     # Advanced watchers (v0.5.0+)
+#     'RECORD_JOBS': True,
+#     'RECORD_REDIS': True,
+#     'RECORD_GATES': True,
 
-    # Security
-    'AUTH_CHECK': lambda request: request.user.is_staff,
-    'IGNORE_PATHS': ['/orbit/', '/static/', '/media/'],
-}
+#     # Security
+#     'AUTH_CHECK': lambda request: request.user.is_staff,
+#     'IGNORE_PATHS': ['/orbit/', '/static/', '/media/'],
+# }
 
 
 WSGI_APPLICATION = "config.wsgi.application"
