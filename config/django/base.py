@@ -51,7 +51,7 @@ THIRD_PARTY_APPS = [
     "ninja_extra",
     "ninja_jwt",
     "ninja_jwt.token_blacklist",
-    "orbit",
+    # "orbit",
     # 'widget_tweaks',
     # 'corsheaders',
 ]
