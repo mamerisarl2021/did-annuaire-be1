@@ -1,8 +1,6 @@
-from django.core.files.base import File as DjangoFile
 from django.db import models
 
 from src.common.models import BaseModel
-from src.files.enums import FileUploadStorage
 from src.files.utils import file_generate_upload_path
 from src.users.models import User
 
@@ -17,11 +15,9 @@ class File(BaseModel):
 
     upload_finished_at = models.DateTimeField(blank=True, null=True)
 
-    uploaded_by = models.ForeignKey(User,
-                                    on_delete=models.SET_NULL,
-                                    null=True,
-                                    related_name='uploaded_files'
-                                    )
+    uploaded_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="uploaded_files"
+    )
 
     @property
     def is_valid(self) -> bool:

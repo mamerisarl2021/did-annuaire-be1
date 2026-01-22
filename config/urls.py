@@ -25,8 +25,9 @@ from src.api.urls import api
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
+    # path("orbit/", include('orbit.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
+# from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
-urlpatterns = DebugToolbarSetup.do_urls(urlpatterns)
+# urlpatterns = DebugToolbarSetup.do_urls(urlpatterns)

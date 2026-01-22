@@ -1,10 +1,4 @@
-from django.shortcuts import get_object_or_404
 
-from src.files.models import File
-from src.files.services import (
-    FileDirectUploadService,
-    FileStandardUploadService,
-)
 
 
 # adapt to django ninja

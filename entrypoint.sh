@@ -26,7 +26,7 @@ python -u manage.py superuser
 
 python -u manage.py check --deploy
 
-# python -u manage.py check_openbao --mount secret --path django --required DJANGO_SECRET_KEY --json
-
 echo "--> Starting web process"
 exec gunicorn ${CONFIG}.wsgi:application --bind $RUNTIME_HOST:$RUNTIME_PORT --config "${APP_DIR}/gunicorn.conf.py"
+
+#exec gunicorn ${CONFIG}.wsgi:application --bind $RUNTIME_HOST:$RUNTIME_PORT --config "gunicorn.conf.py"

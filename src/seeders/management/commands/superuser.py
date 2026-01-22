@@ -1,4 +1,3 @@
-# src/seeders/management/commands/superuser.py
 import os
 from getpass import getpass
 

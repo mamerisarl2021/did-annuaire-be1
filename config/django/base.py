@@ -12,20 +12,21 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-from django.conf.global_settings import MANAGERS, ADMINS
 import dj_database_url
 
-from config.env import APPS_DIR, BASE_DIR, env, env_get
+from config.env import APPS_DIR, BASE_DIR, env
 
-env.read_env(os.path.join(BASE_DIR, ".env"))
+env_path = os.path.join(BASE_DIR, ".env")
+if os.path.exists(env_path):
+    env.read_env(env_path)
 
 
-SECRET_KEY = env_get(
-    name="DJANGO_SECRET_KEY",
+SECRET_KEY = env.str(
+    "DJANGO_SECRET_KEY",
     default="django-insecure-q2m%6pach+q1u7+8re2@_u88vu&d=zk1zc0wyv%sjavy^88&h+",
 )
 
-DEBUG = env_get(name="DEBUG", default=False)
+DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
@@ -50,6 +51,7 @@ THIRD_PARTY_APPS = [
     "ninja_extra",
     "ninja_jwt",
     "ninja_jwt.token_blacklist",
+    # "orbit",
     # 'widget_tweaks',
     # 'corsheaders',
 ]
@@ -67,6 +69,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # "orbit.middleware.OrbitMiddleware",
     # 'corsheaders.middleware.CorsMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -90,12 +93,42 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
-           # "libraries": {
+            # "libraries": {
             #    "widget_tweaks": "widget_tweaks.templatetags.widget_tweaks",
-            #},
+            # },
         },
     },
 ]
+
+
+# ORBIT_CONFIG = {
+#     'ENABLED': True,
+#     'SLOW_QUERY_THRESHOLD_MS': 500,
+#     'STORAGE_LIMIT': 1000,
+
+#     # Core watchers
+#     'RECORD_REQUESTS': True,
+#     'RECORD_QUERIES': True,
+#     'RECORD_LOGS': True,
+#     'RECORD_EXCEPTIONS': True,
+
+#     # Extended watchers
+#     'RECORD_COMMANDS': True,
+#     'RECORD_CACHE': True,
+#     'RECORD_MODELS': True,
+#     'RECORD_HTTP_CLIENT': True,
+#     'RECORD_MAIL': True,
+#     'RECORD_SIGNALS': True,
+
+#     # Advanced watchers (v0.5.0+)
+#     'RECORD_JOBS': True,
+#     'RECORD_REDIS': True,
+#     'RECORD_GATES': True,
+
+#     # Security
+#     'AUTH_CHECK': lambda request: request.user.is_staff,
+#     'IGNORE_PATHS': ['/orbit/', '/static/', '/media/'],
+# }
 
 
 WSGI_APPLICATION = "config.wsgi.application"
@@ -106,7 +139,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
 # }
-DATABASE_URL = env_get("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
+DATABASE_URL = env.str("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
 if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
     DATABASES = {
         "default": dj_database_url.config(
@@ -114,8 +147,8 @@ if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql
         )
     }
 
-SESSION_COOKIE_SECURE = env_get(name="SESSION_COOKIE_SECURE", default=True)
-CSRF_COOKIE_SECURE = env_get("CSRF_COOKIE_SECURE", default=True)
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -152,7 +185,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
-FR_APP_DOMAIN = env_get("FR_APP_DOMAIN", default="http://localhost:8000")
+FR_APP_DOMAIN = env("FR_APP_DOMAIN", default="http://localhost:8000")
 
 from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
@@ -166,15 +199,17 @@ from config.settings.email_sending import *  # noqa
 from config.settings.files_and_storages import *  # noqa
 from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-from config.settings.sessions import *  # noqa
+# from config.settings.sessions import *  # noqa
 # from config.settings.google_oauth2 import *  # noqa
 
-from config.settings.debug_toolbar.settings import *  # noqa
-from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
+# from config.settings.debug_toolbar.settings import *  # noqa
+# from config.settings.debug_toolbar.setup import DebugToolbarSetup  # noqa
 
-INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
+# INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
+DID_DOCUMENTS_ROOT = env(
+    "DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage")
+)
 
 # SITE_ID = 2
 # STORAGES = {
@@ -185,7 +220,8 @@ DID_DOCUMENTS_ROOT = env_get("DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR
 #        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
 #    },
 # }
-
+ADMIN_USER_NAME = env("ADMIN_USER_NAME")
+ADMIN_USER_EMAIL = env("ADMIN_USER_EMAIL")
 MANAGERS = []
 ADMINS = []
 if all([ADMIN_USER_NAME, ADMIN_USER_EMAIL]):

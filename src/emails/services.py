@@ -14,10 +14,20 @@ def _fallback_plain_text(html: str) -> str:
     return re.sub(r"\s+\n", "\n", re.sub(r"[ \t]+", " ", text)).strip()
 
 
-def email_send(*, to: list[str], subject: str, html: str | None = None, text: str | None = None,
-               cc: list[str] | None = None, bcc: list[str] | None = None, reply_to: list[str] | None = None,
-               attachments: list[tuple[str, bytes, str]] | None = None,  # (filename, content, mimetype)
-               extra_headers: dict[str, str] | None = None, connection_kwargs: dict[str, Any] | None = None, ) -> bool:
+def email_send(
+    *,
+    to: list[str],
+    subject: str,
+    html: str | None = None,
+    text: str | None = None,
+    cc: list[str] | None = None,
+    bcc: list[str] | None = None,
+    reply_to: list[str] | None = None,
+    attachments: list[tuple[str, bytes, str]]
+    | None = None,  # (filename, content, mimetype)
+    extra_headers: dict[str, str] | None = None,
+    connection_kwargs: dict[str, Any] | None = None,
+) -> bool:
     """
     Send an email using Django's email backend.
     - If html is provided, sends multipart/alternative (text + html).
@@ -35,27 +45,49 @@ def email_send(*, to: list[str], subject: str, html: str | None = None, text: st
     try:
         if html:
             plain = text or _fallback_plain_text(html)
-            message = EmailMultiAlternatives(subject=subject, body=plain, from_email=from_email, to=to,
-                                             cc=cc or [], bcc=bcc or [], reply_to=reply_to or [],
-                                             headers=extra_headers or {}, connection=connection, )
+            message = EmailMultiAlternatives(
+                subject=subject,
+                body=plain,
+                from_email=from_email,
+                to=to,
+                cc=cc or [],
+                bcc=bcc or [],
+                reply_to=reply_to or [],
+                headers=extra_headers or {},
+                connection=connection,
+            )
             message.attach_alternative(html, "text/html")
         else:
             # text-only path
-            message = EmailMessage(subject=subject, body=(text or ""), from_email=from_email, to=to,
-                                   cc=cc or [], bcc=bcc or [], reply_to=reply_to or [],
-                                   headers=extra_headers or {}, connection=connection, )
+            message = EmailMessage(
+                subject=subject,
+                body=(text or ""),
+                from_email=from_email,
+                to=to,
+                cc=cc or [],
+                bcc=bcc or [],
+                reply_to=reply_to or [],
+                headers=extra_headers or {},
+                connection=connection,
+            )
 
         for att in attachments or []:
             filename, content, mimetype = att
             message.attach(filename, content, mimetype)
 
         sent = message.send(fail_silently=False)
-        audit_action_create(user=None, action=AuditAction.EMAIL_SENT,
-                            details={"to": to, "subject": subject, "result": sent},
-                            category=AuditCategory.SYSTEM, )
+        audit_action_create(
+            user=None,
+            action=AuditAction.EMAIL_SENT,
+            details={"to": to, "subject": subject, "result": sent},
+            category=AuditCategory.SYSTEM,
+        )
         return bool(sent)
     except Exception as exc:
-        audit_action_create(user=None, action=AuditAction.EMAIL_SEND_FAILED,
-                            details={"to": to, "subject": subject, "error": str(exc)},
-                            category=AuditCategory.SYSTEM,)
+        audit_action_create(
+            user=None,
+            action=AuditAction.EMAIL_SEND_FAILED,
+            details={"to": to, "subject": subject, "error": str(exc)},
+            category=AuditCategory.SYSTEM,
+        )
         return False

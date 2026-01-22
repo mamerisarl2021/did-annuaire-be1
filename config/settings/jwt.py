@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from config.env import env
 
 NINJA_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),

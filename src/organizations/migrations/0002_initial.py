@@ -6,31 +6,45 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('organizations', '0001_initial'),
+        ("organizations", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='organization',
-            name='refused_by',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='refused_organizations', to=settings.AUTH_USER_MODEL),
+            model_name="organization",
+            name="refused_by",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="refused_organizations",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='organization',
-            name='validated_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='validated_organizations', to=settings.AUTH_USER_MODEL),
+            model_name="organization",
+            name="validated_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="validated_organizations",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddConstraint(
-            model_name='organization',
-            constraint=models.UniqueConstraint(fields=('email',), name='org_email_unique'),
+            model_name="organization",
+            constraint=models.UniqueConstraint(
+                fields=("email",), name="org_email_unique"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='organization',
-            constraint=models.UniqueConstraint(fields=('slug',), name='org_slug_unique'),
+            model_name="organization",
+            constraint=models.UniqueConstraint(
+                fields=("slug",), name="org_slug_unique"
+            ),
         ),
     ]
