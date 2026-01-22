@@ -100,7 +100,6 @@ TEMPLATES = [
     },
 ]
 
-# CORS_ALLOW_CREDENTIALS = True
 
 ORBIT_CONFIG = {
     'ENABLED': True,
@@ -200,7 +199,7 @@ from config.settings.email_sending import *  # noqa
 from config.settings.files_and_storages import *  # noqa
 from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-#from config.settings.sessions import *  # noqa
+# from config.settings.sessions import *  # noqa
 # from config.settings.google_oauth2 import *  # noqa
 
 # from config.settings.debug_toolbar.settings import *  # noqa
