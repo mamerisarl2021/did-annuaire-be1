@@ -42,7 +42,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 bash\
+    libpq5 bash curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -r appuser && \
