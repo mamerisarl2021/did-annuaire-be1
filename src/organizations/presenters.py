@@ -22,7 +22,6 @@ def org_to_detail_dto_admin(org) -> dict:
         "address": org.address,
         "status": org.status,
         "allowed_email_domains": org.allowed_email_domains,
-        "max_users": org.max_users,
         "max_applications": org.max_applications,
         "validated_at": org.validated_at.isoformat() if org.validated_at else None,
         "refusal_reason": org.refusal_reason if org.refusal_reason else None,

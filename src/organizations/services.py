@@ -240,7 +240,7 @@ def _notify_super_admins_new_org(org: Organization):
                         <li><strong>Email :</strong> {org.email}</li>
                     </ul>
                     <p style="margin-top: 20px;">
-                        <a href="{settings.FR_APP_DOMAIN}" 
+                        <a href="{settings.FR_APP_DOMAIN}/dashboard/superuser"
                            style="background-color: #0056b3; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                             Valider dans le panneau d'administration
                         </a>
