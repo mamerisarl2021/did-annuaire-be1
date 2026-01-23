@@ -8,6 +8,7 @@ from src.dids.apis_registry import RegistryController
 
 from src.organizations.apis import OrganizationController
 from src.users.apis import UserController
+from src.auth.controllers.logout_controller import LogoutController
 from src.dids.apis_universal import (
     UniversalRegistrarController,
     UniversalResolverController,
@@ -29,6 +30,7 @@ api.register_controllers(
     SuperAdminController,
     OrganizationController,
     UserController,
+    LogoutController,
     APIKeyController,
     AuditActionController,
     UniversalRegistrarController,
