@@ -18,7 +18,7 @@ RUNTIME_HOST=${HOST:-0.0.0.0}
 
 export DJANGO_ENV=production
 
-python -u manage.py collectstatic --noinput
+# python -u manage.py collectstatic --noinput
 
 python -u manage.py migrate --noinput
 
