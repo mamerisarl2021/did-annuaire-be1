@@ -20,9 +20,9 @@ export DJANGO_ENV=production
 
 python -u manage.py collectstatic --noinput
 
-python -u manage.py makemigrations --noinput
-
 python -u manage.py migrate --noinput
+
+python -u manage.py setup_periodic_tasks
 
 python -u manage.py superuser
 
