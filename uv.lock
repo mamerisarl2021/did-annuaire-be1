@@ -320,6 +320,7 @@ dependencies = [
     { name = "psycopg", extra = ["c"] },
     { name = "pyld" },
     { name = "pyotp" },
+    { name = "pytz" },
     { name = "qrcode", extra = ["pil"] },
     { name = "sentry-sdk", extra = ["django"] },
 ]
@@ -339,7 +340,7 @@ requires-dist = [
     { name = "django" },
     { name = "django-celery-beat" },
     { name = "django-celery-results" },
-    { name = "django-cors-headers", specifier = ">=4.9.0" },
+    { name = "django-cors-headers" },
     { name = "django-environ" },
     { name = "django-extensions" },
     { name = "django-ninja" },
@@ -351,6 +352,7 @@ requires-dist = [
     { name = "psycopg", extras = ["c"] },
     { name = "pyld" },
     { name = "pyotp" },
+    { name = "pytz", specifier = ">=2025.2" },
     { name = "qrcode", extras = ["pil"] },
     { name = "sentry-sdk", extras = ["django"] },
 ]
