@@ -207,7 +207,7 @@ from config.settings.cors import *  # noqa
 # INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
 DIDS_ROOT = env("DIDS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
-DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", default=False))
+DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", default=False)
 
 # SITE_ID = 2
 # STORAGES = {
