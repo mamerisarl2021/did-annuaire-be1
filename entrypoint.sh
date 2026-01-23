@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+chown -R appuser:appuser /app/mediafiles
+
 CONFIG="config"
 APP_DIR="/app"
 
@@ -29,12 +31,12 @@ python -u manage.py superuser
 python -u manage.py check --deploy
 
 echo "--> Starting web process"
-exec gunicorn ${CONFIG}.wsgi:application \
+exec su appuser -c "gunicorn ${CONFIG}.wsgi:application \
     --capture-output \
     --log-level info \
     --error-logfile - \
     --access-logfile - \
     --bind $RUNTIME_HOST:$RUNTIME_PORT \
-    --config "${APP_DIR}/gunicorn.conf.py"
+    --config ${APP_DIR}/gunicorn.conf.py"
 
 #exec gunicorn ${CONFIG}.wsgi:application --bind $RUNTIME_HOST:$RUNTIME_PORT --config "gunicorn.conf.py"

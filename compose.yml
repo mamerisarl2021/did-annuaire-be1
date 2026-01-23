@@ -32,6 +32,7 @@ services:
     image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-backend
     restart: unless-stopped
+    user: "0"
     env_file:
       - .env.backend
     volumes:
@@ -97,7 +98,8 @@ services:
   celery:
     image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-celery
-    #command: celery -A src.tasks worker -l info --without-gossip --without-mingle --without-heartbeat
+    command: celery -A src.tasks worker -l info --without-gossip --without-mingle --without-heartbeat
+    user: "0"
     env_file:
       - .env.backend
     volumes:
@@ -120,8 +122,8 @@ services:
   celery-beat:
     image: ctrldaviddee/annuaire_did_be:staging-latest
     container_name: annuaire-celery-beat
-    #command: celery -A src.tasks beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    command: celery -A src.tasks beat -l info --scheduler celery.schedulers.PersistentScheduler
+    command: celery -A src.tasks beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    user: "0"
     env_file:
       - .env.backend
     volumes:
