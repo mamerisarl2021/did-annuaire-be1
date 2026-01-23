@@ -32,7 +32,7 @@ ALLOWED_HOSTS = ["*"] if DEBUG else env.list("ALLOWED_HOSTS", default=[])
 
 LOCAL_APPS = [
     "src.api.apps.ApiConfig",
-    "src.api_keys.apps.ApiKeysConfig",
+    #"src.api_keys.apps.ApiKeysConfig",
     "src.auditaction.apps.AuditactionConfig",
     "src.common.apps.CommonConfig",
     "src.dids.apps.DidsConfig",
