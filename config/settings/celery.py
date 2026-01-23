@@ -1,7 +1,5 @@
 from config.env import env
 
-# https://docs.celeryproject.org/en/stable/userguide/configuration.html
-
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="amqp://guest:guest@rabbitmq//")
 CELERY_RESULT_BACKEND = "django-db"
 
@@ -10,9 +8,3 @@ CELERY_TIMEZONE = "UTC"
 CELERY_TASK_SOFT_TIME_LIMIT = 20  # seconds
 CELERY_TASK_TIME_LIMIT = 30  # seconds
 CELERY_TASK_MAX_RETRIES = 3
-CELERY_BEAT_SCHEDULE = {
-    "prune-expired-jwts-daily": {
-        "task": "jwt.flush_expired_tokens",
-        "schedule": 60 * 60 * 24,  # every 24h
-    },
-}
