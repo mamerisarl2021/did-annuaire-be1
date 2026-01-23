@@ -11,7 +11,7 @@ def activate_prod(did_obj, new_doc_model: DIDDocument) -> None:
     new_doc_model.is_active = True
     new_doc_model.save(update_fields=["is_active"])
 
-def publish_to_prod(doc_model: DIDDocument, environment: str) -> str:
+def publish_to_prod(doc_model: DIDDocument) -> str:
     did = doc_model.did
     org = getattr(did.organization, "slug", None) or getattr(did.organization, "namespace", None) or str(
         did.organization_id)

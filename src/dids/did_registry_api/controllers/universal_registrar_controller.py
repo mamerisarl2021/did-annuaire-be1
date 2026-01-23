@@ -94,7 +94,7 @@ class UniversalRegistrarController:
         did_doc = DIDDocument.objects.create(did=did_obj, version=next_version, document=doc, environment="DRAFT",
                                              is_active=False)
 
-        url = publish_to_prod(did_doc, "PROD")
+        url = publish_to_prod(did_doc)
         return ok(request,
                   did_state={"state": "finished", "did": did_obj.did, "environment": "PROD", "location": url},
                   did_doc_meta={"versionId": str(did_doc.version), "environment": "PROD", "published": True},
