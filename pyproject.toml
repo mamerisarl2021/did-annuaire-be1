@@ -6,11 +6,11 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "boto3",
-    "celery==5.6.2",
+    "celery",
     "dj-database-url",
     "django",
-    "django-celery-beat==2.8.1",
-    "django-celery-results==2.6.0",
+    "django-celery-beat>=2.8.1",
+    "django-celery-results",
     "django-cors-headers",
     "django-environ",
     "django-extensions",

@@ -3,8 +3,8 @@ scripts:
     - python manage.py setup_periodic_tasks
   
   serve:
-    - $env.PYTHONDONTWRITEBYTECODE = "1"
-    - $env.PYTHONUNBUFFERED = "1"
+    - export PYTHONDONTWRITEBYTECODE=1
+    - export PYTHONUNBUFFERED=1
     - python manage.py runserver
   
   migrations:

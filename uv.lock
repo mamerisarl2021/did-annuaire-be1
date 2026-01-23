@@ -347,11 +347,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "boto3" },
-    { name = "celery", specifier = "==5.6.2" },
+    { name = "celery" },
     { name = "dj-database-url" },
     { name = "django" },
-    { name = "django-celery-beat", specifier = "==2.8.1" },
-    { name = "django-celery-results", specifier = "==2.6.0" },
+    { name = "django-celery-beat", specifier = ">=2.8.1" },
+    { name = "django-celery-results" },
     { name = "django-cors-headers" },
     { name = "django-environ" },
     { name = "django-extensions" },

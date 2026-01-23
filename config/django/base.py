@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-import dj_database_url
+import dj_database_url 
 
 from config.env import APPS_DIR, BASE_DIR, env
 
@@ -102,7 +102,7 @@ TEMPLATES = [
 
 
 ORBIT_CONFIG = {
-    "ENABLED": True,
+    "ENABLED": False,
     "SLOW_QUERY_THRESHOLD_MS": 500,
     "STORAGE_LIMIT": 1000,
     # Core watchers
@@ -111,7 +111,7 @@ ORBIT_CONFIG = {
     "RECORD_LOGS": True,
     "RECORD_EXCEPTIONS": True,
     # Extended watchers
-    "RECORD_COMMANDS": False,
+    "RECORD_COMMANDS": True,
     "RECORD_CACHE": True,
     "RECORD_MODELS": True,
     "RECORD_HTTP_CLIENT": True,
@@ -206,9 +206,8 @@ from config.settings.cors import *  # noqa
 
 # INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DID_DOCUMENTS_ROOT = env(
-    "DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage")
-)
+DIDS_ROOT = env("DIDS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
+DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", "False")
 
 # SITE_ID = 2
 # STORAGES = {
