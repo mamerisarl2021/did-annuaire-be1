@@ -52,7 +52,7 @@ class PublishRequestsController:
         pr.save(update_fields=["status", "decided_by", "decided_at", "note"])
 
         send_publish_decision_notification(pr)
-        url = publish_to_prod(pr.did_document, "PROD")
+        url = publish_to_prod(pr.did_document)
         return ok(request,
                   did_state={"state": "finished", "did": pr.did.did, "environment": "PROD", "location": url},
                   did_doc_meta={"versionId": str(pr.did_document.version), "environment": "PROD", "published": True},
