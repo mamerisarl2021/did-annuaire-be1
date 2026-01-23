@@ -2,7 +2,7 @@
 from django.db.models import QuerySet
 from src.dids.models import PublishRequest
 
-def list_publish_requests(org_id: int | str, status: str | None, offset: int, limit: int) -> QuerySet[PublishRequest]:
+def list_publish_requests(org_id: str | str, status: str | None, offset: int, limit: int) -> QuerySet[PublishRequest]:
     """
     Read-only selector: liste les demandes d'approbation pour une organisation.
     Applique select_related pour éviter les N+1 et borne le paging.
@@ -16,7 +16,7 @@ def list_publish_requests(org_id: int | str, status: str | None, offset: int, li
     lim = min(200, max(1, int(limit or 50)))
     return qs.order_by("-created_at")[off: off + lim]
 
-def get_publish_request(pr_id: int) -> PublishRequest:
+def get_publish_request(pr_id: str) -> PublishRequest:
     """
     Read-only selector: charge une demande d'approbation par id avec toutes les relations utiles.
     """

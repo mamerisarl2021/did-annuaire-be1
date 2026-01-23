@@ -32,7 +32,6 @@ def org_to_detail_dto_superadmin(org) -> dict:
         "address": org.address,
         "status": org.status,
         "allowed_email_domains": org.allowed_email_domains,
-        "max_applications": org.max_applications,
         "validated_at": org.validated_at.isoformat() if org.validated_at else None,
         "refusal_reason": org.refusal_reason,
         "created_at": org.created_at.isoformat(),

@@ -21,10 +21,10 @@ def _parse_dt(value: str | None) -> datetime | None:
 
 def audit_actions_queryset(
     *,
-    organization_id: int | None,
+    organization_id: str | None,
     category: str | None,
     action: str | None,
-    user_id: int | None,
+    user_id: str | None,
     severity: str | None,
     date_from: str | None,
     date_to: str | None,
@@ -63,10 +63,10 @@ def audit_actions_queryset(
 
 def audit_actions_list_paginated(
     *,
-    organization_id: int | None,
+    organization_id: str | None,
     category: str | None,
     action: str | None,
-    user_id: int | None,
+    user_id: str | None,
     severity: str | None,
     date_from: str | None,
     date_to: str | None,
@@ -91,7 +91,7 @@ def audit_actions_list_paginated(
 
 def audit_stats_by_category(
     *,
-    organization_id: int | None,
+    organization_id: str | None,
     date_from: str | None = None,
     date_to: str | None = None,
 ) -> list[dict[str, any]]:

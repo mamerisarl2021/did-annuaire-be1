@@ -38,7 +38,7 @@ class PublishRequestsController:
         } for pr in qs]
 
     @route.post("/publish-requests/{pr_id}/approve")
-    def approve(self, request, pr_id: int, note: str | None = None):
+    def approve(self, request, pr_id: str, note: str | None = None):
         pr = get_publish_request(pr_id)
         org = pr.did.organization
         if not is_org_admin(request.user, org):
@@ -60,7 +60,7 @@ class PublishRequestsController:
                   status=200)
 
     @route.post("/publish-requests/{pr_id}/reject")
-    def reject(self, request, pr_id: int, note: str = None):
+    def reject(self, request, pr_id: str, note: str = None):
         pr = get_publish_request(pr_id)
         org = pr.did.organization
         if not is_org_admin(request.user, org):
