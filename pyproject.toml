@@ -23,6 +23,7 @@ dependencies = [
     "psycopg[c]",
     "pyld",
     "pyotp",
+    "pytz",
     "qrcode[pil]",
     "sentry-sdk[django]",
 ]

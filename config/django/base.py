@@ -176,6 +176,9 @@ USE_I18N = True
 
 USE_TZ = True
 
+# force pytz instead of zoneinfo
+USE_DEPRECATED_PYTZ = True
+
 
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
