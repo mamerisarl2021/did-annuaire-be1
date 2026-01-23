@@ -29,7 +29,7 @@ class AuditAction(models.TextChoices):
     ORG_VALIDATED = "ORG_VALIDATED", "Organisation validée"
     ORG_REFUSED = "ORG_REFUSED", "Organisation refusée"
     ORG_SUSPENDED = "ORG_SUSPENDED", "Organisation suspendue"
-    ORG_DELETED = "ORG_DELETED", "Organization Deleted"
+    ORG_DELETED = "ORG_DELETED", "Organization supprimé"
     ORGANIZATION_TOGGLED_ACTIVATION = (
         "ORGANIZATION_TOGGLED_ACTIVATION",
         "Organization status toggled",
@@ -70,7 +70,6 @@ class AuditAction(models.TextChoices):
 class AuditLog(BaseModel):
     """
     Journal d'audit pour tracer toutes les actions importantes
-    US7.1 - Journal d'audit
     """
 
     # Acteur/Où

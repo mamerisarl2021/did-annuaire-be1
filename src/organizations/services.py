@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-import uuid
-
 from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
@@ -104,7 +100,7 @@ def organization_create(
 
 
 @transaction.atomic
-def organization_delete(*, organization_id: uuid.UUID, deleted_by: User) -> None:
+def organization_delete(*, organization_id: str, deleted_by: User) -> None:
     org = Organization.objects.get(id=organization_id)
     org_name = org.name
     org_id = org.id
@@ -119,7 +115,7 @@ def organization_delete(*, organization_id: uuid.UUID, deleted_by: User) -> None
 
 @transaction.atomic
 def organization_toggle_activation(
-    *, organization_id: uuid.UUID, toggled_by: User
+    *, organization_id: str, toggled_by: User
 ) -> Organization:
     org = Organization.objects.get(id=organization_id)
     if org.status == OrganizationStatus.ACTIVE:
@@ -140,7 +136,7 @@ def organization_toggle_activation(
 
 @transaction.atomic
 def organization_validate(
-    *, organization_id: uuid.UUID, validated_by: User
+    *, organization_id: str, validated_by: User
 ) -> Organization:
     """Super admin valide une organisation"""
 
@@ -172,7 +168,7 @@ def organization_validate(
 
 @transaction.atomic
 def organization_refuse(
-    *, organization_id: uuid.UUID, refused_by: User, reason: str
+    *, organization_id: str, refused_by: User, reason: str
 ) -> Organization:
     """Super admin refuse une organisation"""
 

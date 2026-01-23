@@ -6,3 +6,7 @@ scripts:
     - export PYTHONDONTWRITEBYTECODE=1
     - export PYTHONUNBUFFERED=1
     - python manage.py runserver
+  
+  migrations:
+     - python manage.py makemigrations
+     - python manage.py migrate

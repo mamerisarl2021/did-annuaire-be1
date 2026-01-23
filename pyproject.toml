@@ -9,7 +9,7 @@ dependencies = [
     "celery",
     "dj-database-url",
     "django",
-    "django-celery-beat",
+    "django-celery-beat>=2.8.1",
     "django-celery-results",
     "django-cors-headers",
     "django-environ",
@@ -23,6 +23,7 @@ dependencies = [
     "psycopg[c]",
     "pyld",
     "pyotp",
+    "pytz",
     "qrcode[pil]",
     "sentry-sdk[django]",
 ]

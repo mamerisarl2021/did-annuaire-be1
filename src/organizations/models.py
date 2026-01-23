@@ -4,10 +4,10 @@ from src.common.models import BaseModel
 
 
 class OrganizationStatus(models.TextChoices):
-    PENDING = "PENDING", "En attente"
-    ACTIVE = "ACTIVE", "Actif"
-    REFUSED = "REFUSED", "Refusé"
-    SUSPENDED = "SUSPENDED", "Suspendu"
+    PENDING = "PENDING", "Pending"
+    ACTIVE = "ACTIVE", "Active"
+    REFUSED = "REFUSED", "Refused"
+    SUSPENDED = "SUSPENDED", "Suspended"
 
 
 class Organization(BaseModel):
@@ -15,7 +15,7 @@ class Organization(BaseModel):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
 
-    # Type et pays
+    # Type and country
     type = models.CharField(
         max_length=50,
         choices={
@@ -26,7 +26,7 @@ class Organization(BaseModel):
         },
         default="Other",
     )
-    country = models.CharField(max_length=50)  # CODE ISO
+    country = models.CharField(max_length=50)
 
     # Contact
     email = models.EmailField(unique=True)
@@ -47,6 +47,7 @@ class Organization(BaseModel):
     )
     authorization_document = models.FileField(
         upload_to="organizations/authorizations/",
+        help_text="Autorisation de l’organisation (document signé par le représentant légal de l’organisation)"
     )
 
     # Statut
@@ -65,7 +66,7 @@ class Organization(BaseModel):
         null=True,
         blank=True,
         related_name="validated_organizations",
-    )  # Ask coderabbit why not related_name='+'
+    )  # why not related_name='+'
 
     # Refus
     refused_at = models.DateTimeField(null=True, blank=True)
@@ -75,12 +76,8 @@ class Organization(BaseModel):
         blank=True,
         null=True,
         related_name="refused_organizations",
-    )  # Ask coderabbit why not related_name='+'
+    )  # not related_name='+'
     refusal_reason = models.TextField(blank=True)
-
-    # Limites
-    max_users = models.IntegerField(default=10)  # Ask coderabbit "Why limit users?"
-    max_applications = models.IntegerField(default=5)
 
     class Meta:
         db_table = "organizations"
@@ -89,7 +86,6 @@ class Organization(BaseModel):
         constraints = [
             models.UniqueConstraint(fields=["email"], name="org_email_unique"),
             models.UniqueConstraint(fields=["slug"], name="org_slug_unique"),
-            # models.UniqueConstraint(fields=["name"], name="org_name_unique"),
         ]
 
     def __str__(self):

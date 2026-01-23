@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-import dj_database_url
+import dj_database_url 
 
 from config.env import APPS_DIR, BASE_DIR, env
 
@@ -32,7 +32,7 @@ ALLOWED_HOSTS = ["*"] if DEBUG else env.list("ALLOWED_HOSTS", default=[])
 
 LOCAL_APPS = [
     "src.api.apps.ApiConfig",
-    "src.api_keys.apps.ApiKeysConfig",
+    #"src.api_keys.apps.ApiKeysConfig",
     "src.auditaction.apps.AuditactionConfig",
     "src.common.apps.CommonConfig",
     "src.dids.apps.DidsConfig",
@@ -111,7 +111,7 @@ ORBIT_CONFIG = {
     "RECORD_LOGS": True,
     "RECORD_EXCEPTIONS": True,
     # Extended watchers
-    "RECORD_COMMANDS": False,
+    "RECORD_COMMANDS": True,
     "RECORD_CACHE": True,
     "RECORD_MODELS": True,
     "RECORD_HTTP_CLIENT": True,
@@ -149,7 +149,7 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
-DATABASES["default"]["ATOMIC_REQUESTS"] = True
+# DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -183,7 +183,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
-FR_APP_DOMAIN = env("FR_APP_DOMAIN", default="http://localhost:8000")
+FR_APP_DOMAIN = env("FR_APP_DOMAIN", default="http://localhost:3000")
 
 from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
@@ -206,9 +206,8 @@ from config.settings.cors import *  # noqa
 
 # INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DID_DOCUMENTS_ROOT = env(
-    "DID_DOCUMENTS_ROOT", default=os.path.join(BASE_DIR, "dids_storage")
-)
+DIDS_ROOT = env("DIDS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
+DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", "False")
 
 # SITE_ID = 2
 # STORAGES = {
