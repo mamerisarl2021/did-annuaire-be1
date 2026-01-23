@@ -28,7 +28,7 @@ SECRET_KEY = env.str(
 
 DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = ["*"] if DEBUG else env.list("ALLOWED_HOSTS", default=[])   
+ALLOWED_HOSTS = ["*"] if DEBUG else env.list("ALLOWED_HOSTS", default=[])
 
 LOCAL_APPS = [
     "src.api.apps.ApiConfig",
@@ -53,7 +53,7 @@ THIRD_PARTY_APPS = [
     "ninja_jwt.token_blacklist",
     "orbit",
     # 'widget_tweaks',
-    'corsheaders',
+    "corsheaders",
 ]
 
 INSTALLED_APPS = [
@@ -70,7 +70,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -102,32 +102,28 @@ TEMPLATES = [
 
 
 ORBIT_CONFIG = {
-    'ENABLED': True,
-    'SLOW_QUERY_THRESHOLD_MS': 500,
-    'STORAGE_LIMIT': 1000,
-
+    "ENABLED": True,
+    "SLOW_QUERY_THRESHOLD_MS": 500,
+    "STORAGE_LIMIT": 1000,
     # Core watchers
-    'RECORD_REQUESTS': True,
-    'RECORD_QUERIES': True,
-    'RECORD_LOGS': True,
-    'RECORD_EXCEPTIONS': True,
-
+    "RECORD_REQUESTS": True,
+    "RECORD_QUERIES": True,
+    "RECORD_LOGS": True,
+    "RECORD_EXCEPTIONS": True,
     # Extended watchers
-    'RECORD_COMMANDS': False,
-    'RECORD_CACHE': True,
-    'RECORD_MODELS': True,
-    'RECORD_HTTP_CLIENT': True,
-    'RECORD_MAIL': True,
-    'RECORD_SIGNALS': True,
-
+    "RECORD_COMMANDS": False,
+    "RECORD_CACHE": True,
+    "RECORD_MODELS": True,
+    "RECORD_HTTP_CLIENT": True,
+    "RECORD_MAIL": True,
+    "RECORD_SIGNALS": True,
     # Advanced watchers (v0.5.0+)
-    'RECORD_JOBS': True,
-    'RECORD_REDIS': True,
-    'RECORD_GATES': True,
-
+    "RECORD_JOBS": True,
+    "RECORD_REDIS": True,
+    "RECORD_GATES": True,
     # Security
-    'AUTH_CHECK': lambda request: request.user.is_staff,
-    'IGNORE_PATHS': ['/orbit/', '/static/', '/media/'],
+    "AUTH_CHECK": lambda request: request.user.is_staff,
+    "IGNORE_PATHS": ["/orbit/", "/static/", "/media/"],
 }
 
 
@@ -201,7 +197,7 @@ from config.settings.email_sending import *  # noqa
 from config.settings.files_and_storages import *  # noqa
 from config.settings.jwt import *  # noqa
 from config.settings.sentry import *  # noqa
-from config.settings.cors import * # noqa
+from config.settings.cors import *  # noqa
 # from config.settings.sessions import *  # noqa
 # from config.settings.google_oauth2 import *  # noqa
 

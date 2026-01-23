@@ -1,6 +1,3 @@
-
-
-
 # adapt to django ninja
 class FileStandardUploadApi:
     pass

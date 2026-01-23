@@ -20,13 +20,21 @@ export DJANGO_ENV=production
 
 python -u manage.py collectstatic --noinput
 
-python -u manage.py migrate --no-input
+python -u manage.py makemigrations --noinput
+
+python -u manage.py migrate --noinput
 
 python -u manage.py superuser
 
 python -u manage.py check --deploy
 
 echo "--> Starting web process"
-exec gunicorn ${CONFIG}.wsgi:application --bind $RUNTIME_HOST:$RUNTIME_PORT --config "${APP_DIR}/gunicorn.conf.py"
+exec gunicorn ${CONFIG}.wsgi:application \
+    --capture-output \
+    --log-level info \
+    --error-logfile - \
+    --access-logfile - \
+    --bind $RUNTIME_HOST:$RUNTIME_PORT \
+    --config "${APP_DIR}/gunicorn.conf.py"
 
 #exec gunicorn ${CONFIG}.wsgi:application --bind $RUNTIME_HOST:$RUNTIME_PORT --config "gunicorn.conf.py"
