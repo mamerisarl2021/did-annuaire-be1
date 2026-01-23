@@ -75,7 +75,7 @@ def audit_action_create(
     category: str | None = None,
     organization=None,
     target_type: str = "",
-    target_id: int | None = None,
+    target_id: str | None = None,
     severity: str = Severity.INFO,
     request: HttpRequest | None = None,
 ) -> AuditLog:

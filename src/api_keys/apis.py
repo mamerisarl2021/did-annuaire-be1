@@ -69,7 +69,7 @@ class APIKeyController(ControllerBase):
         ]
 
     @route.post("/{api_key_id}/revoke")
-    def revoke_api_key(self, api_key_id: int):
+    def revoke_api_key(self, api_key_id: str):
         """Révoquer une clé API"""
 
         user = self.context.request.auth

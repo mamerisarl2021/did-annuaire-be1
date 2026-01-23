@@ -7,7 +7,7 @@ from src.auditaction import selectors
 from src.users.models import UserRole
 
 
-def _scope_org_id_for_user(user) -> int | None:
+def _scope_org_id_for_user(user) -> str | None:
     # SUPERUSER sees all orgs, others are scoped to own org
     if getattr(user, "role", "").upper() == UserRole.SUPERUSER:
         return None
@@ -74,7 +74,7 @@ class AuditActionController(ControllerBase):
         }
 
     @route.get("/actions/{audit_id}")
-    def get_action(self, audit_id: int):
+    def get_action(self, audit_id: str):
         current = self.context.request.auth
         obj = get_object_or_404(AuditAction, id=audit_id)
 
