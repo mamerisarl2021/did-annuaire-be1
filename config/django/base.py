@@ -176,9 +176,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-# force pytz instead of zoneinfo
-USE_DEPRECATED_PYTZ = True
-
 
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
@@ -186,7 +183,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
-FR_APP_DOMAIN = env("FR_APP_DOMAIN", default="http://localhost:8000")
+FR_APP_DOMAIN = env("FR_APP_DOMAIN", default="http://localhost:3000")
 
 from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa

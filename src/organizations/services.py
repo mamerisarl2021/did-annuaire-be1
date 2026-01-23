@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-import uuid
-
 from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
@@ -172,7 +168,7 @@ def organization_validate(
 
 @transaction.atomic
 def organization_refuse(
-    *, organization_id: uuid.UUID, refused_by: User, reason: str
+    *, organization_id: str, refused_by: User, reason: str
 ) -> Organization:
     """Super admin refuse une organisation"""
 

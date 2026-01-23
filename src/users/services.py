@@ -7,6 +7,7 @@ from datetime import timedelta
 import pyotp
 import qrcode
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -67,7 +68,7 @@ def user_send_invitation(*, user: User, invited_by: User):
     user.status = UserStatus.INVITED
     user.save()
 
-    activation_url = f"http://localhost:8000/activate?token={token}"
+    activation_url = f"{settings.FR_APP_DOMAIN}/activate?token={token}"
     email_send(
         to=[user.email],
         subject=f"Invitation - {user.organization.name if user.organization else 'DID Annuaire'}",
