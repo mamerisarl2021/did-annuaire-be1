@@ -5,13 +5,14 @@ import pathlib
 from django.conf import settings
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
+from ninja_extra.throttling import DynamicRateThrottle
 
 from src.core.apis import BaseAPIController
 from src.core.policies import ensure_superuser
 
-@api_controller("/diagnostics", tags=["Diagnostics"])
+@api_controller("/diagnostics", tags=["Diagnostics"], throttle=[DynamicRateThrottle(scope="sustained")])
 class PublishHealthController(BaseAPIController):
-    @route.get("/publish-root", throttle=[])
+    @route.get("/publish-root")
     def publish_root(self, request):
         """
         Superuser-only diagnostics for the DID publish root (DIDS_ROOT).
