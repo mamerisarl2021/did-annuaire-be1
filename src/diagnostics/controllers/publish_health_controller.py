@@ -20,8 +20,7 @@ class PublishHealthController(BaseAPIController):
         Reports path info, writability, disk usage, and sample fs path + public URL.
         """
         user = request.user
-        if not ensure_superuser(user):
-            raise HttpError(403, "Forbidden")
+        ensure_superuser(user)    
 
         root = getattr(settings, "DIDS_ROOT", "/app/data/dids/.well-known")
         host = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
