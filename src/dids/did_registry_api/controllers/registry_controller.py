@@ -1,8 +1,10 @@
+
 from django.db import IntegrityError, transaction
 from django.db.models import Max, OuterRef, Subquery
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+from django.utils import timezone
 
 from jsonschema.exceptions import ValidationError
 from ninja import Query, Body
@@ -302,6 +304,8 @@ class RegistryController(BaseAPIController):
         # Signing disabled: publish as-is to PROD
         if not getattr(settings, "DIDS_SIGNING_ENABLED", False):
             url = publish_to_prod(doc)
+            doc.published_at =  timezone.now()
+            doc.published_by = request.user
             return ok(
                 request,
                 did_state={"state": "finished", "did": did_obj.did, "environment": "PROD", "location": url},
