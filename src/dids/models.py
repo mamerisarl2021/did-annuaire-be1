@@ -99,7 +99,7 @@ class DIDDocument(BaseModel):
     )
     file_sha256 = models.CharField(
         max_length=64, null=True, blank=True,
-        help_text="SHA-256 of published did.json (PREPROD/PROD)"
+        help_text="SHA-256 of published did.json (PROD)"
     )
     file_etag = models.CharField(
         max_length=128, null=True, blank=True,
