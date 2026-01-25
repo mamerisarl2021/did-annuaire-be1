@@ -9,6 +9,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - static_volume:/static:ro
       - media_volume:/media:ro
+      - dids_volume:/app/data/dids:ro
     depends_on:
       - annuaire-frontend
       - annuaire-backend
@@ -38,6 +39,7 @@ services:
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles
+      - dids_volume:/app/data/dids
     depends_on:
       db:
         condition: service_healthy
@@ -148,6 +150,7 @@ volumes:
   rabbitmq_data:
   static_volume:
   media_volume:
+  dids_volume:
 
 networks:
   annuaire_staging_net:

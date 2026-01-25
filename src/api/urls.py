@@ -8,6 +8,7 @@ from src.dids.did_registry_api.controllers.keys_controller import KeysController
 from src.dids.did_registry_api.controllers.publish_requests_controller import PublishRequestsController
 from src.dids.did_registry_api.controllers.registry_controller import RegistryController
 from src.dids.did_registry_api.controllers.universal_registrar_controller import UniversalRegistrarController
+from src.diagnostics.controllers.publish_health_controller import PublishHealthController
 from src.dids.resolver.controllers import ResolverController
 
 from src.organizations.apis import OrganizationController
@@ -39,4 +40,5 @@ api.register_controllers(
     CertificatesController,
     ResolverController,
     LogoutController,
+    PublishHealthController,
 )

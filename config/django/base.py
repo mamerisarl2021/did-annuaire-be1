@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-import dj_database_url 
+import dj_database_url
 
 from config.env import APPS_DIR, BASE_DIR, env
 
