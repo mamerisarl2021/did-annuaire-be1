@@ -1,7 +1,12 @@
-import os, tempfile, pathlib
+import os
+import tempfile
+import pathlib
+
+from django.conf import settings
+
 from src.dids.proof_crypto_engine.canonical.jcs import sha256_hex
 
-DIDS_ROOT = os.environ.get("DIDS_ROOT", "/var/www/dids/.well-known")
+DIDS_ROOT = settings.DIDS_ROOT
 
 def atomic_write(relpath: str, data: bytes) -> tuple[str, str | None]:
     path = pathlib.Path(DIDS_ROOT) / relpath
