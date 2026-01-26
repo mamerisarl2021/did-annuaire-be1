@@ -3,6 +3,7 @@ from ninja_extra import api_controller, route
 from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 
 from src.core.apis import BaseAPIController
 from src.dids.models import DID
@@ -11,7 +12,7 @@ from src.api.pagination import Paginator
 from src.common.utils import validate_uuid
 from src.dids.publishing.selectors import published_dir_relpath_for_did
 from src.dids.publishing.services import remove_published_folder
-
+from src.dids.resolver.services import parse_did_web
 from src.organizations.models import Organization
 from src.organizations import selectors as org_selectors
 from src.organizations.schemas import OrgFilterParams
@@ -214,8 +215,8 @@ class SuperAdminController(BaseAPIController):
     def cleanup_published_folder(self, request, body: dict = Body(...)):
         """
         Superuser-only. Remove the published folder (org/user/doc_type) for a DID.
-        Body: { "did": "<did:web:...>" }
-        Note: nginx remains RO; deletion happens from backend's RW mount.
+        Body: { "did": "<did:web:...>", "prune_empty_parents": false }
+        Works even if no DID row exists in DB; validates host and path containment.
         """
         if not getattr(request.user, "is_superuser", False):
             raise HttpError(403, "Forbidden")
@@ -224,12 +225,15 @@ class SuperAdminController(BaseAPIController):
         if not did or not isinstance(did, str):
             raise HttpError(400, "did is required")
 
-        # Ensure DID exists in DB (avoids deleting unrelated paths)
-        get_object_or_404(DID, did=did)
+        # Safety: ensure the DID host matches our configured public host
+        host, org, user, doc_type = parse_did_web(did)
+        expected = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
+        if host != expected:
+            raise HttpError(400, f"Host mismatch: expected {expected}, got {host}")
 
         try:
             rel_dir, org, user, doc_type = published_dir_relpath_for_did(did)
-            result = remove_published_folder(rel_dir)
+            result = remove_published_folder(rel_dir, prune_empty_parents=bool((body or {}).get("prune_empty_parents")))
         except ValueError as ve:
             raise HttpError(400, str(ve))
 
@@ -244,6 +248,7 @@ class SuperAdminController(BaseAPIController):
                 "rel_dir": rel_dir,
                 "abs_path": result["abs_path"],
                 "removed": result["removed"],
+                "pruned": result.get("pruned", []),
             },
             status_code=200,
         )

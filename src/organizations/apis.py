@@ -124,3 +124,18 @@ class OrganizationController(BaseAPIController):
         return self.create_response(
             message="Organizations statistics", data=stats, status_code=200
         )
+        
+    @route.get("/id/{org_id}/status", auth=None)
+    def get_organization_status(self, org_id: str):
+        """
+        Endpoint public pour récupérer le statut d'une organisation
+        Pas d'authentification requise
+        """
+        org_id = validate_uuid(org_id)
+        org = get_object_or_404(Organization, id=org_id)
+        
+        return self.create_response(
+            message="Organization status",
+            data={"status": org.status},
+            status_code=200
+        )
