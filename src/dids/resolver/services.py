@@ -1,9 +1,11 @@
 from __future__ import annotations
-import os, json, pathlib
+import json
+import pathlib
+from django.conf import settings
 from django.shortcuts import get_object_or_404
-from src.dids.models import DID as DIDModel, DIDDocument
+from src.dids.models import DID as DIDModel
 
-DIDS_ROOT = os.environ.get("DIDS_ROOT", "/var/www/dids/.well-known")
+DIDS_ROOT = settings.DIDS_ROOT
 
 def parse_did_web(did: str) -> tuple[str, str, str, str]:
     # did:web:{host}:{org}:{user}:{doc_type}

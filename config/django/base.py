@@ -14,6 +14,8 @@ import os
 
 import dj_database_url
 
+from django.core.exceptions import ImproperlyConfigured
+
 from config.env import APPS_DIR, BASE_DIR, env
 
 env_path = os.path.join(BASE_DIR, ".env")
@@ -206,7 +208,9 @@ from config.settings.cors import *  # noqa
 
 # INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DIDS_ROOT = env("DIDS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
+if not (DIDS_ROOT := env("DIDS_ROOT", default=None)):
+    raise ImproperlyConfigured("DIDS_ROOT environment variable is not set")
+    
 DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", default=False)
 
 # SITE_ID = 2

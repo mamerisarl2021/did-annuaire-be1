@@ -1,15 +1,7 @@
-import os, json, hashlib, tempfile, pathlib
+import os
 from django.db import transaction
 
 from src.dids.models import UploadedPublicKey, DidDocumentKeyBinding
-
-
-try:
-    import rfc8785  # JSON Canonicalization Scheme
-except ImportError:
-    rfc8785 = None
-
-DIDS_ROOT = "/var/www/dids/.well-known"
 
 def build_host() -> str:
     return os.environ.get("DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
