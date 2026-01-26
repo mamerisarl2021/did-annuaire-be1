@@ -37,12 +37,11 @@ find "$DIDS_BASE" -type d -exec chmod 0755 {} \; || true
 find "$DIDS_BASE" -type f -exec chmod 0644 {} \; || true
 
 # Quick write probe
-if ! su -u appuser sh -lc "touch '$DIDS_ROOT/.probe' && rm -f '$DIDS_ROOT/.probe'"; then
+if ! su -s /bin/sh -c "touch '$DIDS_ROOT/.probe' && rm -f '$DIDS_ROOT/.probe'" appuser; then
   echo "ERROR: DIDS_ROOT not writable by appuser: $DIDS_ROOT" >&2
   exit 1
 fi
 echo "--> DIDS_ROOT ready"
-
 
 # 3) Django housekeeping
 python -u manage.py collectstatic --noinput
