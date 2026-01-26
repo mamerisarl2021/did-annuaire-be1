@@ -1,4 +1,4 @@
-from ninja import Query
+from ninja import Query, Body
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
