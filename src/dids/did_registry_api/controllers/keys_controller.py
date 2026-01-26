@@ -8,7 +8,7 @@ from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
 
 from src.dids.did_registry_api.selectors.did_documents import latest_draft, active_prod
-from src.dids.models import DID, Certificate, UploadedPublicKey, DIDDocument
+from src.dids.models import Certificate, UploadedPublicKey, DIDDocument
 from src.dids.did_registry_api.selectors.dids import get_did_or_404
 from src.dids.did_registry_api.selectors.keys import list_key_versions
 from src.dids.did_registry_api.policies.access import can_manage_did

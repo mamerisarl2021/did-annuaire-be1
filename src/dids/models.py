@@ -37,10 +37,6 @@ class DID(BaseModel):
         db_index=True,
     )
 
-    class Meta:
-        #verbose_name = "DIDs"
-        pass
-
     def __str__(self):
         return self.did
 
@@ -109,6 +105,10 @@ class DIDDocument(BaseModel):
         null=True, blank=True,
         help_text="Relative path under /.well-known (e.g., preprod/{org}/{user}/{type}/did.json)"
     )
+    
+    @property
+    def is_published(self) -> bool:
+        return self.environment == "PROD" and bool(self.is_active)
 
     class Meta:
         ordering = ['-version']
@@ -122,6 +122,9 @@ class DIDDocument(BaseModel):
                 condition=Q(is_active=True),
                 name="unique_active_diddoc_per_env",
             ),
+        ]
+        indexes = [
+            models.Index(fields=["did", "environment", "is_active"], name="did_env_active_idx"),
         ]
 
     def __str__(self):
