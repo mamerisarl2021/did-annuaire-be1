@@ -74,7 +74,7 @@ class UniversalRegistrarController:
 
     @route.post("/deactivate")
     @transaction.atomic
-    def deactivate(self, request, body: dict):
+    def deactivate(self, request, body: dict = Body(...)):
         """
         Body: { did: string }
         Owner-only. Publie un document minimal avec "deactivated": true en PROD.

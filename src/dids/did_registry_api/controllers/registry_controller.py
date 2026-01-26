@@ -1,6 +1,6 @@
 
 from django.db import IntegrityError, transaction
-from django.db.models import Max, OuterRef, Subquery
+from django.db.models import Exists, Max, OuterRef, Subquery
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -155,7 +155,6 @@ class RegistryController(BaseAPIController):
         """
         Lists all DIDs for the caller's organization (ORG scope).
         Pagination via ?page=1&page_size=20.
-        Enriched with latest active certificate public key (JWK) and key version.
         """
         user = request.user
         org_id = getattr(user, "organization_id", None) or getattr(getattr(user, "organization", None), "id", None)
@@ -166,13 +165,22 @@ class RegistryController(BaseAPIController):
         latest_pk_qs = (UploadedPublicKey.objects
                         .filter(did_id=OuterRef("id"), is_active=True)
                         .order_by("-version"))
+        
+        # Exists: is there an active PROD document?
+        prod_active_exists = DIDDocument.objects.filter(
+            did_id=OuterRef("id"),
+            environment="PROD",
+            is_active=True,
+        )
 
-        qs = (dids_for_org(org_id)
-        .annotate(
-            latest_version=Max("documents__version"),
-            latest_public_key_version=Subquery(latest_pk_qs.values("version")[:1]),
-            latest_public_key_jwk=Subquery(latest_pk_qs.values("public_key_jwk")[:1]),
-            latest_key_id=Subquery(latest_pk_qs.values("key_id")[:1]),
+        qs = (
+            dids_for_org(org_id)
+            .annotate(
+                is_published=Exists(prod_active_exists),
+                latest_version=Max("documents__version"),
+                latest_public_key_version=Subquery(latest_pk_qs.values("version")[:1]),
+                latest_public_key_jwk=Subquery(latest_pk_qs.values("public_key_jwk")[:1]),
+                latest_key_id=Subquery(latest_pk_qs.values("key_id")[:1]),
         ))
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
@@ -189,6 +197,7 @@ class RegistryController(BaseAPIController):
                 "key_id": d.latest_key_id,
                 "public_key_version": d.latest_public_key_version,
                 "public_key_jwk": d.latest_public_key_jwk,
+                "is_published": bool(d.is_published),
             })
 
         return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
