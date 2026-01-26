@@ -19,16 +19,26 @@ def safe_abs_path(rel_path: str) -> pathlib.Path:
     return target
 
 
-def remove_published_folder(rel_dir: str) -> dict[str, object]:
-    """
-    Remove the published folder (org/user/doc_type) under DIDS_ROOT. Idempotent.
-    Returns {"removed": bool, "abs_path": str}.
-    """
+def remove_published_folder(rel_dir: str, *, prune_empty_parents: bool = False) -> dict[str, object]:
     target = safe_abs_path(rel_dir)
     if not target.exists():
-        return {"removed": False, "abs_path": str(target)}
-    # Avoid removing root itself by mistake
+        return {"removed": False, "abs_path": str(target), "pruned": []}
+
     if target == _publish_root():
         raise ValueError("Refusing to remove publish root")
+
     shutil.rmtree(target)
-    return {"removed": True, "abs_path": str(target)}
+    pruned: list[str] = []
+    if prune_empty_parents:
+        root = _publish_root()
+        cur = target.parent
+        while cur != root:
+            try:
+                next(cur.iterdir())
+                break  # not empty
+            except StopIteration:
+                cur.rmdir()
+                pruned.append(str(cur))
+                cur = cur.parent
+
+    return {"removed": True, "abs_path": str(target), "pruned": pruned}
