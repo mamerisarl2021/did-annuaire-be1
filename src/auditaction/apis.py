@@ -2,7 +2,7 @@ from ninja_extra import api_controller, route, ControllerBase
 from ninja_jwt.authentication import JWTAuth
 from django.shortcuts import get_object_or_404
 
-from src.auditaction.models import AuditAction
+from src.auditaction.models import AuditLog
 from src.auditaction import selectors
 from src.users.models import UserRole
 
@@ -76,7 +76,7 @@ class AuditActionController(ControllerBase):
     @route.get("/actions/{audit_id}")
     def get_action(self, audit_id: str):
         current = self.context.request.auth
-        obj = get_object_or_404(AuditAction, id=audit_id)
+        obj = get_object_or_404(AuditLog, id=audit_id)
 
         # Scope check for non-superusers
         if getattr(current, "role", "").upper() != "SUPERUSER":
