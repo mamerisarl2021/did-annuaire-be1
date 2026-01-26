@@ -22,7 +22,7 @@ class LogoutController(BaseAPIController):
         rl_key = f"logout:uid:{request.user.id}"
         if cache.get(rl_key):
             return self.create_response(message="Too many requests. Try again shortly.", status_code=429)
-        cache.set(rl_key, "1", timeout=120)
+        cache.set(rl_key, "1", timeout=60)
         
         all_flag = bool(body.get("all") or False)
         refresh = (body.get("refresh") or "").strip()
