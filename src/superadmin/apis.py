@@ -1,12 +1,16 @@
 from ninja import Query
 from ninja_extra import api_controller, route
+from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
 from django.shortcuts import get_object_or_404
 
 from src.core.apis import BaseAPIController
+from src.dids.models import DID
 from src.core.policies import ensure_superuser
 from src.api.pagination import Paginator
 from src.common.utils import validate_uuid
+from src.dids.publishing.selectors import published_dir_relpath_for_did
+from src.dids.publishing.services import remove_published_folder
 
 from src.organizations.models import Organization
 from src.organizations import selectors as org_selectors
@@ -203,4 +207,43 @@ class SuperAdminController(BaseAPIController):
 
         return self.create_response(
             message="Organizations statistics", data=stats, status_code=200
+        )
+
+    
+    @route.post("/cleanup")
+    def cleanup_published_folder(self, request, body: dict = Body(...)):
+        """
+        Superuser-only. Remove the published folder (org/user/doc_type) for a DID.
+        Body: { "did": "<did:web:...>" }
+        Note: nginx remains RO; deletion happens from backend's RW mount.
+        """
+        if not getattr(request.user, "is_superuser", False):
+            raise HttpError(403, "Forbidden")
+
+        did = (body or {}).get("did")
+        if not did or not isinstance(did, str):
+            raise HttpError(400, "did is required")
+
+        # Ensure DID exists in DB (avoids deleting unrelated paths)
+        get_object_or_404(DID, did=did)
+
+        try:
+            rel_dir, org, user, doc_type = published_dir_relpath_for_did(did)
+            result = remove_published_folder(rel_dir)
+        except ValueError as ve:
+            raise HttpError(400, str(ve))
+
+        message = "Removed" if result["removed"] else "Not found"
+        return self.create_response(
+            message=message,
+            data={
+                "did": did,
+                "org": org,
+                "user": user,
+                "document_type": doc_type,
+                "rel_dir": rel_dir,
+                "abs_path": result["abs_path"],
+                "removed": result["removed"],
+            },
+            status_code=200,
         )
