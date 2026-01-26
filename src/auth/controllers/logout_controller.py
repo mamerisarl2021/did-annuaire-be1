@@ -2,13 +2,14 @@ from django.core.cache import cache
 
 from ninja import Body
 from ninja_extra import api_controller, route
+from ninja_jwt.authentication import JWTAuth
 from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from ninja_jwt.tokens import RefreshToken
 
 from src.core.apis import BaseAPIController
 
 
-@api_controller("/auth", tags=["Auth"])
+@api_controller("/auth", tags=["Auth"], auth=JWTAuth())
 class LogoutController(BaseAPIController):
     @route.post("/logout")
     def logout(self, request, body: dict = Body(...)):
