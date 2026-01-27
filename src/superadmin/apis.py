@@ -14,7 +14,7 @@ from src.dids.publishing.selectors import relpaths_for_did
 from src.dids.publishing.services import remove_published_path
 from src.dids.resolver.services import parse_did_web
 from src.organizations.models import Organization
-from src.organizations import selectors as org_selectors
+from src.superadmin import selectors as sa_selectors
 from src.organizations.schemas import OrgFilterParams
 from src.superadmin.presenters import (
     org_to_list_dto_superadmin,
@@ -38,7 +38,7 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
 
-        qs = org_selectors.organization_list_with_admins(
+        qs = sa_selectors.organization_list_with_admins(
             status=filters.status, search=filters.search
         )
 
@@ -116,68 +116,68 @@ class SuperAdminController(BaseAPIController):
         sa_services.org_delete(organization_id=org_uuid, deleted_by=user)
         return self.create_response(message="Organization deleted", status_code=200)
 
-    @route.get("/organizations/users")
-    def list_all_users(self, filters: Query[UserFilterParams]):
-        """
-        Liste TOUS les utilisateurs (toutes organisations)
-        Requiert: SUPERUSER
-        Supporte: status, role, search + pagination
-        """
-        current_user = self.context.request.auth
-        ensure_superuser(current_user)
+    # @route.get("/organizations/users")
+    # def list_users(self, filters: Query[UserFilterParams]):
+    #     """
+    #     Liste TOUS les utilisateurs (toutes organisations)
+    #     Requiert: SUPERUSER
+    #     Supporte: status, role, search + pagination
+    #     """
+    #     current_user = self.context.request.auth
+    #     ensure_superuser(current_user)
 
-        qs = user_selectors.user_list(
-            status=filters.status, role=filters.role, search=filters.search
-        )
+    #     qs = user_selectors.user_list(
+    #         status=filters.status, role=filters.role, search=filters.search
+    #     )
 
-        paginator = Paginator(default_page_size=10, max_page_size=100)
-        items, meta = paginator.paginate_queryset(qs, self.context.request)
+    #     paginator = Paginator(default_page_size=10, max_page_size=100)
+    #     items, meta = paginator.paginate_queryset(qs, self.context.request)
 
-        data = [user_to_list_dto_superadmin(u) for u in items]
-        return self.create_response(
-            message="All users fetched",
-            data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-            status_code=200,
-        )
+    #     data = [user_to_list_dto_superadmin(u) for u in items]
+    #     return self.create_response(
+    #         message="All users fetched",
+    #         data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
+    #         status_code=200,
+    #     )
 
-    @route.get("/organizations/{org_id}/users")
-    def list_organization_users(self, org_id: str, filters: Query[UserFilterParams]):
-        """
-        Liste les utilisateurs d'UNE organisation spécifique
-        Requiert: SUPERUSER
-        Supporte: status, role, search + pagination
-        """
-        current_user = self.context.request.auth
-        ensure_superuser(current_user)
+    # @route.get("/organizations/{org_id}/users")
+    # def list_organization_users(self, org_id: str, filters: Query[UserFilterParams]):
+    #     """
+    #     Liste les utilisateurs d'UNE organisation spécifique
+    #     Requiert: SUPERUSER
+    #     Supporte: status, role, search + pagination
+    #     """
+    #     current_user = self.context.request.auth
+    #     ensure_superuser(current_user)
 
-        org_uuid = validate_uuid(org_id)
-        organization = get_object_or_404(Organization, id=org_uuid)
+    #     org_uuid = validate_uuid(org_id)
+    #     organization = get_object_or_404(Organization, id=org_uuid)
 
-        qs = user_selectors.user_list(
-            organization=organization,
-            status=filters.status,
-            role=filters.role,
-            search=filters.search,
-        )
+    #     qs = user_selectors.user_list(
+    #         organization=organization,
+    #         status=filters.status,
+    #         role=filters.role,
+    #         search=filters.search,
+    #     )
 
-        paginator = Paginator(default_page_size=10, max_page_size=100)
-        items, meta = paginator.paginate_queryset(qs, self.context.request)
+    #     paginator = Paginator(default_page_size=10, max_page_size=100)
+    #     items, meta = paginator.paginate_queryset(qs, self.context.request)
 
-        data = [user_to_list_dto_superadmin(u) for u in items]
-        return self.create_response(
-            message=f"Users from {organization.name} fetched",
-            data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-            status_code=200,
-        )
+    #     data = [user_to_list_dto_superadmin(u) for u in items]
+    #     return self.create_response(
+    #         message=f"Users from {organization.name} fetched",
+    #         data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
+    #         status_code=200,
+    #     )
 
-    @route.post("/users/{user_id}/resend-invite")
-    def resend_invite(self, user_id: str):
-        user = self.context.request.auth
-        ensure_superuser(user)
-        sa_services.user_resend_invite(
-            user_id=validate_uuid(user_id), requested_by=user
-        )
-        return self.create_response(message="Invitation re-sent", status_code=200)
+    # @route.post("/users/{user_id}/resend-invite")
+    # def resend_invite(self, user_id: str):
+    #     user = self.context.request.auth
+    #     ensure_superuser(user)
+    #     sa_services.user_resend_invite(
+    #         user_id=validate_uuid(user_id), requested_by=user
+    #     )
+    #     return self.create_response(message="Invitation re-sent", status_code=200)
 
     @route.get("/organizations/stats")
     def get_organizations_stats(self):
