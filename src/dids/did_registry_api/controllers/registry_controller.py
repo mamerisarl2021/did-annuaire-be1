@@ -18,7 +18,6 @@ from src.dids.did_registry_api.schemas.envelopes import ok, err
 from src.dids.did_document_compiler.builders import build_did_and_document
 from src.dids.did_registry_api.services.preview import preview_single
 from src.dids.models import PublishRequest, Certificate, DID, UploadedPublicKey, DIDDocument
-from src.dids.did_registry_api.schemas.envelopes import ok
 from src.dids.did_registry_api.selectors.dids import get_did_or_404, dids_for_org, dids_for_owner
 from src.dids.did_registry_api.policies.access import can_publish_prod, is_org_admin, can_manage_did
 from src.dids.did_registry_api.services.publish import publish_to_prod
@@ -27,7 +26,7 @@ from src.dids.did_registry_api.selectors.did_documents import candidate_for_publ
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
 from src.dids.did_registry_api.notifications.email import send_publish_request_notification
 from src.dids.utils.ids import generate_key_id
-from src.dids.utils.validators import validate_did_document
+from src.dids.utils.validators import validate_did_document, verify_or_raise
 from src.organizations.models import Organization
 from src.dids.services import bind_doc_to_keys
 
@@ -280,10 +279,13 @@ class RegistryController(BaseAPIController):
             return err(request, 400, str(ve), path="/api/registry/dids/preview")
 
     @route.post("/dids/{did}/publish")
-    def publish(self, request, did: str, version: int | None = None):
+    def publish(self, request, did: str, otp_code: str, version: int | None = None):
         """
         If caller lacks PROD rights, creates a PublishRequest and returns wait/202.
         """
+        otp_code = otp_code
+        verify_or_raise(request.user, otp_code, scope="publish")
+               
         did_obj = get_did_or_404(did)
 
         if not can_manage_did(request.user, did_obj):

@@ -14,7 +14,7 @@ from src.dids.models import DID, DIDDocument
 from src.dids.did_registry_api.policies.access import can_manage_did
 from src.dids.did_document_compiler.builders import build_did_document_from_db
 from src.dids.services import deactivate_did
-from src.dids.utils.validators import validate_did_document
+from src.dids.utils.validators import validate_did_document, verify_or_raise
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
 from src.dids.did_registry_api.schemas.envelopes import ok, err
 from src.dids.services import bind_doc_to_keys
@@ -76,12 +76,15 @@ class UniversalRegistrarController:
     @transaction.atomic
     def deactivate(self, request, body: dict = Body(...)):
         """
-        Body: { did: string }
-        Owner-only. Publie un document minimal avec "deactivated": true en PROD.
+        Body: { did: string, otp_code: string }
+        Owner-only. Publishes a minimal {"deactivated":} DID Document in PROD.
         """
         did_str = body.get("did")
         if not did_str:
             raise HttpError(400, "did is required")
+        
+        verify_or_raise(request.user, body.get("otp_code"), scope="deactivate")    
+        
         did_obj = get_object_or_404(DID, did=did_str)
 
         if not can_manage_did(request.user, did_obj):
