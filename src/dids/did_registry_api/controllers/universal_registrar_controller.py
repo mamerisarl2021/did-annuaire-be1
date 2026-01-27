@@ -1,8 +1,10 @@
 from django.db import transaction
 from django.db.models import Max
 from django.http import JsonResponse
+from django.utils import timezone
 
 from jsonschema import ValidationError
+
 from ninja import Body
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
@@ -98,6 +100,10 @@ class UniversalRegistrarController:
                                              is_active=False)
 
         url = publish_to_prod(did_doc)
+        if hasattr(doc, "published_at") and hasattr(doc, "published_by"):
+                    did_doc.published_at = timezone.now()
+                    did_doc.published_by = request.user
+                    did_doc.save(update_fields=["published_at", "published_by"])
         return ok(request,
                   did_state={"state": "finished", "did": did_obj.did, "environment": "PROD", "location": url},
                   did_doc_meta={"versionId": str(did_doc.version), "environment": "PROD", "published": True},
