@@ -10,8 +10,8 @@ from src.dids.models import DID
 from src.core.policies import ensure_superuser
 from src.api.pagination import Paginator
 from src.common.utils import validate_uuid
-from src.dids.publishing.selectors import published_dir_relpath_for_did
-from src.dids.publishing.services import remove_published_folder
+from src.dids.publishing.selectors import relpaths_for_did
+from src.dids.publishing.services import remove_published_path
 from src.dids.resolver.services import parse_did_web
 from src.organizations.models import Organization
 from src.organizations import selectors as org_selectors
@@ -211,44 +211,63 @@ class SuperAdminController(BaseAPIController):
         )
 
     
-    @route.post("/cleanup")
+    @route.post("/cleanup") 
     def cleanup_published_folder(self, request, body: dict = Body(...)):
-        """
-        Superuser-only. Remove the published folder (org/user/doc_type) for a DID.
-        Body: { "did": "<did:web:...>", "prune_empty_parents": false }
-        Works even if no DID row exists in DB; validates host and path containment.
-        """
-        if not getattr(request.user, "is_superuser", False):
-            raise HttpError(403, "Forbidden")
-
-        did = (body or {}).get("did")
-        if not did or not isinstance(did, str):
-            raise HttpError(400, "did is required")
-
-        # Safety: ensure the DID host matches our configured public host
-        host, org, user, doc_type = parse_did_web(did)
-        expected = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
-        if host != expected:
-            raise HttpError(400, f"Host mismatch: expected {expected}, got {host}")
-
-        try:
-            rel_dir, org, user, doc_type = published_dir_relpath_for_did(did)
-            result = remove_published_folder(rel_dir, prune_empty_parents=bool((body or {}).get("prune_empty_parents")))
-        except ValueError as ve:
-            raise HttpError(400, str(ve))
-
-        message = "Removed" if result["removed"] else "Not found"
-        return self.create_response(
-            message=message,
-            data={
-                "did": did,
-                "org": org,
-                "user": user,
-                "document_type": doc_type,
-                "rel_dir": rel_dir,
-                "abs_path": result["abs_path"],
-                "removed": result["removed"],
-                "pruned": result.get("pruned", []),
-            },
-            status_code=200,
-        )
+            """
+            Superuser-only. Remove a published path under DIDS_ROOT.
+            Body:
+            { "did": "<did:web:...>",
+                "scope": "doc_type" | "user" | "org",   # default "doc_type"
+                "prune_empty_parents": false            # applies when scope != "org"
+            }
+            Validates host and path containment; nginx remains RO; deletion is done by backend RW mount.
+            """
+            if not getattr(request.user, "is_superuser", False):
+                raise HttpError(403, "Forbidden")
+    
+            did = (body or {}).get("did")
+            if not did or not isinstance(did, str):
+                raise HttpError(400, "did is required")
+    
+            scope = (body or {}).get("scope", "doc_type")
+            if scope not in {"doc_type", "user", "org"}:
+                raise HttpError(400, "Invalid scope: expected 'doc_type', 'user', or 'org'")
+    
+            # Safety: host must match configured host
+            host, org, user, doc_type = parse_did_web(did)
+            expected = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
+            if host != expected:
+                raise HttpError(400, f"Host mismatch: expected {expected}, got {host}")
+    
+            # Compute rel path for scope
+            paths = relpaths_for_did(did)
+            rel_map = {
+                "doc_type": paths["doc_type"],
+                "user": paths["user"],
+                "org": paths["org"],
+            }
+            rel_path = rel_map[scope]
+    
+            # Delete; prune parents only when not removing the org-level directly
+            prune = bool((body or {}).get("prune_empty_parents")) and scope != "org"
+            try:
+                result = remove_published_path(rel_path, prune_empty_parents=prune)
+            except ValueError as ve:
+                raise HttpError(400, str(ve))
+    
+            message = "Removed" if result["removed"] else "Not found"
+            return self.create_response(
+                message=message,
+                data={
+                    "did": did,
+                    "scope": scope,
+                    "org": org,
+                    "user": user,
+                    "document_type": doc_type,
+                    "rel_path": rel_path,
+                    "abs_path": result["abs_path"],
+                    "removed": result["removed"],
+                    "pruned": result.get("pruned", []),
+                },
+                status_code=200,
+            )

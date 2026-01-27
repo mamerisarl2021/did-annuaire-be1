@@ -282,19 +282,20 @@ class RegistryController(BaseAPIController):
     def publish(self, request, did: str, body: dict = Body(...)):
         """
         If caller lacks PROD rights, creates a PublishRequest and returns wait/202.
-        OTP is required in the JSON body: { "otp_code": "123456", "version"?: int }.
+        body: { "version"?: int }
         """
+        # OTP is required in the JSON body: { "otp_code": "123456", "version"?: int }.
         
         did_obj = get_did_or_404(did)
         
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "Only the DID owner can initiate publish flow.")
             
-        otp_code = (body or {}).get("otp_code")   
-        try:
-            verify_or_raise(request.user, otp_code, scope="publish")
-        except HttpError as he:
-              return err(request, he.status_code, str(he), path=f"/api/registry/dids/{did}/publish")
+        # otp_code = (body or {}).get("otp_code")   
+        # try:
+        #     verify_or_raise(request.user, otp_code, scope="publish")
+        # except HttpError as he:
+        #       return err(request, he.status_code, str(he), path=f"/api/registry/dids/{did}/publish")
               
         version_raw = (body or {}).get("version", None)
         try:

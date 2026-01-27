@@ -19,26 +19,37 @@ def safe_abs_path(rel_path: str) -> pathlib.Path:
     return target
 
 
-def remove_published_folder(rel_dir: str, *, prune_empty_parents: bool = False) -> dict[str, object]:
-    target = safe_abs_path(rel_dir)
+def remove_published_path(rel_path: str, *, prune_empty_parents: bool = False) -> Dict[str, object]:
+    """
+    Remove an arbitrary published path (doc_type, user, or org folder) under DIDS_ROOT. Idempotent.
+    Returns: {"removed": bool, "abs_path": str, "pruned": [str, ...]}
+    """
+    target = safe_abs_path(rel_path)
     if not target.exists():
         return {"removed": False, "abs_path": str(target), "pruned": []}
 
+    # Avoid removing publish root itself
     if target == _publish_root():
         raise ValueError("Refusing to remove publish root")
 
     shutil.rmtree(target)
-    pruned: list[str] = []
+    pruned: List[str] = []
     if prune_empty_parents:
         root = _publish_root()
         cur = target.parent
+        # climb up deleting empty parents only until root
         while cur != root:
             try:
                 next(cur.iterdir())
-                break  # not empty
+                break  # non-empty
             except StopIteration:
                 cur.rmdir()
                 pruned.append(str(cur))
                 cur = cur.parent
 
     return {"removed": True, "abs_path": str(target), "pruned": pruned}
+
+
+# Backward-compat legacy name
+def remove_published_folder(rel_dir: str, *, prune_empty_parents: bool = False) -> dict[str, object]:
+    return remove_published_path(rel_dir, prune_empty_parents=prune_empty_parents)

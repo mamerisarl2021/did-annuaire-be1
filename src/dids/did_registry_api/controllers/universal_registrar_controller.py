@@ -78,14 +78,15 @@ class UniversalRegistrarController:
     @transaction.atomic
     def deactivate(self, request, body: dict = Body(...)):
         """
-        Body: { did: string, otp_code: string }
+        Body: { did: string,  }
         Owner-only. Publishes a minimal {"deactivated":} DID Document in PROD.
         """
+        # otp_code: string
         did_str = body.get("did")
         if not did_str:
             raise HttpError(400, "did is required")
         
-        verify_or_raise(request.user, body.get("otp_code"), scope="deactivate")    
+        # verify_or_raise(request.user, body.get("otp_code"), scope="deactivate")    
         
         did_obj = get_object_or_404(DID, did=did_str)
 
