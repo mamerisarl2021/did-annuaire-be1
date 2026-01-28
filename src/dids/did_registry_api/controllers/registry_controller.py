@@ -26,7 +26,7 @@ from src.dids.did_registry_api.selectors.did_documents import candidate_for_publ
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
 from src.dids.did_registry_api.notifications.email import send_publish_request_notification
 from src.dids.utils.ids import generate_key_id
-from src.dids.utils.validators import validate_did_document, verify_or_raise
+from src.dids.utils.validators import validate_did_document 
 from src.organizations.models import Organization
 from src.dids.services import bind_doc_to_keys
 

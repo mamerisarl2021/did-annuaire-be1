@@ -35,63 +35,41 @@ class Command(BaseCommand):
         if not email:
             raise CommandError("Provide --email or set ADMIN_USER_EMAIL.")
 
-        # Optional interactive password prompt if not provided via args/env
         if not password:
             self.stdout.write(self.style.WARNING("No password provided."))
             password = getpass("Enter superuser password: ").strip()
             if not password:
                 raise CommandError("Password is required.")
 
-        # IMPORTANT: filter by email only (no 'username' on custom user)
-        existing = User.objects.filter(email__iexact=email).first()
+        user = User.objects.filter(email__iexact=email).first()
 
-        # Helper to set optional fields only if the model has them
-        def set_optional_fields(u):
-            if _model_has_field(User, "first_name"):
-                u.first_name = first_name
-            if _model_has_field(User, "last_name"):
-                u.last_name = last_name
-            # If your model has 'role' & 'status', set them but only if they exist
-            if _model_has_field(User, "role"):
-                try:
-                    # Align with your choices if applicable; otherwise skip silently
-                    u.role = "SUPERUSER"
-                except Exception:
-                    pass
+        if user:
+            # Upgrade existing user to platform admin
+            user.is_superuser = True
+            user.is_staff = True
+
             if _model_has_field(User, "status"):
-                try:
-                    u.status = "ACTIVE"
-                except Exception:
-                    pass
-            return u
+                user.status = "ACTIVE"
 
-        if existing:
-            # Upgrade existing user to superuser/staff and update password
-            existing.is_superuser = True
-            existing.is_staff = True
-            set_optional_fields(existing)
-            existing.set_password(password)
-            existing.save()
+            user.set_password(password)
+            user.save()
+
             self.stdout.write(
                 self.style.SUCCESS(f"Updated existing superuser: {email}")
             )
-        else:
-            # Create a brand new superuser (email is USERNAME_FIELD)
-            kwargs = dict(
-                email=email,
-                password=password,
-                is_staff=True,
-                is_superuser=True,
-            )
-            # Add optional fields if present
-            if _model_has_field(User, "first_name"):
-                kwargs["first_name"] = first_name
-            if _model_has_field(User, "last_name"):
-                kwargs["last_name"] = last_name
-            if _model_has_field(User, "role"):
-                kwargs["role"] = "SUPERUSER"
-            if _model_has_field(User, "status"):
-                kwargs["status"] = "ACTIVE"
+            return
 
-            user = User.objects.create_superuser(**kwargs)
-            self.stdout.write(self.style.SUCCESS(f"Created superuser: {user.email}"))
+        # Create brand new platform admin
+        kwargs = {
+            "email": email,
+            "password": password,
+        }
+
+        if _model_has_field(User, "first_name"):
+            kwargs["first_name"] = first_name
+        if _model_has_field(User, "last_name"):
+            kwargs["last_name"] = last_name
+
+        user = User.objects.create_superuser(**kwargs)
+
+        self.stdout.write(self.style.SUCCESS(f"Created superuser: {user.email}"))

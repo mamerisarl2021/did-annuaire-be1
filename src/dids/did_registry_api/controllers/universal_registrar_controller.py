@@ -16,7 +16,7 @@ from src.dids.models import DID, DIDDocument
 from src.dids.did_registry_api.policies.access import can_manage_did
 from src.dids.did_document_compiler.builders import build_did_document_from_db
 from src.dids.services import deactivate_did
-from src.dids.utils.validators import validate_did_document, verify_or_raise
+from src.dids.utils.validators import validate_did_document 
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
 from src.dids.did_registry_api.schemas.envelopes import ok, err
 from src.dids.services import bind_doc_to_keys

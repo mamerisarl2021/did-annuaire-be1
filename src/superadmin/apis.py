@@ -24,7 +24,7 @@ from src.superadmin.presenters import (
 from src.superadmin import services as sa_services
 from src.superadmin.schemas import RefusePayload
 from src.users import selectors as user_selectors
-from src.users.schemas import UserFilterParams
+from src.users.schemas import FilterParams
 
 
 @api_controller("/superadmin", tags=["Super Admin"], auth=JWTAuth())
