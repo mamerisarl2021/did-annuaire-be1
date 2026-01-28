@@ -1,3 +1,4 @@
+from uuid import UUID
 from ninja import Schema
 from pydantic import field_validator, EmailStr
 from datetime import datetime
@@ -12,7 +13,7 @@ class UserCreatePayload(Schema):
     can_publish_prod: bool = False
 
 class UserListItem(Schema):
-    id: str
+    id: UUID
     email: str
     full_name: str
     role: list[str]
@@ -42,7 +43,7 @@ class UserProfileSchema(Schema):
     status: str
     organization: OrganizationInfo
     totp_enabled: bool
-    last_login: str | None = None
+    last_login: datetime | None = None
     can_publish_prod: bool
     functions: str | None = None
 

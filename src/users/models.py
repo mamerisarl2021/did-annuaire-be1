@@ -1,11 +1,8 @@
 from django.contrib.postgres.indexes import GinIndex
 from django.db.models import CheckConstraint, Q
-from django.db.models.expressions import RawSQL
 from django.db import models
 
 from src.common.models import BaseModel
-
-from .utils import validate_roles
 
 
 from django.contrib.auth.models import (
@@ -75,7 +72,6 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     # Rôle et statut
     role = models.JSONField(
         default=list,
-        validators=[validate_roles],
         help_text="List of role tokens (e.g., ['ORG_MEMBER','AUDITOR']).",
     )
     status = models.CharField(

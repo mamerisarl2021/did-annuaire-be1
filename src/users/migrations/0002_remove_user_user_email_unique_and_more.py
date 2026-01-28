@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='role',
-            field=models.JSONField(default=list, help_text="List of role tokens (e.g., ['ORG_MEMBER','AUDITOR']).", validators=[src.users.utils.validate_roles]),
+            field=models.JSONField(default=list, help_text="List of role tokens (e.g., ['ORG_MEMBER','AUDITOR'])."),
         ),
         migrations.AlterField(
             model_name='user',
