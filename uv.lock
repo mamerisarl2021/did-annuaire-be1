@@ -326,10 +326,12 @@ dependencies = [
     { name = "django-ninja" },
     { name = "django-ninja-jwt", extra = ["crypto"] },
     { name = "django-orbit" },
+    { name = "django-request-id" },
     { name = "django-structlog", extra = ["celery"] },
     { name = "gunicorn" },
     { name = "jsonschema" },
     { name = "psycopg", extra = ["c"] },
+    { name = "pydantic", extra = ["email"] },
     { name = "pyld" },
     { name = "pyotp" },
     { name = "pytz" },
@@ -358,10 +360,12 @@ requires-dist = [
     { name = "django-ninja" },
     { name = "django-ninja-jwt", extras = ["crypto"] },
     { name = "django-orbit", specifier = "==0.6.2" },
+    { name = "django-request-id", specifier = ">=1.0.0" },
     { name = "django-structlog", extras = ["celery"] },
     { name = "gunicorn" },
     { name = "jsonschema" },
     { name = "psycopg", extras = ["c"] },
+    { name = "pydantic", extras = ["email"], specifier = ">=2.12.5" },
     { name = "pyld" },
     { name = "pyotp" },
     { name = "pytz" },
@@ -553,6 +557,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-request-id"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/97/60/386d2d55d606518482e2780034d03f2c6b444139a81403a74a723365965c/django-request-id-1.0.0.tar.gz", hash = "sha256:0eb7ef17e21ff5efe5014e5b3cc6d22fc3396d4ea9d5b353bba2c43107998368", size = 6619, upload-time = "2016-10-23T15:27:57.295Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/ce/0455f018d3457a36a7bdd971b735fd7d0fd725ef203d0388ff6175766161/django_request_id-1.0.0-py2.py3-none-any.whl", hash = "sha256:f7f296a7c6de44193af9461c72cbdb6a12887fffe00a7dcfa0f43a4ec67e4643", size = 11756, upload-time = "2016-10-23T15:28:01.379Z" },
+]
+
+[[package]]
 name = "django-structlog"
 version = "10.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -582,6 +598,28 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/da/05/9b93a66452cdb8a08ab26f08d5766d2332673e659a8b2aeb73f2a904d421/django_timezone_field-7.2.1.tar.gz", hash = "sha256:def846f9e7200b7b8f2a28fcce2b78fb2d470f6a9f272b07c4e014f6ba4c6d2e", size = 13096, upload-time = "2025-12-06T23:50:44.591Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/7f/d885667401515b467f84569c56075bc9add72c9fd425fca51a25f4c997e1/django_timezone_field-7.2.1-py3-none-any.whl", hash = "sha256:276915b72c5816f57c3baf9e43f816c695ef940d1b21f91ebf6203c09bf4ad44", size = 13284, upload-time = "2025-12-06T23:50:43.302Z" },
+]
+
+[[package]]
+name = "dnspython"
+version = "2.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/8b/57666417c0f90f08bcafa776861060426765fdb422eb10212086fb811d26/dnspython-2.8.0.tar.gz", hash = "sha256:181d3c6996452cb1189c4046c61599b84a5a86e099562ffde77d26984ff26d0f", size = 368251, upload-time = "2025-09-07T18:58:00.022Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ba/5a/18ad964b0086c6e62e2e7500f7edc89e3faa45033c71c1893d34eed2b2de/dnspython-2.8.0-py3-none-any.whl", hash = "sha256:01d9bbc4a2d76bf0db7c1f729812ded6d912bd318d3b1cf81d30c0f845dbf3af", size = 331094, upload-time = "2025-09-07T18:57:58.071Z" },
+]
+
+[[package]]
+name = "email-validator"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dnspython" },
+    { name = "idna" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f5/22/900cb125c76b7aaa450ce02fd727f452243f2e91a61af068b40adba60ea9/email_validator-2.3.0.tar.gz", hash = "sha256:9fc05c37f2f6cf439ff414f8fc46d917929974a82244c20eb10231ba60c54426", size = 51238, upload-time = "2025-08-26T13:09:06.831Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/15/545e2b6cf2e3be84bc1ed85613edd75b8aea69807a71c26f4ca6a9258e82/email_validator-2.3.0-py3-none-any.whl", hash = "sha256:80f13f623413e6b197ae73bb10bf4eb0908faf509ad8362c5edeb0be7fd450b4", size = 35604, upload-time = "2025-08-26T13:09:05.858Z" },
 ]
 
 [[package]]
@@ -850,6 +888,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/69/44/36f1a6e523abc58ae5f928898e4aca2e0ea509b5aa6f6f392a5d882be928/pydantic-2.12.5.tar.gz", hash = "sha256:4d351024c75c0f085a9febbb665ce8c0c6ec5d30e903bdb6394b7ede26aebb49", size = 821591, upload-time = "2025-11-26T15:11:46.471Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/87/b70ad306ebb6f9b585f114d0ac2137d792b48be34d732d60e597c2f8465a/pydantic-2.12.5-py3-none-any.whl", hash = "sha256:e561593fccf61e8a20fc46dfc2dfe075b8be7d0188df33f221ad1f0139180f9d", size = 463580, upload-time = "2025-11-26T15:11:44.605Z" },
+]
+
+[package.optional-dependencies]
+email = [
+    { name = "email-validator" },
 ]
 
 [[package]]

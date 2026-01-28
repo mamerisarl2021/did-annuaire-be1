@@ -1,73 +1,53 @@
 from ninja import Schema
-from pydantic import field_validator
-
-
-ALLOWED_ROLES = {"SUPERUSER", "ORG_ADMIN", "ORG_MEMBER", "AUDITOR"}
-ALLOWED_STATUSES = {"PENDING", "ACTIVE", "SUSPENDED", "DEACTIVATED"}
-
+from pydantic import field_validator, EmailStr
+from datetime import datetime
 
 class UserCreatePayload(Schema):
+    email: EmailStr
+    first_name: str
+    last_name: str
+    phone: str
+    is_auditor: bool = False
+    functions: str | None = None
+    can_publish_prod: bool = False
+
+class UserListItem(Schema):
+    id: int
+    email: str
+    full_name: str
+    role: list[str]
+    status: str
+    created_at: datetime
+    organization: str | None = None
+    invited_by: str | None = None
+    functions: str | None = None
+    invitation_accepted_at: datetime | None = None
+    can_publish_prod: bool
+
+class FilterParams(Schema):
+    status: str | None = None
+    search: str | None = None
+
+class OrganizationInfo(Schema):
+    id: int | None = None
+    name: str | None = None
+
+class UserProfileSchema(Schema):
+    id: int
     email: str
     first_name: str
     last_name: str
     phone: str
-    role: str
+    role: list[str]
+    status: str
+    organization: OrganizationInfo
+    totp_enabled: bool
+    last_login: str | None = None
+    can_publish_prod: bool
     functions: str | None = None
 
-    @field_validator("email")
-    @classmethod
-    def _validate_email(cls, v: str) -> str:
-        if "@" not in v or "." not in v.split("@")[-1]:
-            raise ValueError("Invalid email format")
-        return v.strip().lower()
-
-    @field_validator("role")
-    @classmethod
-    def _validate_role(cls, v: str) -> str:
-        role = (v or "").upper().strip()
-        if role not in ALLOWED_ROLES:
-            raise ValueError(f"role must be one of {sorted(ALLOWED_ROLES)}")
-        return role
-
-    @field_validator("phone")
-    @classmethod
-    def _normalize_phone(cls, v: str) -> str:
-        return v.strip()
-
-
-class UserUpdatePayload(Schema):
-    first_name: str | None = None
-    last_name: str | None = None
-    phone: str | None = None
-    role: str | None = None
-    functions: str | None = None
-    status: str | None = None
-
-    @field_validator("role")
-    @classmethod
-    def _validate_role_optional(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        role = v.upper().strip()
-        if role not in ALLOWED_ROLES:
-            raise ValueError(f"role must be one of {sorted(ALLOWED_ROLES)}")
-        return role
-
-    @field_validator("status")
-    @classmethod
-    def _validate_status(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        s = v.upper().strip()
-        if s not in ALLOWED_STATUSES:
-            raise ValueError(f"status must be one of {sorted(ALLOWED_STATUSES)}")
-        return s
-
-    @field_validator("phone")
-    @classmethod
-    def _normalize_phone_optional(cls, v: str | None) -> str | None:
-        return v.strip() if isinstance(v, str) else v
-
+class OTPVerifyPayload(Schema):
+    code: str
 
 class UserActivatePayload(Schema):
     token: str
@@ -82,41 +62,10 @@ class UserActivatePayload(Schema):
             raise ValueError("token is required")
         return v.strip()
 
-    @field_validator("password")
-    @classmethod
-    def _password_basic_rules(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("password must be at least 8 characters")
-        return v
-
-
-class OTPVerifyPayload(Schema):
-    code: str
-
-
-class UserFilterParams(Schema):
-    """Paramètres de filtrage et recherche"""
-
-    status: str | None = None
+class UserUpdatePayload(Schema):
+    first_name: str | None = None
+    last_name: str | None = None
+    phone: str | None = None
     role: str | None = None
-    search: str | None = None
-
-    @field_validator("status")
-    @classmethod
-    def _validate_status(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        s = v.upper().strip()
-        if s not in ALLOWED_STATUSES:
-            raise ValueError(f"status must be one of {sorted(ALLOWED_STATUSES)}")
-        return s
-
-    @field_validator("role")
-    @classmethod
-    def _validate_role(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        r = v.upper().strip()
-        if r not in ALLOWED_ROLES:
-            raise ValueError(f"role must be one of {sorted(ALLOWED_ROLES)}")
-        return r
+    functions: str | None = None
+    status: str | None = None

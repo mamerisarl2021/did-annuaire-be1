@@ -121,7 +121,7 @@ class AuditLog(BaseModel):
         db_table = "audit_logs"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["organization", "-created_at"]),
+            models.Index(fields=["organization", "action", "-created_at"]),
             models.Index(fields=["category", "-created_at"]),
             models.Index(fields=["action"]),
             models.Index(fields=["user"]),
@@ -129,5 +129,6 @@ class AuditLog(BaseModel):
         ]
 
     def __str__(self) -> str:
-        who = self.user.email if self.user else "system"
-        return f"[{self.category}] {self.action} by {who} at {self.created_at:%Y-%m-%d %H:%M:%S}"
+        actor = self.user.email if self.user else "system"
+        target = f"{self.target_type}:{self.target_id}" if self.target_type else ""
+        return f"[{self.category}] {self.action} by {actor} {target} at {self.created_at:%Y-%m-%d %H:%M:%S}"

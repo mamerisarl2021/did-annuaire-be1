@@ -1,8 +1,10 @@
 from django.db import transaction
 from django.db.models import Max
 from django.http import JsonResponse
+from django.utils import timezone
 
 from jsonschema import ValidationError
+
 from ninja import Body
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
@@ -14,7 +16,7 @@ from src.dids.models import DID, DIDDocument
 from src.dids.did_registry_api.policies.access import can_manage_did
 from src.dids.did_document_compiler.builders import build_did_document_from_db
 from src.dids.services import deactivate_did
-from src.dids.utils.validators import validate_did_document
+from src.dids.utils.validators import validate_did_document 
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
 from src.dids.did_registry_api.schemas.envelopes import ok, err
 from src.dids.services import bind_doc_to_keys
@@ -76,12 +78,16 @@ class UniversalRegistrarController:
     @transaction.atomic
     def deactivate(self, request, body: dict = Body(...)):
         """
-        Body: { did: string }
-        Owner-only. Publie un document minimal avec "deactivated": true en PROD.
+        Body: { did: string,  }
+        Owner-only. Publishes a minimal {"deactivated":} DID Document in PROD.
         """
+        # otp_code: string
         did_str = body.get("did")
         if not did_str:
             raise HttpError(400, "did is required")
+        
+        # verify_or_raise(request.user, body.get("otp_code"), scope="deactivate")    
+        
         did_obj = get_object_or_404(DID, did=did_str)
 
         if not can_manage_did(request.user, did_obj):
@@ -95,6 +101,10 @@ class UniversalRegistrarController:
                                              is_active=False)
 
         url = publish_to_prod(did_doc)
+        if hasattr(doc, "published_at") and hasattr(doc, "published_by"):
+                    did_doc.published_at = timezone.now()
+                    did_doc.published_by = request.user
+                    did_doc.save(update_fields=["published_at", "published_by"])
         return ok(request,
                   did_state={"state": "finished", "did": did_obj.did, "environment": "PROD", "location": url},
                   did_doc_meta={"versionId": str(did_doc.version), "environment": "PROD", "published": True},

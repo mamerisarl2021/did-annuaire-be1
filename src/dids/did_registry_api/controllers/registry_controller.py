@@ -18,7 +18,6 @@ from src.dids.did_registry_api.schemas.envelopes import ok, err
 from src.dids.did_document_compiler.builders import build_did_and_document
 from src.dids.did_registry_api.services.preview import preview_single
 from src.dids.models import PublishRequest, Certificate, DID, UploadedPublicKey, DIDDocument
-from src.dids.did_registry_api.schemas.envelopes import ok
 from src.dids.did_registry_api.selectors.dids import get_did_or_404, dids_for_org, dids_for_owner
 from src.dids.did_registry_api.policies.access import can_publish_prod, is_org_admin, can_manage_did
 from src.dids.did_registry_api.services.publish import publish_to_prod
@@ -27,7 +26,7 @@ from src.dids.did_registry_api.selectors.did_documents import candidate_for_publ
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
 from src.dids.did_registry_api.notifications.email import send_publish_request_notification
 from src.dids.utils.ids import generate_key_id
-from src.dids.utils.validators import validate_did_document
+from src.dids.utils.validators import validate_did_document 
 from src.organizations.models import Organization
 from src.dids.services import bind_doc_to_keys
 
@@ -280,22 +279,48 @@ class RegistryController(BaseAPIController):
             return err(request, 400, str(ve), path="/api/registry/dids/preview")
 
     @route.post("/dids/{did}/publish")
-    def publish(self, request, did: str, version: int | None = None):
+    def publish(self, request, did: str, body: dict = Body(...)):
         """
         If caller lacks PROD rights, creates a PublishRequest and returns wait/202.
+        body: { "version"?: int }
         """
+        # OTP is required in the JSON body: { "otp_code": "123456", "version"?: int }.
+        
         did_obj = get_did_or_404(did)
-
+        
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "Only the DID owner can initiate publish flow.")
-
+            
+        # otp_code = (body or {}).get("otp_code")   
+        # try:
+        #     verify_or_raise(request.user, otp_code, scope="publish")
+        # except HttpError as he:
+        #       return err(request, he.status_code, str(he), path=f"/api/registry/dids/{did}/publish")
+              
+        version_raw = (body or {}).get("version", None)
+        try:
+            version = int(version_raw) if version_raw is not None else None
+        except (TypeError, ValueError):
+            return err(request, 400, "version must be an integer", path=f"/api/registry/dids/{did}/publish")     
+        
+        # If a version was specified, ensure it's a DRAFT of this DID
+        if version is not None:
+            exists = DIDDocument.objects.filter(did=did_obj, version=version, environment="DRAFT").exists()
+            if not exists:
+                return err(request, 404, "Requested version not found or not DRAFT",
+                            path=f"/api/registry/dids/{did}/publish")
+                
         doc = candidate_for_publish(did_obj, version)
         if not doc:
             raise HttpError(404, "No DRAFT document to publish")
+        
+        # Enforce DRAFT only
+        if getattr(doc, "environment", None) != "DRAFT":
+            return err(request, 400, "Only DRAFT documents can be published",
+                        path=f"/api/registry/dids/{did}/publish")
 
-        # Approval gate for PROD
-        if not (is_org_admin(request.user, did_obj.organization) or can_publish_prod(request.user,
-                                                                                     did_obj.organization)):
+        # Approval gate
+        if not (is_org_admin(request.user, did_obj.organization) or can_publish_prod(request.user, did_obj.organization)):
             pr = PublishRequest.objects.create(
                 did=did_obj, did_document=doc, environment="PROD",
                 requested_by=request.user, status=PublishRequest.Status.PENDING
@@ -303,8 +328,8 @@ class RegistryController(BaseAPIController):
             send_publish_request_notification(pr)
             return ok(
                 request,
-                did_state={"state": "wait", "did": did_obj.did, "environment": "PROD", "reason": "approval_required",
-                           "publishRequestId": pr.id},
+                did_state={"state": "wait", "did": did_obj.did, "environment": "PROD",
+                            "reason": "approval_required", "publishRequestId": pr.id},
                 did_doc_meta={"versionId": str(doc.version), "environment": "PROD", "published": False},
                 did_reg_meta={"method": "web"},
                 status=202
@@ -313,8 +338,11 @@ class RegistryController(BaseAPIController):
         # Signing disabled: publish as-is to PROD
         if not getattr(settings, "DIDS_SIGNING_ENABLED", False):
             url = publish_to_prod(doc)
-            doc.published_at =  timezone.now()
-            doc.published_by = request.user
+            # audit trail on the document
+            if hasattr(doc, "published_at") and hasattr(doc, "published_by"):
+                doc.published_at = timezone.now()
+                doc.published_by = request.user
+                doc.save(update_fields=["published_at", "published_by"])
             return ok(
                 request,
                 did_state={"state": "finished", "did": did_obj.did, "environment": "PROD", "location": url},

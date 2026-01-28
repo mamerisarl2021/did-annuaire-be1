@@ -4,7 +4,6 @@ import pathlib
 
 from django.conf import settings
 from ninja_extra import api_controller, route
-from ninja.errors import HttpError
 from ninja_extra.throttling import DynamicRateThrottle
 from ninja_jwt.authentication import JWTAuth
 
