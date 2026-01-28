@@ -88,6 +88,7 @@ class UserController(BaseAPIController):
     @route.get("/me") # ✅
     def get_current_user(self):
         user = self.context.request.auth
+        user.id = validate_uuid(user.id)
         user_data = UserProfileSchema(
             id=user.id,
             email=user.email,
