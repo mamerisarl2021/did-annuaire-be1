@@ -114,7 +114,7 @@ def user_create_by_admin(
     phone: str,
     is_auditor: bool = False,
     functions: str | None = None,
-    can_publish_prod: bool = False
+    can_publish_prod: bool = True
 ) -> User:
     """Org Admin creates a user"""
 
