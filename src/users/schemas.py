@@ -12,7 +12,7 @@ class UserCreatePayload(Schema):
     can_publish_prod: bool = False
 
 class UserListItem(Schema):
-    id: int
+    id: str
     email: str
     full_name: str
     role: list[str]
@@ -33,7 +33,7 @@ class OrganizationInfo(Schema):
     name: str | None = None
 
 class UserProfileSchema(Schema):
-    id: int
+    id: str
     email: str
     first_name: str
     last_name: str
