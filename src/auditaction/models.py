@@ -45,6 +45,7 @@ class AuditAction(models.TextChoices):
         "Utilisateur suspendu",
     )
     USER_CREATED = "USER_CREATED", "Création Utilisateur"
+    USER_UPDATED = "USER_UPDATED", "Mise à jour utilisateur"
 
     # DIDs
     DID_CREATED = "DID_CREATED", "DID créé"
