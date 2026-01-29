@@ -441,5 +441,5 @@ def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePaylo
         },
     )
 
-    return userreturn user
+    return user
     
