@@ -224,7 +224,7 @@ class UserController(BaseAPIController):
         user_id = validate_uuid(user_id)
         current_user = self.context.request.auth
 
-        ensure_role_in(current_user, [UserRole.ORG_ADMIN, UserRole.ORG_MEMBER])
+        ensure_role_in(current_user, UserRole.ORG_ADMIN, UserRole.ORG_MEMBER)
 
         updated_user = services.user_update_user(
             user_id=user_id,
@@ -238,14 +238,14 @@ class UserController(BaseAPIController):
             status_code=200,
         )
 
-@route.get("/stats", auth=JWTAuth())
-def users_stats(self):
-    user = self.context.request.auth
-
-    stats = selectors.users_stats_for_actor(user=user)
-
-    return self.create_response(
-        message="Users statistics",
-        data=stats,
-        status_code=200,
-    )
+    @route.get("/stats")
+    def users_stats(self):
+        user = self.context.request.auth
+    
+        stats = selectors.users_stats_for_actor(user=user)
+    
+        return self.create_response(
+            message="Users statistics",
+            data=stats,
+            status_code=200,
+        )

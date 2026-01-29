@@ -20,6 +20,7 @@ from src.emails.services import email_send
 from src.auditaction.services import audit_action_create
 from src.users.schemas import UserUpdatePayload
 from src.users.selectors import user_get_invited_by_token
+from src.core.exceptions import APIError
 
 
 ########################################################################################################################################
@@ -360,32 +361,67 @@ def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
 
 @transaction.atomic
 def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePayload) -> User:
-    user = User.objects.get(id=user_id)
+    qs = User.objects.select_for_update()
 
-    if UserRole.ORG_MEMBER in updated_by.role and user.id != updated_by.id:
-        raise PermissionError("You can only update your own profile")
+    # SUPERUSER can update anyone
+    if updated_by.is_platform_admin:
+        user = qs.get(id=user_id)
 
-    # Determine allowed fields
-    if UserRole.ORG_MEMBER in updated_by.role:
-        allowed_fields = ["first_name", "last_name", "phone"]
-    else:  # ORG_ADMIN
-        allowed_fields = ["first_name", "last_name", "phone", "role", "functions", "status"]
+    # ORG_ADMIN can update anyone in their org
+    elif UserRole.ORG_ADMIN.value in updated_by.role:
+        user = qs.get(id=user_id, organization=updated_by.organization)
 
-    update_data = {k: getattr(payload, k) for k in allowed_fields if getattr(payload, k) is not None}
+    # ORG_MEMBER can update self only
+    elif UserRole.ORG_MEMBER.value in updated_by.role:
+        user = qs.get(id=user_id, organization=updated_by.organization)
+        if user.id != updated_by.id:
+            raise APIError(
+                message="You can only update your own profile",
+                code="FORBIDDEN",
+                status=403,
+            )
+    else:
+        raise APIError("Permission denied", code="FORBIDDEN", status=403)
 
-    for k, v in update_data.items():
-        setattr(user, k, v)
+    # Allowed fields
+    if UserRole.ORG_MEMBER.value in updated_by.role:
+        allowed_fields = {"first_name", "last_name", "phone"}
+    else:  # ORG_ADMIN or SUPERUSER
+        allowed_fields = {
+            "first_name",
+            "last_name",
+            "phone",
+            "role",
+            "functions",
+            "status",
+        }
 
-    user.save()
+    update_data = {
+        field: getattr(payload, field)
+        for field in allowed_fields
+        if getattr(payload, field) is not None
+    }
+
+    if not update_data:
+        return user
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    user.save(update_fields=list(update_data.keys()))
 
     audit_action_create(
         user=updated_by,
         category=AuditCategory.USER,
-        organization=updated_by.organization,
+        organization=user.organization,
         action=AuditAction.USER_UPDATED,
         target_type="user",
         target_id=str(user.id),
-        details={"updated_fields": list(update_data.keys()), "user_id": user.id, "email": user.email},
+        details={
+            "updated_fields": list(update_data.keys()),
+            "user_id": str(user.id),
+            "email": user.email,
+        },
     )
 
     return user

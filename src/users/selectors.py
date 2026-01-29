@@ -1,11 +1,13 @@
-from django.db.models import QuerySet
 from datetime import timedelta
+
+from django.db.models import QuerySet
 from django.utils import timezone
+from django.db.models.expressions import RawSQL
+from django.db.models import Q, Count
+
+from src.core.exceptions import APIError
 from src.core.exceptions import DomainValidationError
 from src.users.models import User, UserStatus, UserRole
-
-from django.db.models import Q, Count
-from src.core.exceptions import APIError
 
 def user_list(
     *,
@@ -63,40 +65,46 @@ def user_get_invited_by_token(*, token: str) -> User:
     return user
     
 def users_stats_for_actor(*, user) -> dict:
-    """
-    User statistics visible to the caller:
-    - Platform admin: all users
-    - ORG_ADMIN: users in their organization
-    """
-
     if not (
         user.is_platform_admin
         or UserRole.ORG_ADMIN.value in user.role
     ):
         raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
 
-    qs = User.objects.all()
+    base_qs = User.objects.all()
 
     if not user.is_platform_admin:
-        qs = qs.filter(organization=user.organization)
+        base_qs = base_qs.filter(organization=user.organization)
 
-    total = qs.count()
+    # --- total ---
+    total = base_qs.count()
 
     # --- by status ---
-    by_status_qs = (
-        qs.values("status")
-        .annotate(count=Count("id"))
-    )
     by_status = {
         row["status"].lower(): row["count"]
-        for row in by_status_qs
+        for row in (
+            base_qs
+            .values("status")
+            .annotate(count=Count("id"))
+        )
     }
 
-    # --- by role (JSONField) ---
+    # --- by role (single pass, JSON explode) ---
+    role_qs = (
+        base_qs
+        .annotate(
+            role_item=RawSQL(
+                "jsonb_array_elements_text(role)",
+                []
+            )
+        )
+        .values("role_item")
+        .annotate(count=Count("id"))
+    )
+
     by_role = {
-        UserRole.ORG_ADMIN.value.lower(): qs.filter(role__contains=[UserRole.ORG_ADMIN.value]).count(),
-        UserRole.ORG_MEMBER.value.lower(): qs.filter(role__contains=[UserRole.ORG_MEMBER.value]).count(),
-        UserRole.AUDITOR.value.lower(): qs.filter(role__contains=[UserRole.AUDITOR.value]).count(),
+        row["role_item"].lower(): row["count"]
+        for row in role_qs
     }
 
     return {
@@ -104,3 +112,4 @@ def users_stats_for_actor(*, user) -> dict:
         "by_status": by_status,
         "by_role": by_role,
     }
+    
