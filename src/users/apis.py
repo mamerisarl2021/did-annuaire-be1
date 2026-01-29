@@ -226,7 +226,7 @@ class UserController(BaseAPIController):
 
         ensure_role_in(current_user, UserRole.ORG_ADMIN, UserRole.ORG_MEMBER)
 
-        updated_user = services.user_update_user(
+        services.user_update_user(
             user_id=user_id,
             updated_by=current_user,
             payload=payload

@@ -64,12 +64,10 @@ class UserActivatePayload(Schema):
         return v.strip()
 
 class UserUpdatePayload(Schema):
-    email: str
+    email: str | None
     first_name: str | None
     last_name: str | None
     phone: str | None
-    role: list[str]
     functions: str | None
-    status: str
-    can_publish_prod: bool
-    is_auditor: bool
+    can_publish_prod: bool | None
+    is_auditor: bool | None
