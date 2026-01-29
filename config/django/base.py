@@ -72,7 +72,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
-    'request_id.middleware.RequestIdMiddleware',
+#    'request_id.middleware.RequestIdMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -192,8 +192,8 @@ from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = LoggersSetup.setup_settings(INSTALLED_APPS, MIDDLEWARE)
-LoggersSetup.setup_structlog()
-LOGGING = LoggersSetup.setup_logging()
+#LoggersSetup.setup_structlog()
+#LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
 from config.settings.email_sending import *  # noqa

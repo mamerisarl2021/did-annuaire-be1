@@ -10,17 +10,15 @@ def ensure_superuser(user) -> None:
             status=403,
         )
 
-
 def ensure_org_member(user, org_id) -> None:
-    """
-    Enforce that the caller belongs to the given organization.
-    org_id may be UUID (obj) or str — compare as strings.
-    """
-    user_org = getattr(user, "organization_id", None)
-    if not user_org or str(user_org) != str(org_id):
+    """Ensure the caller belongs to the given organization (UUID or str)."""
+    org_id_str = str(org_id)
+    if str(getattr(user, "organization_id", None)) != org_id_str:
         raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
 
 
 def ensure_role_in(user, *roles) -> None:
-    if getattr(user, "role", None) not in roles:
-        raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
+    user_roles = getattr(user, "role", [])
+    
+    if not any(r in roles for r in user_roles):
+            raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
