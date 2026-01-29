@@ -22,7 +22,7 @@ class OrgCreatePayload(Schema):
     functions: str 
 
 
-class AdminOrgFilterParams:
+class AdminOrgFilterParams(Schema):
     status: str | None = None
 
     @field_validator("status")
