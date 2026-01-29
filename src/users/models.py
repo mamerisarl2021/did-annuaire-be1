@@ -97,11 +97,13 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     # 2FA - Email OTP
     email_otp_code = models.CharField(max_length=6, blank=True)
     email_otp_expires_at = models.DateTimeField(null=True, blank=True)
+    email_otp_sent_at = models.DateTimeField(null=True, blank=True)
 
     # 2FA - SMS OTP
     sms_otp_code = models.CharField(max_length=6, blank=True)
     sms_otp_expires_at = models.DateTimeField(null=True, blank=True)
-
+    sms_otp_sent_at = models.DateTimeField(null=True, blank=True)
+    
     # Permissions
     can_publish_prod = models.BooleanField(default=False)
 

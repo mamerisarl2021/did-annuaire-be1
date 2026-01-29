@@ -74,7 +74,7 @@ def organization_create(*,
         phone=admin_phone,
         organization=org,
         functions=functions,
-        role=UserRole.ORG_ADMIN,
+        role=[UserRole.ORG_ADMIN],
         status=UserStatus.PENDING,
     )
 

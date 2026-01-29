@@ -27,6 +27,7 @@ from src.users.selectors import user_get_invited_by_token
 # ######################################################################################################################################
 # **************************************************************************************************************************************
 # 
+@transaction.atomic
 def user_generate_totp_qr(*, user: User) -> str:
     if not user.totp_secret:
         user.totp_secret = pyotp.random_base32()
@@ -256,24 +257,39 @@ def user_activate_account(*, token: str, password: str, enable_totp: bool = Fals
 
 @transaction.atomic
 def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
+    if user.status == UserStatus.ACTIVE:
+        raise DomainValidationError(
+            message="OTP not allowed for active user",
+            code="OTP_NOT_ALLOWED"
+        )
+
     code_field = f"{otp_type}_otp_code"
     expires_field = f"{otp_type}_otp_expires_at"
+    sent_field = f"{otp_type}_otp_sent_at"
     interval = 120 if otp_type == "email" else 60
 
-    last_sent = getattr(user, expires_field, None)
+    last_sent = getattr(user, sent_field, None)
     if last_sent:
-        enforce_min_interval(last_sent - timedelta(minutes=10), seconds=interval,
-                             code="OTP_RATE_LIMIT",
-                             message=f"Veuillez patienter avant de redemander un {otp_type.upper()} code.")
+        enforce_min_interval(
+            last_sent,
+            seconds=interval,
+            code="OTP_RATE_LIMIT",
+            message=f"Veuillez patienter avant de redemander un {otp_type.upper()} code."
+        )
 
     code = str(secrets.randbelow(1000000)).zfill(6)
+    now = timezone.now()
     setattr(user, code_field, code)
-    setattr(user, expires_field, timezone.now() + timedelta(minutes=10))
+    setattr(user, expires_field, now + timedelta(minutes=10))
+    setattr(user, sent_field, now)
     user.save()
 
     if otp_type == "email":
-        email_send(to=[user.email], subject="Code de vérification",
-                   html=f"<p>Votre code de vérification est: <strong>{code}</strong></p><p>Valide pendant 10 minutes.</p>")
+        email_send(
+            to=[user.email],
+            subject="Code de vérification",
+            html=f"<p>Votre code de vérification est: <strong>{code}</strong></p><p>Valide pendant 10 minutes.</p>"
+        )
 
     if otp_type == "sms":
         # TODO
@@ -289,10 +305,8 @@ def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
         target_id=str(user.id),
     )
 
-
     return code
-
-
+    
 @transaction.atomic
 def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
     """
