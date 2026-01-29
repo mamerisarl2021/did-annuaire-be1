@@ -137,7 +137,7 @@ class UserController(BaseAPIController):
             if payload.enable_totp:
                 # Prepare QR if TOTP not set or no code provided
                 if not user.totp_secret or not payload.code:
-                    qr = user_generate_totp_qr(user=user)
+                    qr = services.user_generate_totp_qr(user=user)
                     return self.create_response(
                         message="TOTP required: scan the QR and submit the code to activate",
                         data={"totp_qr": qr},
@@ -145,7 +145,7 @@ class UserController(BaseAPIController):
                         code="TOTP_REQUIRED",
                     )
                 # Verify TOTP then activate
-                verify_otp(user=user, otp_type="totp", provided_code=payload.code)
+                services.verify_otp(user=user, otp_type="totp", provided_code=payload.code)
                 user = services.user_activate_account(
                     token=payload.token, password=payload.password, enable_totp=True
                 )
