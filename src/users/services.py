@@ -361,17 +361,22 @@ def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
 
 @transaction.atomic
 def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePayload) -> User:
+    """
+    Update a user's profile with proper role and organization scoping.
+
+    Rules:
+      - SUPERUSER can update anyone.
+      - ORG_ADMIN can update anyone in their org.
+      - ORG_MEMBER can update only themselves.
+      - role is derived from `is_auditor`; never trust client input.
+    """
     qs = User.objects.select_for_update()
 
-    # SUPERUSER can update anyone
+    # Fetch user with proper scope
     if updated_by.is_platform_admin:
         user = qs.get(id=user_id)
-
-    # ORG_ADMIN can update anyone in their org
     elif UserRole.ORG_ADMIN.value in updated_by.role:
         user = qs.get(id=user_id, organization=updated_by.organization)
-
-    # ORG_MEMBER can update self only
     elif UserRole.ORG_MEMBER.value in updated_by.role:
         user = qs.get(id=user_id, organization=updated_by.organization)
         if user.id != updated_by.id:
@@ -381,35 +386,47 @@ def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePaylo
                 status=403,
             )
     else:
-        raise APIError("Permission denied", code="FORBIDDEN", status=403)
+        raise APIError(
+            message="Permission denied",
+            code="FORBIDDEN",
+            status=403,
+        )
 
-    # Allowed fields
+    # Determine allowed fields by updater's role
     if UserRole.ORG_MEMBER.value in updated_by.role:
         allowed_fields = {"first_name", "last_name", "phone"}
     else:  # ORG_ADMIN or SUPERUSER
-        allowed_fields = {
-            "first_name",
-            "last_name",
-            "phone",
-            "role",
-            "functions",
-            "status",
-        }
+        allowed_fields = {"first_name", "last_name", "phone", "functions", "can_publish_prod"}
 
+    # Build update dict
     update_data = {
         field: getattr(payload, field)
         for field in allowed_fields
         if getattr(payload, field) is not None
     }
 
-    if not update_data:
-        return user
+    # Handle is_auditor -> role
+    if hasattr(payload, "is_auditor") and payload.is_auditor is not None:
+        roles = set(user.role or [])
+        if payload.is_auditor:
+            roles.add(UserRole.AUDITOR.value)
+        else:
+            roles.discard(UserRole.AUDITOR.value)
+        user.role = list(roles)
 
+    # Apply updates
     for field, value in update_data.items():
         setattr(user, field, value)
 
-    user.save(update_fields=list(update_data.keys()))
+    # Save only updated fields + role if changed
+    save_fields = list(update_data.keys())
+    if "role" in user.__dict__:  # role was modified
+        save_fields.append("role")
 
+    if save_fields:
+        user.save(update_fields=save_fields)
+
+    # Audit
     audit_action_create(
         user=updated_by,
         category=AuditCategory.USER,
@@ -418,10 +435,11 @@ def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePaylo
         target_type="user",
         target_id=str(user.id),
         details={
-            "updated_fields": list(update_data.keys()),
+            "updated_fields": list(update_data.keys()) + (["role"] if hasattr(payload, "is_auditor") else []),
             "user_id": str(user.id),
             "email": user.email,
         },
     )
 
     return user
+    
