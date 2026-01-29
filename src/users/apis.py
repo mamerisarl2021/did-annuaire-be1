@@ -237,3 +237,15 @@ class UserController(BaseAPIController):
             data={"user": updated_user.to_dict()},
             status_code=200,
         )
+
+@route.get("/stats", auth=JWTAuth())
+def users_stats(self):
+    user = self.context.request.auth
+
+    stats = selectors.users_stats_for_actor(user=user)
+
+    return self.create_response(
+        message="Users statistics",
+        data=stats,
+        status_code=200,
+    )
