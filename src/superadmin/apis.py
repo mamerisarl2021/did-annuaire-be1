@@ -6,7 +6,6 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 
 from src.core.apis import BaseAPIController
-from src.dids.models import DID
 from src.core.policies import ensure_superuser
 from src.api.pagination import Paginator
 from src.common.utils import validate_uuid
@@ -15,16 +14,16 @@ from src.dids.publishing.services import remove_published_path
 from src.dids.resolver.services import parse_did_web
 from src.organizations.models import Organization
 from src.superadmin import selectors as sa_selectors
-from src.organizations.schemas import OrgFilterParams
+from .schemas import OrgFilterParams, OrgRefusePayload
 from src.superadmin.presenters import (
     org_to_list_dto_superadmin,
     org_to_detail_dto_superadmin,
     user_to_list_dto_superadmin,
 )
-from src.superadmin import services as sa_services
-from src.superadmin.schemas import RefusePayload
-from src.users import selectors as user_selectors
-from src.users.schemas import FilterParams
+from . import services
+from . import selectors
+# from src.users import selectors as user_selectors
+# from src.users.schemas import FilterParams
 
 
 @api_controller("/superadmin", tags=["Super Admin"], auth=JWTAuth())
@@ -38,11 +37,9 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
 
-        qs = sa_selectors.organization_list_with_admins(
-            status=filters.status, search=filters.search
-        )
+        qs = sa_selectors.organization_list_with_admins(status=filters.status, search=filters.search)
 
-        paginator = Paginator(default_page_size=20, max_page_size=100)
+        paginator = Paginator(default_page_size=10, max_page_size=20)
         items, meta = paginator.paginate_queryset(qs, self.context.request)
 
         data = [org_to_list_dto_superadmin(o) for o in items]
@@ -58,16 +55,14 @@ class SuperAdminController(BaseAPIController):
         if msg_parts:
             message += f" ({', '.join(msg_parts)})"
 
-        return self.create_response(
-            message=message, data={"items": data, "pagination": meta}, status_code=200
-        )
+        return self.create_response(message=message, data={"items": data, "pagination": meta}, status_code=200)
 
     @route.get("/organizations/{org_id}")
     def get_organization(self, org_id: str):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        org = org_selectors.organization_get_with_admin(org_id=org_uuid)
+        org = selectors.organization_get_with_admin(org_id=org_uuid)
         return self.create_response(
             message="Organization details",
             data=org_to_detail_dto_superadmin(org),
@@ -79,19 +74,15 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        sa_services.org_validate(organization_id=org_uuid, validated_by=user)
-        return self.create_response(
-            message="Organization validated successfully", status_code=200
-        )
+        services.organization_validate(organization_id=org_uuid, validated_by=user)
+        return self.create_response(message="Organization validated successfully", status_code=200)
 
     @route.post("/organizations/{org_id}/refuse")
-    def refuse(self, org_id: str, payload: RefusePayload):
+    def refuse(self, org_id: str, payload: OrgRefusePayload):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        sa_services.org_refuse(
-            organization_id=org_uuid, refused_by=user, reason=payload.reason
-        )
+        services.organization_refuse(organization_id=org_uuid, refused_by=user, reason=payload.reason)
         return self.create_response(message="Organization refused", status_code=200)
 
     @route.patch("/organizations/{org_id}/toggle-activation")
@@ -99,7 +90,7 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        org = sa_services.org_toggle_activation(
+        org = services.organization_toggle_activation(
             organization_id=org_uuid, toggled_by=user
         )
         return self.create_response(
@@ -113,7 +104,7 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        sa_services.org_delete(organization_id=org_uuid, deleted_by=user)
+        services.organization_delete(organization_id=org_uuid, deleted_by=user)
         return self.create_response(message="Organization deleted", status_code=200)
 
     # @route.get("/organizations/users")
@@ -222,7 +213,7 @@ class SuperAdminController(BaseAPIController):
             }
             Validates host and path containment; nginx remains RO; deletion is done by backend RW mount.
             """
-            if not getattr(request.user, "is_superuser", False):
+            if not getattr(self.context.request.auth, "is_superuser", False):
                 raise HttpError(403, "Forbidden")
     
             did = (body or {}).get("did")
@@ -271,3 +262,23 @@ class SuperAdminController(BaseAPIController):
                 },
                 status_code=200,
             )
+
+    @route.get("/health", auth=None)
+    def health_stats(self):
+        from orbit import get_watcher_status, get_failed_watchers
+        
+        # Get status of all watchers
+        status = get_watcher_status()
+        # {'cache': {'installed': True, 'error': None, 'disabled': False}, ...}
+        
+        # Get only failed watchers
+        failed = get_failed_watchers()
+        # {'celery': 'ModuleNotFoundError: No module named celery'}
+        
+        return self.create_response(
+            data={
+                "orbit_watcher_status": status,
+                "orbit_failed_watchers": failed 
+            }
+        )
+                    

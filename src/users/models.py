@@ -97,11 +97,13 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     # 2FA - Email OTP
     email_otp_code = models.CharField(max_length=6, blank=True)
     email_otp_expires_at = models.DateTimeField(null=True, blank=True)
+    email_otp_sent_at = models.DateTimeField(null=True, blank=True)
 
     # 2FA - SMS OTP
     sms_otp_code = models.CharField(max_length=6, blank=True)
-    sms_otp_expires_at = models.DateTimeField(null=True, blank=True)
-
+    sms_otp_expires_at = models.DateTimeField(null=True, blank=False)
+    sms_otp_sent_at = models.DateTimeField(null=True, blank=True)
+    
     # Permissions
     can_publish_prod = models.BooleanField(default=False)
 
@@ -134,7 +136,7 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
         ]
 
     def __str__(self):
-        return f"{self.email} [{', '.join(self.role)}]"
+        return f"{self.email} {[self.role]}" if self.role else f"{self.email} [SUPER_ADMIN]"
 
     @property
     def is_platform_admin(self):

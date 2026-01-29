@@ -72,7 +72,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
-    'request_id.middleware.RequestIdMiddleware',
+#    'request_id.middleware.RequestIdMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -105,7 +105,7 @@ TEMPLATES = [
 
 
 ORBIT_CONFIG = {
-    "ENABLED": False,
+    "ENABLED": True,
     "SLOW_QUERY_THRESHOLD_MS": 500,
     "STORAGE_LIMIT": 1000,
     # Core watchers
@@ -124,6 +124,7 @@ ORBIT_CONFIG = {
     "RECORD_JOBS": True,
     "RECORD_REDIS": True,
     "RECORD_GATES": True,
+    #'WATCHER_FAIL_SILENTLY': True,
     # Security
     "AUTH_CHECK": lambda request: request.user.is_staff,
     "IGNORE_PATHS": ["/orbit/", "/static/", "/media/"],
@@ -192,8 +193,8 @@ from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = LoggersSetup.setup_settings(INSTALLED_APPS, MIDDLEWARE)
-LoggersSetup.setup_structlog()
-LOGGING = LoggersSetup.setup_logging()
+#LoggersSetup.setup_structlog()
+#LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
 from config.settings.email_sending import *  # noqa

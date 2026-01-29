@@ -20,6 +20,7 @@ from src.emails.services import email_send
 from src.auditaction.services import audit_action_create
 from src.users.schemas import UserUpdatePayload
 from src.users.selectors import user_get_invited_by_token
+from src.core.exceptions import APIError
 
 
 ########################################################################################################################################
@@ -27,6 +28,7 @@ from src.users.selectors import user_get_invited_by_token
 # ######################################################################################################################################
 # **************************************************************************************************************************************
 # 
+@transaction.atomic
 def user_generate_totp_qr(*, user: User) -> str:
     if not user.totp_secret:
         user.totp_secret = pyotp.random_base32()
@@ -256,24 +258,39 @@ def user_activate_account(*, token: str, password: str, enable_totp: bool = Fals
 
 @transaction.atomic
 def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
+    if user.status == UserStatus.ACTIVE:
+        raise DomainValidationError(
+            message="OTP not allowed for active user",
+            code="OTP_NOT_ALLOWED"
+        )
+
     code_field = f"{otp_type}_otp_code"
     expires_field = f"{otp_type}_otp_expires_at"
+    sent_field = f"{otp_type}_otp_sent_at"
     interval = 120 if otp_type == "email" else 60
 
-    last_sent = getattr(user, expires_field, None)
+    last_sent = getattr(user, sent_field, None)
     if last_sent:
-        enforce_min_interval(last_sent - timedelta(minutes=10), seconds=interval,
-                             code="OTP_RATE_LIMIT",
-                             message=f"Veuillez patienter avant de redemander un {otp_type.upper()} code.")
+        enforce_min_interval(
+            last_sent,
+            seconds=interval,
+            code="OTP_RATE_LIMIT",
+            message=f"Veuillez patienter avant de redemander un {otp_type.upper()} code."
+        )
 
     code = str(secrets.randbelow(1000000)).zfill(6)
+    now = timezone.now()
     setattr(user, code_field, code)
-    setattr(user, expires_field, timezone.now() + timedelta(minutes=10))
+    setattr(user, expires_field, now + timedelta(minutes=10))
+    setattr(user, sent_field, now)
     user.save()
 
     if otp_type == "email":
-        email_send(to=[user.email], subject="Code de vérification",
-                   html=f"<p>Votre code de vérification est: <strong>{code}</strong></p><p>Valide pendant 10 minutes.</p>")
+        email_send(
+            to=[user.email],
+            subject="Code de vérification",
+            html=f"<p>Votre code de vérification est: <strong>{code}</strong></p><p>Valide pendant 10 minutes.</p>"
+        )
 
     if otp_type == "sms":
         # TODO
@@ -289,10 +306,8 @@ def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
         target_id=str(user.id),
     )
 
-
     return code
-
-
+    
 @transaction.atomic
 def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
     """
@@ -346,32 +361,67 @@ def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
 
 @transaction.atomic
 def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePayload) -> User:
-    user = User.objects.get(id=user_id)
+    qs = User.objects.select_for_update()
 
-    if UserRole.ORG_MEMBER in updated_by.role and user.id != updated_by.id:
-        raise PermissionError("You can only update your own profile")
+    # SUPERUSER can update anyone
+    if updated_by.is_platform_admin:
+        user = qs.get(id=user_id)
 
-    # Determine allowed fields
-    if UserRole.ORG_MEMBER in updated_by.role:
-        allowed_fields = ["first_name", "last_name", "phone"]
-    else:  # ORG_ADMIN
-        allowed_fields = ["first_name", "last_name", "phone", "role", "functions", "status"]
+    # ORG_ADMIN can update anyone in their org
+    elif UserRole.ORG_ADMIN.value in updated_by.role:
+        user = qs.get(id=user_id, organization=updated_by.organization)
 
-    update_data = {k: getattr(payload, k) for k in allowed_fields if getattr(payload, k) is not None}
+    # ORG_MEMBER can update self only
+    elif UserRole.ORG_MEMBER.value in updated_by.role:
+        user = qs.get(id=user_id, organization=updated_by.organization)
+        if user.id != updated_by.id:
+            raise APIError(
+                message="You can only update your own profile",
+                code="FORBIDDEN",
+                status=403,
+            )
+    else:
+        raise APIError("Permission denied", code="FORBIDDEN", status=403)
 
-    for k, v in update_data.items():
-        setattr(user, k, v)
+    # Allowed fields
+    if UserRole.ORG_MEMBER.value in updated_by.role:
+        allowed_fields = {"first_name", "last_name", "phone"}
+    else:  # ORG_ADMIN or SUPERUSER
+        allowed_fields = {
+            "first_name",
+            "last_name",
+            "phone",
+            "role",
+            "functions",
+            "status",
+        }
 
-    user.save()
+    update_data = {
+        field: getattr(payload, field)
+        for field in allowed_fields
+        if getattr(payload, field) is not None
+    }
+
+    if not update_data:
+        return user
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    user.save(update_fields=list(update_data.keys()))
 
     audit_action_create(
         user=updated_by,
         category=AuditCategory.USER,
-        organization=updated_by.organization,
+        organization=user.organization,
         action=AuditAction.USER_UPDATED,
         target_type="user",
         target_id=str(user.id),
-        details={"updated_fields": list(update_data.keys()), "user_id": user.id, "email": user.email},
+        details={
+            "updated_fields": list(update_data.keys()),
+            "user_id": str(user.id),
+            "email": user.email,
+        },
     )
 
     return user

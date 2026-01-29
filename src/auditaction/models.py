@@ -45,6 +45,7 @@ class AuditAction(models.TextChoices):
         "Utilisateur suspendu",
     )
     USER_CREATED = "USER_CREATED", "Création Utilisateur"
+    USER_UPDATED = "USER_UPDATED", "Mise à jour utilisateur"
 
     # DIDs
     DID_CREATED = "DID_CREATED", "DID créé"
@@ -63,6 +64,7 @@ class AuditAction(models.TextChoices):
     # Email services
     EMAIL_SENT = "EMAIL_SENT", "Email delivered"
     EMAIL_SEND_FAILED = "EMAIL_SEND_FAILED", "Email delivery failed"
+    OTP_GENERATED="OTP_GENERATED", "OTP generated"
 
     # Celery tasks
 

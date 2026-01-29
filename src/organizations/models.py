@@ -87,6 +87,9 @@ class Organization(BaseModel):
             models.UniqueConstraint(fields=["email"], name="org_email_unique"),
             models.UniqueConstraint(fields=["slug"], name="org_slug_unique"),
         ]
+        indexes = [
+            models.Index(fields=["status", "-created_at"]),
+        ]
 
     def __str__(self):
         return self.name

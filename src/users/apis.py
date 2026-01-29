@@ -10,6 +10,7 @@ from src.core.exceptions import DomainValidationError
 from src.core.policies import ensure_role_in
 from src.users.models import User, UserRole, UserStatus
 from src.users import services, selectors
+from src.core.exceptions import APIError
 
 from src.users.schemas import (
     UserActivatePayload,
@@ -57,12 +58,15 @@ class UserController(BaseAPIController):
 
     @route.get("/") # ✅
     def list_users(self, filters: Query[FilterParams]):
-        current_user = self.context.request.auth
-        ensure_role_in(current_user, UserRole.ORG_ADMIN)
+        user = self.context.request.auth
 
-        qs = selectors.user_list(organization=current_user.organization, status=filters.status, search=filters.search)
+        qs = selectors.user_list(
+                user=user,
+                status=filters.status,
+                search=filters.search,
+            )
 
-        paginator = Paginator(default_page_size=20, max_page_size=100)
+        paginator = Paginator(default_page_size=10, max_page_size=100)
         items, meta = paginator.paginate_queryset(qs, self.context.request)
 
         data = [UserListItem(
@@ -84,7 +88,7 @@ class UserController(BaseAPIController):
             data={"items": data, "pagination": meta},
             status_code=200,
         )
-
+ 
     @route.get("/me") # ✅
     def get_current_user(self):
         user = self.context.request.auth
@@ -97,6 +101,7 @@ class UserController(BaseAPIController):
             role=user.role,
             status=user.status,
             organization=OrganizationInfo(
+                id=user.organization.id if user.organization else None,
                 name=user.organization.name if user.organization else None,
             ),
             totp_enabled=user.totp_enabled,
@@ -137,7 +142,7 @@ class UserController(BaseAPIController):
             if payload.enable_totp:
                 # Prepare QR if TOTP not set or no code provided
                 if not user.totp_secret or not payload.code:
-                    qr = user_generate_totp_qr(user=user)
+                    qr = services.user_generate_totp_qr(user=user)
                     return self.create_response(
                         message="TOTP required: scan the QR and submit the code to activate",
                         data={"totp_qr": qr},
@@ -145,7 +150,7 @@ class UserController(BaseAPIController):
                         code="TOTP_REQUIRED",
                     )
                 # Verify TOTP then activate
-                verify_otp(user=user, otp_type="totp", provided_code=payload.code)
+                services.verify_otp(user=user, otp_type="totp", provided_code=payload.code)
                 user = services.user_activate_account(
                     token=payload.token, password=payload.password, enable_totp=True
                 )
@@ -167,7 +172,7 @@ class UserController(BaseAPIController):
                 )
 
             # verify OTP then activate
-            verify_otp(user=user, otp_type="email", provided_code=payload.code)
+            services.verify_otp(user=user, otp_type="email", provided_code=payload.code)
             user = services.user_activate_account(
                 token=payload.token, password=payload.password, enable_totp=False
             )
@@ -219,7 +224,7 @@ class UserController(BaseAPIController):
         user_id = validate_uuid(user_id)
         current_user = self.context.request.auth
 
-        ensure_role_in(current_user, [UserRole.ORG_ADMIN, UserRole.ORG_MEMBER])
+        ensure_role_in(current_user, UserRole.ORG_ADMIN, UserRole.ORG_MEMBER)
 
         updated_user = services.user_update_user(
             user_id=user_id,
@@ -230,5 +235,17 @@ class UserController(BaseAPIController):
         return self.create_response(
             message="User updated successfully",
             data={"user": updated_user.to_dict()},
+            status_code=200,
+        )
+
+    @route.get("/stats")
+    def users_stats(self):
+        user = self.context.request.auth
+    
+        stats = selectors.users_stats_for_actor(user=user)
+    
+        return self.create_response(
+            message="Users statistics",
+            data=stats,
             status_code=200,
         )

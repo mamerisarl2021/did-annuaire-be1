@@ -30,11 +30,11 @@ class FilterParams(Schema):
     search: str | None = None
 
 class OrganizationInfo(Schema):
-    id: int | None = None
+    id: UUID | None = None
     name: str | None = None
 
 class UserProfileSchema(Schema):
-    id: str
+    id: UUID
     email: str
     first_name: str
     last_name: str
@@ -67,6 +67,6 @@ class UserUpdatePayload(Schema):
     first_name: str | None = None
     last_name: str | None = None
     phone: str | None = None
-    role: str | None = None
+    role: list[str] | None = None
     functions: str | None = None
     status: str | None = None

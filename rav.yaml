@@ -1,12 +1,15 @@
 scripts:
   tasks:
-    - python manage.py setup_periodic_tasks
+    - python -u manage.py setup_periodic_tasks
   
   serve:
     - export PYTHONDONTWRITEBYTECODE=1
     - export PYTHONUNBUFFERED=1
-    - python manage.py runserver
+    - python -u manage.py runserver
   
   migrations:
-     - python manage.py makemigrations
-     - python manage.py migrate
+     - python -u manage.py makemigrations
+     - python -u manage.py migrate
+     
+  super:
+     - python -u manage.py superuser
