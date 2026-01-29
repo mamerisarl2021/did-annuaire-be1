@@ -105,7 +105,7 @@ TEMPLATES = [
 
 
 ORBIT_CONFIG = {
-    "ENABLED": False,
+    "ENABLED": True,
     "SLOW_QUERY_THRESHOLD_MS": 500,
     "STORAGE_LIMIT": 1000,
     # Core watchers
@@ -124,6 +124,7 @@ ORBIT_CONFIG = {
     "RECORD_JOBS": True,
     "RECORD_REDIS": True,
     "RECORD_GATES": True,
+    #'WATCHER_FAIL_SILENTLY': True,
     # Security
     "AUTH_CHECK": lambda request: request.user.is_staff,
     "IGNORE_PATHS": ["/orbit/", "/static/", "/media/"],

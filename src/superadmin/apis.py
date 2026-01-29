@@ -213,7 +213,7 @@ class SuperAdminController(BaseAPIController):
             }
             Validates host and path containment; nginx remains RO; deletion is done by backend RW mount.
             """
-            if not getattr(request.user, "is_superuser", False):
+            if not getattr(self.context.request.auth, "is_superuser", False):
                 raise HttpError(403, "Forbidden")
     
             did = (body or {}).get("did")
@@ -262,3 +262,23 @@ class SuperAdminController(BaseAPIController):
                 },
                 status_code=200,
             )
+
+    @route.get("/health", auth=None)
+    def health_stats(self):
+        from orbit import get_watcher_status, get_failed_watchers
+        
+        # Get status of all watchers
+        status = get_watcher_status()
+        # {'cache': {'installed': True, 'error': None, 'disabled': False}, ...}
+        
+        # Get only failed watchers
+        failed = get_failed_watchers()
+        # {'celery': 'ModuleNotFoundError: No module named celery'}
+        
+        return self.create_response(
+            data={
+                "orbit_watcher_status": status,
+                "orbit_failed_watchers": failed 
+            }
+        )
+                    

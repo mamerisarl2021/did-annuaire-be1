@@ -359,7 +359,7 @@ requires-dist = [
     { name = "django-extensions" },
     { name = "django-ninja" },
     { name = "django-ninja-jwt", extras = ["crypto"] },
-    { name = "django-orbit", specifier = "==0.6.2" },
+    { name = "django-orbit", specifier = "==0.6.3" },
     { name = "django-request-id", specifier = ">=1.0.0" },
     { name = "django-structlog", extras = ["celery"] },
     { name = "gunicorn" },
@@ -546,14 +546,14 @@ crypto = [
 
 [[package]]
 name = "django-orbit"
-version = "0.6.2"
+version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/e9/8e103c634c903049a4a42e5ea38b84e39d770d4f4ffccc3490f79228ba6c/django_orbit-0.6.2.tar.gz", hash = "sha256:904ef5b7debd5a39841103a3ea55f945870c968b926658ec4caaca1a12e193f9", size = 75230, upload-time = "2026-01-23T14:53:32.202Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/67/fb/ead2a39aa49711c3502981a6a9f67301d5e8d8f1467d195d015bf5acf671/django_orbit-0.6.3.tar.gz", hash = "sha256:ec55b97a91c0833855c7d8870964535d700545cbcf862a46a52aca2ad518085f", size = 83287, upload-time = "2026-01-25T21:11:52.906Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/21/a07e5dff218f7130759fb629c97f62a63474a7a87d2156c29edc0c78a779/django_orbit-0.6.2-py3-none-any.whl", hash = "sha256:2688ef819972b24d88b0f9b5eafed4dc9576c03b75906cf0af4a7742edc9449b", size = 69587, upload-time = "2026-01-23T14:53:30.669Z" },
+    { url = "https://files.pythonhosted.org/packages/53/fe/43adde2f2745abd04461f8136179ec9e5e9006bc1a416e0fa70f4e7a3733/django_orbit-0.6.3-py3-none-any.whl", hash = "sha256:e4203ba944938603682159081f56ba2835a49e08fdedd7afb2780e4ee0f007e5", size = 78182, upload-time = "2026-01-25T21:11:51.094Z" },
 ]
 
 [[package]]

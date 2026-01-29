@@ -58,11 +58,13 @@ class UserController(BaseAPIController):
 
     @route.get("/") # ✅
     def list_users(self, filters: Query[FilterParams]):
-        current_user = self.context.request.auth
-        if not (current_user.is_superuser or UserRole.ORG_ADMIN.value in current_user.role):
-                raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
+        user = self.context.request.auth
 
-        qs = selectors.user_list(user=current_user, status=filters.status, search=filters.search)
+        qs = selectors.user_list(
+                user=user,
+                status=filters.status,
+                search=filters.search,
+            )
 
         paginator = Paginator(default_page_size=10, max_page_size=100)
         items, meta = paginator.paginate_queryset(qs, self.context.request)
