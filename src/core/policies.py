@@ -3,9 +3,11 @@ from src.users.models import UserRole
 
 
 def ensure_superuser(user) -> None:
-    if getattr(user, "role", None) != UserRole.SUPERUSER:
+    if not user.is_platform_admin:
         raise APIError(
-            message="Only SUPERUSER can access this", code="FORBIDDEN", status=403
+            message="Only platform administrators can access this",
+            code="FORBIDDEN",
+            status=403,
         )
 
 

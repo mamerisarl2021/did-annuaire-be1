@@ -11,8 +11,7 @@ from src.auditaction.services import audit_action_create
 
 
 @transaction.atomic
-def organization_create(
-    *,
+def organization_create(*,
     name: str,
     org_type: str,
     country: str,
@@ -98,7 +97,7 @@ def organization_create(
 
 def _notify_super_admins_new_org(org: Organization):
     """Notifier les super admins d'une nouvelle organisation"""
-    super_admins = User.objects.filter(role=UserRole.SUPERUSER, is_active=True)
+    super_admins = User.objects.filter(is_superuser=True, is_active=True)
     emails = [admin.email for admin in super_admins]
 
     if emails:

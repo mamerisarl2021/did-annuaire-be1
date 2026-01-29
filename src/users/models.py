@@ -134,7 +134,7 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
         ]
 
     def __str__(self):
-        return f"{self.email} [{', '.join(self.role)}]"
+        return f"{self.email} {[self.role]}" if self.role else f"{self.email} [SUPER_ADMIN]"
 
     @property
     def is_platform_admin(self):
