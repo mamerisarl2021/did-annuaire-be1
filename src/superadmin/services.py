@@ -41,6 +41,9 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
             "organization_name": org.name,
         },
         category=AuditCategory.ORGANIZATION,
+        organization=org,
+        target_type="organization",
+        target_id=org.id,
     )
 
     return org
@@ -91,6 +94,9 @@ def organization_refuse(*, organization_id: UUID, refused_by: User, reason: str)
             "reason": reason,
         },
         category=AuditCategory.ORGANIZATION,
+        organization=org,
+        target_type="organization",
+        target_id=org.id,
     )
 
     return org
@@ -111,6 +117,9 @@ def organization_toggle_activation(*, organization_id: str, toggled_by: User) ->
         action=AuditAction.ORGANIZATION_TOGGLED_ACTIVATION,
         details={"organization_id": str(org.id), "new_status": org.status},
         category=AuditCategory.ORGANIZATION,
+        organization=org,
+        target_type="organization",
+        target_id=org.id,
     )
     return org
 
@@ -126,5 +135,6 @@ def organization_delete(*, organization_id: UUID, deleted_by: User) -> None:
         action=AuditAction.ORG_DELETED,
         details={"organization_id": str(org_id), "organization_name": org_name},
         category=AuditCategory.ORGANIZATION,
+        target_type="organization",
     )
 

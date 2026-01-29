@@ -90,7 +90,7 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        org = services.org_toggle_activation(
+        org = services.organization_toggle_activation(
             organization_id=org_uuid, toggled_by=user
         )
         return self.create_response(

@@ -8,8 +8,8 @@ from src.users.models import UserRole
 
 
 def _scope_org_id_for_user(user) -> str | None:
-    # SUPERUSER sees all orgs, others are scoped to own org
-    if getattr(user, "role", "").upper() == UserRole.SUPERUSER:
+    # Platform admins see everything; others are scoped to their org
+    if user.is_platform_admin:
         return None
     return getattr(user, "organization_id", None)
 
@@ -34,11 +34,11 @@ class AuditActionController(ControllerBase):
         List audit actions with filtering and simple pagination.
         SUPERUSER can pass organization_id explicitly; others are auto-scoped.
         """
-        current = self.context.request.auth
+        user = self.context.request.auth
         scoped_org = (
             organization_id
-            if getattr(current, "role", "").upper() == "SUPERUSER"
-            else _scope_org_id_for_user(current)
+            if user.is_platform_admin
+            else _scope_org_id_for_user(user=user)
         )
 
         total, items = selectors.audit_actions_list_paginated(
