@@ -10,6 +10,7 @@ from src.core.exceptions import DomainValidationError
 from src.core.policies import ensure_role_in
 from src.users.models import User, UserRole, UserStatus
 from src.users import services, selectors
+from src.core.exceptions import APIError
 
 from src.users.schemas import (
     UserActivatePayload,
@@ -58,11 +59,12 @@ class UserController(BaseAPIController):
     @route.get("/") # ✅
     def list_users(self, filters: Query[FilterParams]):
         current_user = self.context.request.auth
-        ensure_role_in(current_user, UserRole.ORG_ADMIN)
+        if not (current_user.is_superuser or UserRole.ORG_ADMIN.value in current_user.role):
+                raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
 
-        qs = selectors.user_list(organization=current_user.organization, status=filters.status, search=filters.search)
+        qs = selectors.user_list(user=current_user, status=filters.status, search=filters.search)
 
-        paginator = Paginator(default_page_size=20, max_page_size=100)
+        paginator = Paginator(default_page_size=10, max_page_size=100)
         items, meta = paginator.paginate_queryset(qs, self.context.request)
 
         data = [UserListItem(
@@ -84,7 +86,7 @@ class UserController(BaseAPIController):
             data={"items": data, "pagination": meta},
             status_code=200,
         )
-
+ 
     @route.get("/me") # ✅
     def get_current_user(self):
         user = self.context.request.auth

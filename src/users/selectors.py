@@ -2,7 +2,7 @@ from django.db.models import QuerySet
 from datetime import timedelta
 from django.utils import timezone
 from src.core.exceptions import DomainValidationError
-from src.users.models import User, UserStatus
+from src.users.models import User, UserStatus, UserRole
 
 from django.db.models import Q
 from src.organizations.models import Organization
@@ -10,6 +10,7 @@ from src.organizations.models import Organization
 
 def user_list(
     *,
+    user = User,
     organization: Organization | None = None,
     status: str | None = None,
     search: str | None = None,
@@ -23,32 +24,29 @@ def user_list(
         role: Filtrer par rôle
         search: Recherche dans email, first_name, last_name
     """
-    qs = (
-        User.objects
-        .select_related("organization", "invited_by", "function")
-        .only(
-            "id", "email", "first_name", "last_name", "can_publish_prod",
-            "role", "status", "created_at",
-            "organization__name",
-            "invited_by__email",
-        )
-    )
+    qs = User.objects.select_related("organization", "invited_by") \
+            .only(
+                "id", "email", "first_name", "last_name", "can_publish_prod", "functions"
+                "role", "status", "created_at",
+                "organization__name",
+                "invited_by__email",
+            )
 
-    if organization:
-        qs = qs.filter(organization=organization)
+    # Scope ORG_ADMIN
+    if not user.is_superuser:
+        if UserRole.ORG_ADMIN.value in user.role and user.organization:
+            qs = qs.filter(organization=user.organization)
+        else:
+            # Non-admin users see nothing
+            qs = qs.none()
 
     if status:
         qs = qs.filter(status=status)
 
     if search:
-        search_term = search.strip()
-        qs = qs.filter(
-            Q(email__icontains=search_term)
-            | Q(first_name__icontains=search_term)
-            | Q(last_name__icontains=search_term)
-        )
-
-
+            s = search.strip()
+            qs = qs.filter(Q(email__icontains=s) | Q(first_name__icontains=s) | Q(last_name__icontains=s))
+    
     return qs.order_by("-created_at")
 
 def user_get_invited_by_token(*, token: str) -> User:
