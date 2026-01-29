@@ -99,7 +99,7 @@ class UserController(BaseAPIController):
             role=user.role,
             status=user.status,
             organization=OrganizationInfo(
-                id=user.organization.id,
+                id=user.organization.id if user.organization else None,
                 name=user.organization.name if user.organization else None,
             ),
             totp_enabled=user.totp_enabled,
