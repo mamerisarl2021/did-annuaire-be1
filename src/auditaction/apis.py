@@ -102,19 +102,19 @@ class AuditActionController(ControllerBase):
         }
 
     @route.get("/stats/by-category")
-    def stats_by_category(
-        self,
-        date_from=None,
-        date_to=None,
-        organization_id=None,
-    ):
+    def stats_by_category(self, date_from=None, date_to=None, organization_id=None,):
         current = self.context.request.auth
+    
         scoped_org = (
             organization_id
-            if getattr(current, "role", "").upper() == "SUPERUSER"
+            if current.is_platform_admin
             else _scope_org_id_for_user(current)
         )
+    
         data = selectors.audit_stats_by_category(
-            organization_id=scoped_org, date_from=date_from, date_to=date_to
+            organization_id=scoped_org,
+            date_from=date_from,
+            date_to=date_to,
         )
+    
         return {"items": data}
