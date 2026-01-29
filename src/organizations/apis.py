@@ -4,7 +4,7 @@ from ninja import File, UploadedFile, Form, Query
 from django.shortcuts import get_object_or_404
 
 from src.core.policies import ensure_role_in
-from src.organizations.schemas import OrgCreatePayload, OrgFilterParams
+from src.organizations.schemas import OrgCreatePayload 
 from src.common.utils import validate_uuid
 from src.core.apis import BaseAPIController
 from src.organizations.models import Organization
@@ -53,77 +53,77 @@ class OrganizationController(BaseAPIController):
             status_code=201,
         )
 
-    @route.get("/", auth=JWTAuth())
-    def list_organizations(self, filters: Query[OrgFilterParams]):  # ← MODIFIÉ
-        """
-        Liste les organisations
-        Supporte: status, search (name/slug) + pagination
-        """
-        user = self.context.request.auth
-        ensure_role_in(user, UserRole.ORG_ADMIN)
+    # @route.get("/", auth=JWTAuth())
+    # def list_organizations(self, filters: Query[OrgFilterParams]):  # ← MODIFIÉ
+    #     """
+    #     Liste les organisations
+    #     Supporte: status, search (name/slug) + pagination
+    #     """
+    #     user = self.context.request.auth
+    #     ensure_role_in(user, UserRole.ORG_ADMIN)
 
-        qs = selectors.organization_list_with_admins(
-            status=filters.status, search=filters.search
-        )
+    #     qs = selectors.organization_list_with_admins(
+    #         status=filters.status, search=filters.search
+    #     )
 
-        paginator = Paginator(default_page_size=10, max_page_size=100)
-        page_items, meta = paginator.paginate_queryset(qs, self.context.request)
+    #     paginator = Paginator(default_page_size=10, max_page_size=100)
+    #     page_items, meta = paginator.paginate_queryset(qs, self.context.request)
 
-        data = [org_to_list_dto_admin(o) for o in page_items]
+    #     data = [org_to_list_dto_admin(o) for o in page_items]
 
-        # Message dynamique
-        msg_parts = []
-        if filters.status:
-            msg_parts.append(f"status={filters.status}")
-        if filters.search:
-            msg_parts.append(f"search='{filters.search}'")
+    #     # Message dynamique
+    #     msg_parts = []
+    #     if filters.status:
+    #         msg_parts.append(f"status={filters.status}")
+    #     if filters.search:
+    #         msg_parts.append(f"search='{filters.search}'")
 
-        message = "Organizations"
-        if msg_parts:
-            message += f" ({', '.join(msg_parts)})"
+    #     message = "Organizations"
+    #     if msg_parts:
+    #         message += f" ({', '.join(msg_parts)})"
 
-        return self.create_response(
-            message=message,
-            data={"items": data, "pagination": meta},
-            status_code=200,
-        )
+    #     return self.create_response(
+    #         message=message,
+    #         data={"items": data, "pagination": meta},
+    #         status_code=200,
+    #     )
 
-    @route.get("/id/{org_id}", auth=JWTAuth())
-    def get_organization(self, org_id: str):
-        user = self.context.request.auth
-        org_id = validate_uuid(org_id)
-        org = get_object_or_404(Organization, id=org_id)
-        ensure_role_in(user, UserRole.ORG_ADMIN)
-        data = org_to_detail_dto_admin(org)
-        return self.create_response(
-            message="Organization details", data=data, status_code=200
-        )
+    # @route.get("/id/{org_id}", auth=JWTAuth())
+    # def get_organization(self, org_id: str):
+    #     user = self.context.request.auth
+    #     org_id = validate_uuid(org_id)
+    #     org = get_object_or_404(Organization, id=org_id)
+    #     ensure_role_in(user, UserRole.ORG_ADMIN)
+    #     data = org_to_detail_dto_admin(org)
+    #     return self.create_response(
+    #         message="Organization details", data=data, status_code=200
+    #     )
 
-    @route.get("/stats", auth=JWTAuth())
-    def get_organizations_stats(self):
-        """
-        Statistiques des organisations par statut
-        Requiert: ORG_ADMIN
-        """
-        user = self.context.request.auth
-        ensure_role_in(user, UserRole.ORG_ADMIN)
+    # @route.get("/stats", auth=JWTAuth())
+    # def get_organizations_stats(self):
+    #     """
+    #     Statistiques des organisations par statut
+    #     Requiert: ORG_ADMIN
+    #     """
+    #     user = self.context.request.auth
+    #     ensure_role_in(user, UserRole.ORG_ADMIN)
 
-        from src.organizations.models import OrganizationStatus
+    #     from src.organizations.models import OrganizationStatus
 
-        # TODO: results must be filtered by organizations pertaining to the admin
-        stats = {
-            "all": Organization.objects.count(),
-            "active": Organization.objects.filter(
-                status=OrganizationStatus.ACTIVE
-            ).count(),
-            "suspended": Organization.objects.filter(
-                status=OrganizationStatus.SUSPENDED
-            ).count(),
-        }
+    #     # TODO: results must be filtered by organizations pertaining to the admin
+    #     stats = {
+    #         "all": Organization.objects.count(),
+    #         "active": Organization.objects.filter(
+    #             status=OrganizationStatus.ACTIVE
+    #         ).count(),
+    #         "suspended": Organization.objects.filter(
+    #             status=OrganizationStatus.SUSPENDED
+    #         ).count(),
+    #     }
 
-        return self.create_response(
-            message="Organizations statistics", data=stats, status_code=200
-        )
+    #     return self.create_response(
+    #         message="Organizations statistics", data=stats, status_code=200
+    #     )
         
     @route.get("/id/{org_id}/status", auth=None)
     def get_organization_status(self, org_id: str):
