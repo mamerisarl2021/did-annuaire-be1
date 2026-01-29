@@ -26,7 +26,7 @@ def user_list(
     """
     qs = User.objects.select_related("organization", "invited_by") \
             .only(
-                "id", "email", "first_name", "last_name", "can_publish_prod", "functions"
+                "id", "email", "first_name", "last_name", "can_publish_prod", "functions",
                 "role", "status", "created_at",
                 "organization__name",
                 "invited_by__email",
