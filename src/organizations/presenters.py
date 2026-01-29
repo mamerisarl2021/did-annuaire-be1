@@ -1,4 +1,4 @@
-def org_to_list_dto_admin(org) -> dict:
+def org_to_list_dto_admin_org(org) -> dict:
     return {
         "id": org.id,
         "name": org.name,
@@ -6,11 +6,13 @@ def org_to_list_dto_admin(org) -> dict:
         "type": org.type,
         "country": org.country,
         "email": org.email,
+        "address": org.address,
+        "status": org.status,
         "created_at": org.created_at.isoformat(),
     }
 
 
-def org_to_detail_dto_admin(org) -> dict:
+def org_to_detail_dto_admin_org(org) -> dict:
     return {
         "id": org.id,
         "name": org.name,
