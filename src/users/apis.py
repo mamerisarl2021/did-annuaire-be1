@@ -234,7 +234,6 @@ class UserController(BaseAPIController):
 
         return self.create_response(
             message="User updated successfully",
-            data={"user": updated_user},
             status_code=200,
         )
 
