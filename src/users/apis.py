@@ -88,9 +88,6 @@ class UserController(BaseAPIController):
     @route.get("/me") # ✅
     def get_current_user(self):
         user = self.context.request.auth
-        user_roles = []
-        if isinstance(list, user.role):
-            [user_roles for role in user]
         user_data = UserProfileSchema(
             id=user.id,
             email=user.email,
