@@ -67,7 +67,7 @@ class PublishRequestsController:
             
         if pr.status != PublishRequest.Status.PENDING:
             raise HttpError(400, "Request is not pending")
-        with transaction.atomic()
+        with transaction.atomic():
             pr.status = PublishRequest.Status.APPROVED
             pr.decided_by = request.user
             pr.decided_at = dj_tz.now()
