@@ -88,21 +88,15 @@ def send_publish_decision_notification(pr: PublishRequest) -> None:
     approved = (pr.status == PublishRequest.Status.APPROVED)
     subject = f"[DID Annuaire] Publication PROD {'approuvée' if approved else 'rejetée'} pour {did}"
 
-    note = (pr.note or "").strip()
-    decision_line = "Votre demande de publication a été approuvée." if approved else "Votre demande de publication a été rejetée."
-    note_line = f"<p>Note: {note}</p>" if note else ""
 
     ctx = {
-        "title": "Décision de publication",
-        "did": did,
-        "version": pr.did_document.version,
-        "status": pr.status,
-        "decided_by": getattr(pr.decided_by, "email", None),
-        "content": (
-            f"<p>{decision_line}</p>"
-            f"<p>DID: <code>{did}</code> (version {pr.did_document.version}).</p>"
-            f"{note_line}"
-        ),
-    }
-    html = _render_with_layout(inner_template=None, context=ctx)
+            "title": "Décision de publication",
+            "did": did,
+            "version": pr.did_document.version,
+            "requested_by": getattr(pr.requested_by, "email", "Utilisateur"),
+            "status": "APPROVED" if pr.status == PublishRequest.Status.APPROVED else "REJECTED",
+            "note": pr.note.strip() if pr.note else "",
+            "dashboard_url": urljoin(settings.FR_APP_DOMAIN, "/dashboard/publish-requests"),
+        }
+    html = _render_with_layout(inner_template="emails/publish_decision_content.html", context=ctx)
     _send_html_email(to=[to_email], subject=subject, html=html)
