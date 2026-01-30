@@ -167,12 +167,12 @@ class PublishRequest(BaseModel):
 
     class Meta:
         constraints = [
-                    models.UniqueConstraint(
-                        fields=["did", "environment"],
-                        condition=Q(status=Status.PENDING),
-                        name="unique_pending_publish_request_per_did_env",
-                    ),
-                ]
+            models.UniqueConstraint(
+                fields=["did", "environment"],
+                condition=Q(status="PENDING"),
+                name="unique_pending_publish_request_per_did_env",
+            ),
+        ]
         indexes = [
             models.Index(fields=["did", "environment", "status"]),
         ]
