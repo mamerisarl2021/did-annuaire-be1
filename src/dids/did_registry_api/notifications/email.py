@@ -1,10 +1,11 @@
 from typing import Iterable, Any
-from src.emails.services import email_send
+from urllib.parse import urljoin
 
-
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
+from src.emails.services import email_send
 from src.dids.models import PublishRequest
 from src.users.models import User, UserRole
 
@@ -60,21 +61,18 @@ def send_publish_request_notification(pr: PublishRequest) -> None:
     subject = f"[DID Annuaire] Demande de publication PROD pour {did}"
     ctx = {
         "title": "Demande de publication en production",
-        "org_name": getattr(org, "name", str(org)),
+        "org_name": org.name if hasattr(org, "name") else "—",
         "did": did,
         "version": pr.did_document.version,
         "requested_by": getattr(pr.requested_by, "email", None),
-        "environment": pr.environment,
+        "environment": pr.environment.upper(),
         "publish_request_id": pr.id,
-        # Le layout par défaut doit inclure {{ content|safe }}. On fournit 'content' via un mini fragment.
-        "content": (
-            f"<p>Une demande de publication en <strong>PROD</strong> a été créée pour le DID "
-            f"<code>{did}</code> (version {pr.did_document.version}).</p>"
-            f"<p>Demandeur: {getattr(pr.requested_by, 'email', 'inconnu')}.</p>"
-            f"<p>ID de demande: <strong>{pr.id}</strong>.</p>"
+        "admin_url": urljoin(
+            settings.FR_APP_DOMAIN,
+            "/dashboard/publish-requests",
         ),
     }
-    html = _render_with_layout(inner_template=None, context=ctx)
+    html = _render_with_layout(inner_template="templates/publish_request_content.html",context=ctx,)
     _send_html_email(to=recipients, subject=subject, html=html)
 
 

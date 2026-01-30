@@ -141,6 +141,14 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     @property
     def is_platform_admin(self):
         return self.is_superuser
+        
+    @property
+    def is_org_admin(self) -> bool:
+        return UserRole.ORG_ADMIN.value in self.role
+        
+    @property
+    def can_publish_prod_effective(self) -> bool:
+        return self.is_org_admin or self.can_publish_prod
 
     @property
     def full_name(self):

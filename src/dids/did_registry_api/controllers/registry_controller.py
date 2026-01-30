@@ -290,12 +290,6 @@ class RegistryController(BaseAPIController):
         
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "Only the DID owner can initiate publish flow.")
-            
-        # otp_code = (body or {}).get("otp_code")   
-        # try:
-        #     verify_or_raise(request.user, otp_code, scope="publish")
-        # except HttpError as he:
-        #       return err(request, he.status_code, str(he), path=f"/api/registry/dids/{did}/publish")
               
         version_raw = (body or {}).get("version", None)
         try:
@@ -320,7 +314,8 @@ class RegistryController(BaseAPIController):
                         path=f"/api/registry/dids/{did}/publish")
 
         # Approval gate
-        if not (is_org_admin(request.user, did_obj.organization) or can_publish_prod(request.user, did_obj.organization)):
+        # if not (is_org_admin(request.user, did_obj.organization) or can_publish_prod(request.user, did_obj.organization)):
+        if not can_publish_prod(request.user, did_obj.organization):
             pr = PublishRequest.objects.create(
                 did=did_obj, did_document=doc, environment="PROD",
                 requested_by=request.user, status=PublishRequest.Status.PENDING
