@@ -224,6 +224,7 @@ class UserController(BaseAPIController):
         user_id = validate_uuid(user_id)
         current_user = self.context.request.auth
 
+        # TODO: ALLOW superuser to update user info
         ensure_role_in(current_user, UserRole.ORG_ADMIN, UserRole.ORG_MEMBER)
 
         services.user_update_user(
@@ -248,3 +249,5 @@ class UserController(BaseAPIController):
             data=stats,
             status_code=200,
         )
+        
+    # TODO: Reset password, Delete user

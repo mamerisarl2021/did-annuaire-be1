@@ -1,6 +1,6 @@
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
-from django.shortcuts import get_object_or_404
+from django.db import transaction
 from django.utils import timezone as dj_tz
 from ninja_jwt.authentication import JWTAuth
 
@@ -11,6 +11,26 @@ from src.dids.did_registry_api.schemas.envelopes import ok
 from src.dids.did_registry_api.services.publish import publish_to_prod
 from src.dids.did_registry_api.notifications.email import send_publish_decision_notification
 
+
+def _publish_and_notify(pr_id: str) -> None:
+    from src.dids.models import PublishRequest
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        pr = PublishRequest.objects.select_related("did", "did_document", "requested_by").get(id=pr_id)
+
+        publish_to_prod(pr.did_document)
+
+        # same function, same signature
+        send_publish_decision_notification(pr)
+
+    except Exception:
+        logger.exception(
+            "Failed to publish DID after approval",
+            extra={"publish_request_id": pr_id},
+        )
 
 @api_controller("/registry", tags=["DID Registry"], auth=JWTAuth())
 class PublishRequestsController:
@@ -41,15 +61,23 @@ class PublishRequestsController:
     def approve(self, request, pr_id: str, note: str | None = None):
         pr = get_publish_request(pr_id)
         org = pr.did.organization
+        
         if not is_org_admin(request.user, org):
             raise HttpError(403, "Forbidden")
+            
         if pr.status != PublishRequest.Status.PENDING:
             raise HttpError(400, "Request is not pending")
-        pr.status = PublishRequest.Status.APPROVED
-        pr.decided_by = request.user
-        pr.decided_at = dj_tz.now()
-        pr.note = note or pr.note
-        pr.save(update_fields=["status", "decided_by", "decided_at", "note"])
+        with transaction.atomic()
+            pr.status = PublishRequest.Status.APPROVED
+            pr.decided_by = request.user
+            pr.decided_at = dj_tz.now()
+            pr.note = note or pr.note
+            pr.save(update_fields=["status", "decided_by", "decided_at", "note"])
+            
+            # publish AFTER commit
+            transaction.on_commit(
+                lambda: _publish_and_notify(pr.id)
+            )
 
         send_publish_decision_notification(pr)
         url = publish_to_prod(pr.did_document)
