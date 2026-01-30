@@ -316,11 +316,23 @@ class RegistryController(BaseAPIController):
         # Approval gate
         # if not (is_org_admin(request.user, did_obj.organization) or can_publish_prod(request.user, did_obj.organization)):
         if not can_publish_prod(request.user, did_obj.organization):
-            pr = PublishRequest.objects.create(
-                did=did_obj, did_document=doc, environment="PROD",
-                requested_by=request.user, status=PublishRequest.Status.PENDING
-            )
-            send_publish_request_notification(pr)
+            created = False
+            try:
+                pr = PublishRequest.objects.create(
+                    did=did_obj, did_document=doc, environment="PROD",
+                    requested_by=request.user, status=PublishRequest.Status.PENDING
+                )
+                created = True
+            except IntegrityError:
+                pr = PublishRequest.objects.get(
+                    did=did_obj,
+                    did_document=doc,
+                    environment="PROD",
+                    status=PublishRequest.Status.PENDING,
+                )   
+            
+            if created:
+                send_publish_request_notification(pr)
             return ok(
                 request,
                 did_state={"state": "wait", "did": did_obj.did, "environment": "PROD",

@@ -98,5 +98,5 @@ def send_publish_decision_notification(pr: PublishRequest) -> None:
             "note": pr.note.strip() if pr.note else "",
             "dashboard_url": urljoin(settings.FR_APP_DOMAIN, "/dashboard/publish-requests"),
         }
-    html = _render_with_layout(inner_template="emails/publish_decision_content.html", context=ctx)
+    html = _render_with_layout(inner_template="templates/publish_decision_content.html", context=ctx)
     _send_html_email(to=[to_email], subject=subject, html=html)
