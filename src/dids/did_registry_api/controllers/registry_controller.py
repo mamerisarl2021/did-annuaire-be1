@@ -316,23 +316,21 @@ class RegistryController(BaseAPIController):
         # Approval gate
         # if not (is_org_admin(request.user, did_obj.organization) or can_publish_prod(request.user, did_obj.organization)):
         if not can_publish_prod(request.user, did_obj.organization):
-            created = False
-            try:
-                pr = PublishRequest.objects.create(
-                    did=did_obj, did_document=doc, environment="PROD",
-                    requested_by=request.user, status=PublishRequest.Status.PENDING
-                )
-                created = True
-            except IntegrityError:
-                pr = PublishRequest.objects.get(
-                    did=did_obj,
-                    did_document=doc,
-                    environment="PROD",
-                    status=PublishRequest.Status.PENDING,
-                )   
-            
+            pr, created = PublishRequest.objects.get_or_create(
+                did=did_obj,
+                environment="PROD",
+                status=PublishRequest.Status.PENDING,
+                defaults={"did_document": doc, "requested_by": request.user},
+            )
             if created:
-                send_publish_request_notification(pr)
+                # notify admins only on first creation; defer until commit
+                transaction.on_commit(lambda: send_publish_request_notification(pr))
+            else:
+                # Optional: if there’s a newer DRAFT, keep the pending request pointing to it
+                if pr.did_document_id != doc.id:
+                    pr.did_document = doc
+                    pr.save(update_fields=["did_document"])
+              
             return ok(
                 request,
                 did_state={"state": "wait", "did": did_obj.did, "environment": "PROD",

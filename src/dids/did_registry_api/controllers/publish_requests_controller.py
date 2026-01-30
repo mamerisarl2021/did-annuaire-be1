@@ -1,36 +1,25 @@
+import uuid
+import logging
+
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+from django.utils import timezone
+
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
-from django.db import transaction
-from django.utils import timezone as dj_tz
 from ninja_jwt.authentication import JWTAuth
+from ninja import Body
 
 from src.dids.models import PublishRequest
 from src.dids.did_registry_api.selectors.publish_requests import list_publish_requests, get_publish_request
 from src.dids.did_registry_api.policies.access import is_org_admin
-from src.dids.did_registry_api.schemas.envelopes import ok
+from src.dids.did_registry_api.schemas.envelopes import ok, err
 from src.dids.did_registry_api.services.publish import publish_to_prod
 from src.dids.did_registry_api.notifications.email import send_publish_decision_notification
+from src.auditaction.services import audit_action_create
+from src.auditaction.models import AuditAction, AuditCategory
 
-
-def _publish_and_notify(pr_id: str) -> None:
-    from src.dids.models import PublishRequest
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-    try:
-        pr = PublishRequest.objects.select_related("did", "did_document", "requested_by").get(id=pr_id)
-
-        publish_to_prod(pr.did_document)
-
-        # same function, same signature
-        send_publish_decision_notification(pr)
-
-    except Exception:
-        logger.exception(
-            "Failed to publish DID after approval",
-            extra={"publish_request_id": pr_id},
-        )
+logger = logging.getLogger(__name__)
 
 @api_controller("/registry", tags=["DID Registry"], auth=JWTAuth())
 class PublishRequestsController:
@@ -58,52 +47,135 @@ class PublishRequestsController:
         } for pr in qs]
 
     @route.post("/publish-requests/{pr_id}/approve")
-    def approve(self, request, pr_id: str, note: str | None = None):
-        pr = get_publish_request(pr_id)
-        org = pr.did.organization
-        
-        if not is_org_admin(request.user, org):
-            raise HttpError(403, "Forbidden")
-            
+    def approve(self, request, pr_id: uuid.UUID, body: dict = Body(None)):
+        try:
+            pr = get_publish_request(str(pr_id))
+        except PublishRequest.DoesNotExist:
+            raise HttpError(404, "PublishRequest not found")
+    
         if pr.status != PublishRequest.Status.PENDING:
-            raise HttpError(400, "Request is not pending")
-        with transaction.atomic():
-            pr.status = PublishRequest.Status.APPROVED
-            pr.decided_by = request.user
-            pr.decided_at = dj_tz.now()
-            pr.note = note or pr.note
-            pr.save(update_fields=["status", "decided_by", "decided_at", "note"])
-            
-            # publish AFTER commit
-            transaction.on_commit(
-                lambda: _publish_and_notify(pr.id)
-            )
-
-        send_publish_decision_notification(pr)
+            return err(request, 409, "PUBLISH_REQUEST_NOT_PENDING", path=f"/api/registry/publish-requests/{pr_id}/approve")
+    
+        # Only org admins of the DID's organization can approve/reject
+        if not is_org_admin(request.user, pr.did.organization):
+            raise HttpError(403, "Forbidden")
+    
+        # Decision
+        pr.status = PublishRequest.Status.APPROVED
+        pr.decided_by = request.user
+        pr.decided_at = timezone.now()
+        pr.save(update_fields=["status", "decided_by", "decided_at"])
+    
+        # Perform publish (signing currently disabled → publish as-is)
         url = publish_to_prod(pr.did_document)
-        return ok(request,
-                  did_state={"state": "finished", "did": pr.did.did, "environment": "PROD", "location": url},
-                  did_doc_meta={"versionId": str(pr.did_document.version), "environment": "PROD", "published": True},
-                  did_reg_meta={"method": "web"},
-                  status=200)
+    
+        # Persist publish audit on the document if the fields exist
+        if hasattr(pr.did_document, "published_at") and hasattr(pr.did_document, "published_by"):
+            pr.did_document.published_at = timezone.now()
+            pr.did_document.published_by = request.user
+            pr.did_document.save(update_fields=["published_at", "published_by"])
+    
+        # Audit decision
+        audit_action_create(
+            user=request.user,
+            action=AuditAction.PUBLISH_REQUEST_APPROVED,
+            details={
+                "publish_request_id": str(pr.id),
+                "did": pr.did.did,
+                "version": pr.did_document.version,
+                "environment": "PROD",
+                "location": url,
+            },
+            category=AuditCategory.DID,
+            organization=pr.did.organization,
+            target_type="publish_request",
+            target_id=pr.id,
+        )
+    
+        # Send email after commit; log + audit if email fails (does not break API)
+        def _send():
+            try:
+                send_publish_decision_notification(pr)
+            except Exception as e:
+                logger.exception("Failed to send publish decision email", extra={"publish_request_id": str(pr.id)})
+                audit_action_create(
+                    user=request.user,
+                    action=AuditAction.EMAIL_SEND_FAILED,
+                    details={"publish_request_id": str(pr.id), "error": str(e)},
+                    category=AuditCategory.DID,
+                    organization=pr.did.organization,
+                    target_type="publish_request",
+                    target_id=pr.id,
+                )
+        transaction.on_commit(_send)
+    
+        # Auto-delete request after decision (kept in audit trail)
+        pr.delete()
+    
+        return ok(
+            request,
+            did_state={"state": "finished", "did": pr.did.did, "environment": "PROD", "location": url},
+            did_doc_meta={"versionId": str(pr.did_document.version), "environment": "PROD", "published": True},
+            did_reg_meta={"method": "web"},
+            status=200
+        )
 
     @route.post("/publish-requests/{pr_id}/reject")
-    def reject(self, request, pr_id: str, note: str = None):
-        pr = get_publish_request(pr_id)
-        org = pr.did.organization
-        if not is_org_admin(request.user, org):
-            raise HttpError(403, "Forbidden")
+    def reject(self, request, pr_id: uuid.UUID, body: dict = Body(None)):
+        try:
+            pr = get_publish_request(str(pr_id))
+        except PublishRequest.DoesNotExist:
+            raise HttpError(404, "PublishRequest not found")
+    
         if pr.status != PublishRequest.Status.PENDING:
-            raise HttpError(400, "Request is not pending")
+            return err(request, 409, "PUBLISH_REQUEST_NOT_PENDING", path=f"/api/registry/publish-requests/{pr_id}/reject")
+    
+        if not is_org_admin(request.user, pr.did.organization):
+            raise HttpError(403, "Forbidden")
+    
         pr.status = PublishRequest.Status.REJECTED
         pr.decided_by = request.user
-        pr.decided_at = dj_tz.now()
-        pr.note = note or pr.note
-        pr.save(update_fields=["status", "decided_by", "decided_at", "note"])
-
-        send_publish_decision_notification(pr)
-        return ok(request,
-                  did_state={"state": "rejected", "did": pr.did.did, "environment": "PROD"},
-                  did_doc_meta={"versionId": str(pr.did_document.version), "environment": "PROD", "published": False},
-                  did_reg_meta={"method": "web"},
-                  status=200)
+        pr.decided_at = timezone.now()
+        pr.save(update_fields=["status", "decided_by", "decided_at"])
+    
+        audit_action_create(
+            user=request.user,
+            action=AuditAction.PUBLISH_REQUEST_REJECTED,
+            details={
+                "publish_request_id": str(pr.id),
+                "did": pr.did.did,
+                "version": pr.did_document.version,
+                "environment": "PROD",
+                "reason": (body or {}).get("reason"),
+            },
+            category=AuditCategory.DID,
+            organization=pr.did.organization,
+            target_type="publish_request",
+            target_id=pr.id,
+        )
+    
+        def _send():
+            try:
+                send_publish_decision_notification(pr)
+            except Exception as e:
+                logger.exception("Failed to send publish decision email", extra={"publish_request_id": str(pr.id)})
+                audit_action_create(
+                    user=request.user,
+                    action=AuditAction.EMAIL_SEND_FAILED,
+                    details={"publish_request_id": str(pr.id), "error": str(e)},
+                    category=AuditCategory.DID,
+                    organization=pr.did.organization,
+                    target_type="publish_request",
+                    target_id=pr.id,
+                )
+        transaction.on_commit(_send)
+    
+        pr.delete()
+    
+        return ok(
+            request,
+            did_state={"state": "finished", "did": pr.did.did, "environment": "PROD", "reason": "rejected"},
+            did_doc_meta={"versionId": str(pr.did_document.version), "environment": "PROD", "published": False},
+            did_reg_meta={"method": "web"},
+            status=200
+        )

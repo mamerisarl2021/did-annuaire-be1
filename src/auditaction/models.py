@@ -51,6 +51,8 @@ class AuditAction(models.TextChoices):
     DID_CREATED = "DID_CREATED", "DID créé"
     DID_PUBLISHED_DRAFT = "DID_PUBLISHED_DRAFT", "DID publié en draft"
     DID_PUBLISHED_PUBLIC = "DID_PUBLISHED_PUBLIC", "DID publié publiquement"
+    PUBLISH_REQUEST_APPROVED = "PUBLISH_REQUEST_APPROVED", "Publication did Acccepté"
+    PUBLISH_REQUEST_REJECTED = "PUBLISH_REQUEST_REJECTED", "Publication did rejeté"
     DID_REVOKED = "DID_REVOKED", "DID révoqué"
 
     # Clés et certificats
