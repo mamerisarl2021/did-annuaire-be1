@@ -8,7 +8,7 @@ from src.users.models import User, UserRole
 from src.users import services
 from src.organizations.models import Organization, OrganizationStatus
 from src.auditaction.services import audit_action_create
-from src.auditaction.models import AuditCategory, AuditAction
+from src.auditaction.models import AuditCategory, AuditAction, Severity
 from src.core.exceptions import DomainConflictError
 
 @transaction.atomic
@@ -21,33 +21,63 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
             code="ORG_INVALID_STATUS",
             errors={"status": [org.status]},
         )
-    # Valider
+    # Activate Organization
     org.status = OrganizationStatus.ACTIVE
     org.validated_at = timezone.now()
     org.validated_by = validated_by
-    org.save()
+    org.save(update_fields=["status", "validated_at", "validated_by"])
 
-    # Envoyer invitation à l'admin
-    admin = org.users.filter(role=UserRole.ORG_ADMIN).first()
+    # Send invitation to admin
+    admin = (
+        org.users
+        .filter(role__contains=[UserRole.ORG_ADMIN])
+        .order_by("created_at", "id")
+        .first()
+    )
     if admin:
-        services.user_send_invitation(user=admin, invited_by=validated_by)
-
-    # Audit
+        # Send after the transaction commits
+        def _send():
+            try:
+                services.user_send_invitation(user=admin, invited_by=validated_by)
+            except Exception as e:
+                # add audit/log here
+                audit_action_create(
+                    user=validated_by,
+                    action=AuditAction.EMAIL_SEND_FAILED,
+                    details={"organization_id": str(org.id), "admin_id": str(admin.id), "error": str(e)},
+                    category=AuditCategory.ORGANIZATION,
+                    organization=org,
+                    target_type="organization",
+                    target_id=org.id,
+                    severity=Severity.ERROR
+                )
+    
+        transaction.on_commit(_send)
+    else:
+        # audit that no admin was found
+        audit_action_create(
+            user=validated_by,
+            action=AuditAction.ADMIN_NOT_FOUND,
+            details={"organization_id": str(org.id), "note": "No user with ORG_ADMIN role"},
+            category=AuditCategory.ORGANIZATION,
+            organization=org,
+            target_type="organization",
+            target_id=org.id,
+            severity=Severity.INFO,
+        )
+    
     audit_action_create(
         user=validated_by,
         action=AuditAction.ORG_VALIDATED,
-        details={
-            "organization_id": org.id,
-            "organization_name": org.name,
-        },
+        details={"organization_id": str(org.id), "organization_name": org.name},
         category=AuditCategory.ORGANIZATION,
         organization=org,
         target_type="organization",
         target_id=org.id,
     )
-
+    
     return org
-
+    
 @transaction.atomic
 def organization_refuse(*, organization_id: UUID, refused_by: User, reason: str) -> Organization:
     org = Organization.objects.get(id=organization_id)
