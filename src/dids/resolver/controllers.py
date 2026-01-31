@@ -1,7 +1,11 @@
 from time import perf_counter
+from urllib.parse import quote
+
 from django.http import JsonResponse
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
+
+from src.dids.did_registry_api.schemas.envelopes import err
 from src.dids.resolver.services import load_from_fs, load_from_db, parse_did_web
 
 def _wants_resolution(accept: str) -> bool:
@@ -23,7 +27,16 @@ class ResolverController:
                 doc = load_from_db(identifier)
             driver_duration_ms = int((perf_counter() - d0) * 1000)
         except Exception:
+            doc = None
             raise HttpError(404, "DID Document not found")
+        
+        if not isinstance(doc, dict):
+            return err(
+                request,
+                404,
+                "resolver_error: DID must resolve to a valid https URL containing a JSON document: Error: Bad response Forbidden",
+                path=f"/api/universal-resolver/identifiers/{quote(identifier, safe=':')}"
+            )
 
         total_ms = int((perf_counter() - t0) * 1000)
 
