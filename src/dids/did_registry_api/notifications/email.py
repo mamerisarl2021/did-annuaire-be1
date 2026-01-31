@@ -38,14 +38,18 @@ def _send_html_email(to: Iterable[str], subject: str, html: str, text_fallback: 
 
 def _org_admin_emails(org) -> list[str]:
     """
-    Renvoie les emails des ORG_ADMIN d'une organisation. Adapte le filtre à ton modèle.
+    Return emails of ORG_ADMINs in the organization.
     """
-    try:
-        qs = User.objects.filter(organization=org, role=UserRole.ORG_ADMIN, is_active=True).only("email")
-        return [u.email for u in qs if u.email]
-    except Exception:
-        # Fallback: aucun destinataire
-        return []
+    qs = (
+        User.objects
+        .filter(organization=org, is_active=True)
+        .filter(role__contains=[UserRole.ORG_ADMIN])  # JSON array membership
+        .exclude(email__isnull=True)
+        .exclude(email="")
+        .values_list("email", flat=True)
+        .distinct()
+    )
+    return list(qs)
 
 
 def send_publish_request_notification(pr: PublishRequest) -> None:
