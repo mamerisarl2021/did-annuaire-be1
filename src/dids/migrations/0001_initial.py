@@ -6,101 +6,323 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Certificate',
+            name="Certificate",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('file', models.FileField(upload_to='certificates/%Y/%m/')),
-                ('format', models.CharField(choices=[('PEM', 'PEM'), ('DER', 'DER'), ('PKCS7', 'PKCS#7'), ('PKCS12', 'PKCS#12')], max_length=20)),
-                ('extracted_jwk', models.JSONField(help_text='Clé publique normalisée au format JWK')),
-                ('fingerprint', models.CharField(help_text='SHA-256 fingerprint', max_length=128, unique=True)),
-                ('is_revoked', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        db_index=True, default=django.utils.timezone.now
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("file", models.FileField(upload_to="certificates/%Y/%m/")),
+                (
+                    "format",
+                    models.CharField(
+                        choices=[
+                            ("PEM", "PEM"),
+                            ("DER", "DER"),
+                            ("PKCS7", "PKCS#7"),
+                            ("PKCS12", "PKCS#12"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "extracted_jwk",
+                    models.JSONField(help_text="Clé publique normalisée au format JWK"),
+                ),
+                (
+                    "fingerprint",
+                    models.CharField(
+                        help_text="SHA-256 fingerprint", max_length=128, unique=True
+                    ),
+                ),
+                ("is_revoked", models.BooleanField(default=False)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='DID',
+            name="DID",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('did', models.CharField(help_text='did:web:domain:{org}:{user}:{document_type}', max_length=500, unique=True)),
-                ('method', models.CharField(default='web', help_text='DID method', max_length=20)),
-                ('document_type', models.CharField(help_text='Logical document identifier (e.g. permis_conduite_qrcode)', max_length=150)),
-                ('status', models.CharField(choices=[('DRAFT', 'Draft'), ('ACTIVE', 'Active'), ('DEACTIVATED', 'Deactivated')], db_index=True, default='DRAFT', max_length=20)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        db_index=True, default=django.utils.timezone.now
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "did",
+                    models.CharField(
+                        help_text="did:web:domain:{org}:{user}:{document_type}",
+                        max_length=500,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "method",
+                    models.CharField(
+                        default="web", help_text="DID method", max_length=20
+                    ),
+                ),
+                (
+                    "document_type",
+                    models.CharField(
+                        help_text="Logical document identifier (e.g. permis_conduite_qrcode)",
+                        max_length=150,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("DRAFT", "Draft"),
+                            ("ACTIVE", "Active"),
+                            ("DEACTIVATED", "Deactivated"),
+                        ],
+                        db_index=True,
+                        default="DRAFT",
+                        max_length=20,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='DIDDocument',
+            name="DIDDocument",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('version', models.PositiveIntegerField(help_text='Monotonically increasing version number')),
-                ('document', models.JSONField(help_text='Canonical W3C DID Document JSON')),
-                ('proof', models.JSONField(blank=True, help_text='Cryptographic proof added before publication (Linked Data Proof) JsonWebSignature2020 proof', null=True)),
-                ('environment', models.CharField(choices=[('DRAFT', 'Draft'), ('PROD', 'Production')], default='DRAFT', max_length=20)),
-                ('published_at', models.DateTimeField(blank=True, null=True)),
-                ('is_active', models.BooleanField(default=False, help_text='Only one active document per DID & environment')),
-                ('canonical_sha256', models.CharField(blank=True, help_text='JCS (RFC8785) SHA-256 of the JSON document in DRAFT', max_length=64, null=True)),
-                ('file_sha256', models.CharField(blank=True, help_text='SHA-256 of published did.json (PREPROD/PROD)', max_length=64, null=True)),
-                ('file_etag', models.CharField(blank=True, help_text='ETag of did.json if available', max_length=128, null=True)),
-                ('published_relpath', models.TextField(blank=True, help_text='Relative path under /.well-known (e.g., preprod/{org}/{user}/{type}/did.json)', null=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        db_index=True, default=django.utils.timezone.now
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "version",
+                    models.PositiveIntegerField(
+                        help_text="Monotonically increasing version number"
+                    ),
+                ),
+                (
+                    "document",
+                    models.JSONField(help_text="Canonical W3C DID Document JSON"),
+                ),
+                (
+                    "proof",
+                    models.JSONField(
+                        blank=True,
+                        help_text="Cryptographic proof added before publication (Linked Data Proof) JsonWebSignature2020 proof",
+                        null=True,
+                    ),
+                ),
+                (
+                    "environment",
+                    models.CharField(
+                        choices=[("DRAFT", "Draft"), ("PROD", "Production")],
+                        default="DRAFT",
+                        max_length=20,
+                    ),
+                ),
+                ("published_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=False,
+                        help_text="Only one active document per DID & environment",
+                    ),
+                ),
+                (
+                    "canonical_sha256",
+                    models.CharField(
+                        blank=True,
+                        help_text="JCS (RFC8785) SHA-256 of the JSON document in DRAFT",
+                        max_length=64,
+                        null=True,
+                    ),
+                ),
+                (
+                    "file_sha256",
+                    models.CharField(
+                        blank=True,
+                        help_text="SHA-256 of published did.json (PREPROD/PROD)",
+                        max_length=64,
+                        null=True,
+                    ),
+                ),
+                (
+                    "file_etag",
+                    models.CharField(
+                        blank=True,
+                        help_text="ETag of did.json if available",
+                        max_length=128,
+                        null=True,
+                    ),
+                ),
+                (
+                    "published_relpath",
+                    models.TextField(
+                        blank=True,
+                        help_text="Relative path under /.well-known (e.g., preprod/{org}/{user}/{type}/did.json)",
+                        null=True,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-version'],
+                "ordering": ["-version"],
             },
         ),
         migrations.CreateModel(
-            name='DidDocumentKeyBinding',
+            name="DidDocumentKeyBinding",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('purposes_snapshot', models.JSONField(default=list)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        db_index=True, default=django.utils.timezone.now
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("purposes_snapshot", models.JSONField(default=list)),
             ],
         ),
         migrations.CreateModel(
-            name='PublishRequest',
+            name="PublishRequest",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('environment', models.CharField(choices=[('PROD', 'Production')], max_length=10)),
-                ('status', models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')], default='PENDING', max_length=10)),
-                ('decided_at', models.DateTimeField(blank=True, null=True)),
-                ('note', models.TextField(blank=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        db_index=True, default=django.utils.timezone.now
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "environment",
+                    models.CharField(choices=[("PROD", "Production")], max_length=10),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PENDING", "Pending"),
+                            ("APPROVED", "Approved"),
+                            ("REJECTED", "Rejected"),
+                        ],
+                        default="PENDING",
+                        max_length=10,
+                    ),
+                ),
+                ("decided_at", models.DateTimeField(blank=True, null=True)),
+                ("note", models.TextField(blank=True)),
             ],
         ),
         migrations.CreateModel(
-            name='UploadedPublicKey',
+            name="UploadedPublicKey",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('key_id', models.CharField(help_text='Fragment id, e.g. key-1', max_length=100)),
-                ('key_type', models.CharField(choices=[('JsonWebKey2020', 'JsonWebKey2020')], max_length=50)),
-                ('version', models.PositiveIntegerField(db_index=True, default=1)),
-                ('public_key_jwk', models.JSONField(help_text='Normalized public key (JWK only)')),
-                ('public_key_jwk_snapshot', models.JSONField(help_text='Frozen copy of the JWK as used in a specific DID Document version')),
-                ('purposes', models.JSONField(default=list, help_text='authentication, assertionMethod, keyAgreement, etc.')),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        db_index=True, default=django.utils.timezone.now
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "key_id",
+                    models.CharField(
+                        help_text="Fragment id, e.g. key-1", max_length=100
+                    ),
+                ),
+                (
+                    "key_type",
+                    models.CharField(
+                        choices=[("JsonWebKey2020", "JsonWebKey2020")], max_length=50
+                    ),
+                ),
+                ("version", models.PositiveIntegerField(db_index=True, default=1)),
+                (
+                    "public_key_jwk",
+                    models.JSONField(help_text="Normalized public key (JWK only)"),
+                ),
+                (
+                    "public_key_jwk_snapshot",
+                    models.JSONField(
+                        help_text="Frozen copy of the JWK as used in a specific DID Document version"
+                    ),
+                ),
+                (
+                    "purposes",
+                    models.JSONField(
+                        default=list,
+                        help_text="authentication, assertionMethod, keyAgreement, etc.",
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'verbose_name': 'Public Key',
-                'verbose_name_plural': 'Public Keys',
-                'db_table': 'public_keys',
+                "verbose_name": "Public Key",
+                "verbose_name_plural": "Public Keys",
+                "db_table": "public_keys",
             },
         ),
     ]

@@ -3,6 +3,7 @@ from ninja import Schema
 from pydantic import field_validator, EmailStr
 from datetime import datetime
 
+
 class UserCreatePayload(Schema):
     email: EmailStr
     first_name: str
@@ -11,6 +12,7 @@ class UserCreatePayload(Schema):
     is_auditor: bool = False
     functions: str | None = None
     can_publish_prod: bool = False
+
 
 class UserListItem(Schema):
     id: UUID
@@ -25,13 +27,16 @@ class UserListItem(Schema):
     invitation_accepted_at: datetime | None = None
     can_publish_prod: bool
 
+
 class FilterParams(Schema):
     status: str | None = None
     search: str | None = None
 
+
 class OrganizationInfo(Schema):
     id: UUID | None = None
     name: str | None = None
+
 
 class UserProfileSchema(Schema):
     id: UUID
@@ -47,8 +52,10 @@ class UserProfileSchema(Schema):
     can_publish_prod: bool
     functions: str | None = None
 
+
 class OTPVerifyPayload(Schema):
     code: str
+
 
 class UserActivatePayload(Schema):
     token: str
@@ -62,6 +69,7 @@ class UserActivatePayload(Schema):
         if not v or not v.strip():
             raise ValueError("token is required")
         return v.strip()
+
 
 class UserUpdatePayload(Schema):
     email: str | None

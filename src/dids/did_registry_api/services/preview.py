@@ -1,20 +1,21 @@
-import uuid
 from django.shortcuts import get_object_or_404
 from ninja.errors import HttpError
 
 from src.dids.utils.ids import generate_key_id
 from src.organizations.models import Organization
-from src.users.models import User
 from src.dids.models import Certificate
 from src.dids.did_document_compiler.builders import build_did_and_document
 from src.dids.utils.validators import validate_did_document  # adapte si autre chemin
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
 
-def preview_single(request_user,
-                   organization_id: str,
-                   document_type: str,
-                   certificate_id: str,
-                   purposes: list[str] | None) -> dict:
+
+def preview_single(
+    request_user,
+    organization_id: str,
+    document_type: str,
+    certificate_id: str,
+    purposes: list[str] | None,
+) -> dict:
     org = get_object_or_404(Organization, pk=organization_id)
     owner = request_user
     cert = get_object_or_404(Certificate, pk=certificate_id, organization=org)

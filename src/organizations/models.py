@@ -47,7 +47,7 @@ class Organization(BaseModel):
     )
     authorization_document = models.FileField(
         upload_to="organizations/authorizations/",
-        help_text="Autorisation de l’organisation (document signé par le représentant légal de l’organisation)"
+        help_text="Autorisation de l’organisation (document signé par le représentant légal de l’organisation)",
     )
 
     # Statut

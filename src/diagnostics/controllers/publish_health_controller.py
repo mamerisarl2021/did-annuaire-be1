@@ -10,7 +10,13 @@ from ninja_jwt.authentication import JWTAuth
 from src.core.apis import BaseAPIController
 from src.core.policies import ensure_superuser
 
-@api_controller("/diagnostics", tags=["Diagnostics"], throttle=[DynamicRateThrottle(rate="30/min", scope="sustained")], auth=JWTAuth())
+
+@api_controller(
+    "/diagnostics",
+    tags=["Diagnostics"],
+    throttle=[DynamicRateThrottle(rate="30/min", scope="sustained")],
+    auth=JWTAuth(),
+)
 class PublishHealthController(BaseAPIController):
     @route.get("/publish-root")
     def publish_root(self, request):
@@ -19,7 +25,7 @@ class PublishHealthController(BaseAPIController):
         Reports path info, writability, disk usage, and sample fs path + public URL.
         """
         user = request.user
-        ensure_superuser(user)    
+        ensure_superuser(user)
 
         root = getattr(settings, "DIDS_ROOT", "/app/data/dids/.well-known")
         host = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
@@ -44,7 +50,9 @@ class PublishHealthController(BaseAPIController):
         example_user = "example-user"
         example_type = "example-type"
         example_rel = f"{example_org}/{example_user}/{example_type}/did.json"
-        example_fs_path = str(p / example_org / example_user / example_type / "did.json")
+        example_fs_path = str(
+            p / example_org / example_user / example_type / "did.json"
+        )
         example_url = f"https://{host}/{example_rel}"
 
         return self.create_response(

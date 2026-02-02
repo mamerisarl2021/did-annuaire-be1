@@ -3,15 +3,20 @@ from django.db.models import Prefetch, QuerySet, Q
 from src.organizations.models import Organization
 from src.users.models import User, UserRole
 
+
 def organization_list_all() -> QuerySet[Organization]:
     """Return all organizations (no filter)."""
     return Organization.objects.all().order_by("-created_at")
-    
+
+
 def organization_list_by_status(*, status: str) -> QuerySet[Organization]:
     """Return organizations filtered by a single status."""
     return Organization.objects.filter(status=status).order_by("-created_at")
-    
-def organization_list(*, status: str = None, search: str = None) -> QuerySet[Organization]:
+
+
+def organization_list(
+    *, status: str = None, search: str = None
+) -> QuerySet[Organization]:
     """
     List organisations with optional filters
 
@@ -34,8 +39,11 @@ def organization_list(*, status: str = None, search: str = None) -> QuerySet[Org
         qs = qs.filter(Q(name__icontains=search_term) | Q(slug__icontains=search_term))
 
     return qs.order_by("-created_at")
-    
-def organization_list_with_admins(*, status: str = None, search: str = None) -> QuerySet[Organization]:
+
+
+def organization_list_with_admins(
+    *, status: str = None, search: str = None
+) -> QuerySet[Organization]:
     """
     List organisations ORG_ADMIN prefetched
 
@@ -46,9 +54,11 @@ def organization_list_with_admins(*, status: str = None, search: str = None) -> 
     qs = organization_list(status=status, search=search)
     return qs.prefetch_related(_admin_prefetch())
 
+
 def organization_get_with_admin(*, org_id) -> Organization:
     """Single organisation avec son ORG_ADMIN prefetched"""
     return Organization.objects.prefetch_related(_admin_prefetch()).get(id=org_id)
+
 
 def _admin_prefetch() -> Prefetch:
     admin_qs = (

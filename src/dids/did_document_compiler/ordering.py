@@ -1,13 +1,20 @@
-
 from collections import OrderedDict
 
 PREFERRED_ORDER = [
-    "@context", "id", "controller",
+    "@context",
+    "id",
+    "controller",
     "verificationMethod",
-    "authentication", "assertionMethod", "keyAgreement",
-    "capabilityInvocation", "capabilityDelegation",
-    "service", "proof", "deactivated"
+    "authentication",
+    "assertionMethod",
+    "keyAgreement",
+    "capabilityInvocation",
+    "capabilityDelegation",
+    "service",
+    "proof",
+    "deactivated",
 ]
+
 
 def order_did_document(doc: dict) -> dict:
     out = OrderedDict()

@@ -29,7 +29,7 @@ from . import selectors
 # Helpers
 # ######################################################################################################################################
 # **************************************************************************************************************************************
-# 
+#
 @transaction.atomic
 def user_generate_totp_qr(*, user: User) -> str:
     if not user.totp_secret:
@@ -57,7 +57,10 @@ def user_generate_totp_qr(*, user: User) -> str:
 
     return f"data:image/png;base64,{img_str}"
 
-def verify_otp(*, user: User, otp_type: Literal["email", "sms", "totp"], provided_code: str) -> bool:
+
+def verify_otp(
+    *, user: User, otp_type: Literal["email", "sms", "totp"], provided_code: str
+) -> bool:
     """
     Unified OTP/TOTP verification helper.
 
@@ -74,19 +77,17 @@ def verify_otp(*, user: User, otp_type: Literal["email", "sms", "totp"], provide
         if not stored_code or not expires_at:
             raise DomainValidationError(
                 message=f"{otp_type.upper()} OTP not generated",
-                code="OTP_NOT_GENERATED"
+                code="OTP_NOT_GENERATED",
             )
 
         if timezone.now() > expires_at:
             raise DomainValidationError(
-                message=f"{otp_type.upper()} OTP expired",
-                code="OTP_EXPIRED"
+                message=f"{otp_type.upper()} OTP expired", code="OTP_EXPIRED"
             )
 
         if stored_code != provided_code:
             raise DomainValidationError(
-                message=f"{otp_type.upper()} OTP invalid",
-                code="OTP_INVALID"
+                message=f"{otp_type.upper()} OTP invalid", code="OTP_INVALID"
             )
 
         setattr(user, code_field, "")
@@ -97,20 +98,21 @@ def verify_otp(*, user: User, otp_type: Literal["email", "sms", "totp"], provide
     if otp_type == "totp":
         if not user.totp_secret:
             raise DomainValidationError(
-                message="TOTP not prepared",
-                code="TOTP_REQUIRED"
+                message="TOTP not prepared", code="TOTP_REQUIRED"
             )
         totp = pyotp.TOTP(user.totp_secret)
         if not totp.verify(provided_code, valid_window=1):
             raise DomainValidationError(
-                message="TOTP code invalid",
-                code="TOTP_INVALID"
+                message="TOTP code invalid", code="TOTP_INVALID"
             )
         return True
 
     raise ValueError(f"Unsupported OTP type: {otp_type}")
+
+
 # **************************************************************************************************************************************
 # ######################################################################################################################################
+
 
 @transaction.atomic
 def user_create_by_admin(
@@ -123,7 +125,7 @@ def user_create_by_admin(
     phone: str,
     is_auditor: bool = False,
     functions: str | None = None,
-    can_publish_prod: bool = True
+    can_publish_prod: bool = True,
 ) -> User:
     """Org Admin creates a user"""
 
@@ -151,7 +153,7 @@ def user_create_by_admin(
         status=UserStatus.PENDING,
         invited_by=created_by,
         functions=functions or "",
-        can_publish_prod=can_publish_prod
+        can_publish_prod=can_publish_prod,
     )
 
     audit_action_create(
@@ -159,9 +161,14 @@ def user_create_by_admin(
         category=AuditCategory.USER,
         organization=organization,
         action=AuditAction.USER_CREATED,
-        details={"user_id": user.id, "email": email, "role": roles, "publish authorization": can_publish_prod},
+        details={
+            "user_id": user.id,
+            "email": email,
+            "role": roles,
+            "publish authorization": can_publish_prod,
+        },
         target_type="user",
-        target_id=str(user.id)
+        target_id=str(user.id),
     )
     return user
 
@@ -230,8 +237,11 @@ def user_send_invitation(*, user: User, invited_by: User):
         target_id=str(user.id),
     )
 
+
 @transaction.atomic
-def user_activate_account(*, token: str, password: str, enable_totp: bool = False) -> User:
+def user_activate_account(
+    *, token: str, password: str, enable_totp: bool = False
+) -> User:
     user = user_get_invited_by_token(token=token)
     user.set_password(password)
     user.status = UserStatus.ACTIVE
@@ -258,12 +268,12 @@ def user_activate_account(*, token: str, password: str, enable_totp: bool = Fals
     )
     return user
 
+
 @transaction.atomic
 def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
     if user.status == UserStatus.ACTIVE:
         raise DomainValidationError(
-            message="OTP not allowed for active user",
-            code="OTP_NOT_ALLOWED"
+            message="OTP not allowed for active user", code="OTP_NOT_ALLOWED"
         )
 
     code_field = f"{otp_type}_otp_code"
@@ -277,7 +287,7 @@ def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
             last_sent,
             seconds=interval,
             code="OTP_RATE_LIMIT",
-            message=f"Veuillez patienter avant de redemander un {otp_type.upper()} code."
+            message=f"Veuillez patienter avant de redemander un {otp_type.upper()} code.",
         )
 
     code = str(secrets.randbelow(1000000)).zfill(6)
@@ -291,7 +301,7 @@ def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
         email_send(
             to=[user.email],
             subject="Code de vérification",
-            html=f"<p>Votre code de vérification est: <strong>{code}</strong></p><p>Valide pendant 10 minutes.</p>"
+            html=f"<p>Votre code de vérification est: <strong>{code}</strong></p><p>Valide pendant 10 minutes.</p>",
         )
 
     if otp_type == "sms":
@@ -309,7 +319,8 @@ def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
     )
 
     return code
-    
+
+
 @transaction.atomic
 def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
     """
@@ -353,15 +364,22 @@ def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
         category=AuditCategory.USER,
         organization=user.organization,
         action=action,
-        details={"user_id": str(user.id), "prev_status": prev_status, "new_status": user.status},
+        details={
+            "user_id": str(user.id),
+            "prev_status": prev_status,
+            "new_status": user.status,
+        },
         target_type="user",
         target_id=str(user.id),
     )
 
     return user
 
+
 @transaction.atomic
-def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePayload) -> User:
+def user_update_user(
+    *, user_id: str, updated_by: User, payload: UserUpdatePayload
+) -> User:
     """
     Update a user's profile with proper role and organization scoping.
 
@@ -397,7 +415,13 @@ def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePaylo
     if UserRole.ORG_MEMBER.value in updated_by.role:
         allowed_fields = {"first_name", "last_name", "phone"}
     else:  # ORG_ADMIN or SUPERUSER
-        allowed_fields = {"first_name", "last_name", "phone", "functions", "can_publish_prod"}
+        allowed_fields = {
+            "first_name",
+            "last_name",
+            "phone",
+            "functions",
+            "can_publish_prod",
+        }
 
     # Build update dict
     update_data = {
@@ -436,7 +460,8 @@ def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePaylo
         target_type="user",
         target_id=str(user.id),
         details={
-            "updated_fields": list(update_data.keys()) + (["role"] if hasattr(payload, "is_auditor") else []),
+            "updated_fields": list(update_data.keys())
+            + (["role"] if hasattr(payload, "is_auditor") else []),
             "user_id": str(user.id),
             "email": user.email,
         },
@@ -444,39 +469,42 @@ def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePaylo
 
     return user
 
+
 @transaction.atomic
 def user_delete(*, user_id: uuid.UUID, requesting_user: User):
     """
     Delete/deactivate a user - soft delete recommended
     """
-    
+
     target_user = selectors.user_get_for_update(user_id=user_id)
-    
+
     # Permission check - only org admins can delete users
     if not requesting_user.is_org_admin:
-            raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
-    
-    # Check same organization      
+        raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
+
+    # Check same organization
     if target_user.organization_id != requesting_user.organization_id:
-            raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
-        
+        raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
+
     # Prevent self-deletion
     if target_user.id == requesting_user.id:
-        raise APIError(message="Cannot self delete", code="CANNOT_DELETE_SELF", status=400)
-        
+        raise APIError(
+            message="Cannot self delete", code="CANNOT_DELETE_SELF", status=400
+        )
+
     target_user.status = UserStatus.DEACTIVATED
     target_user.is_active = False
-    target_user.save(update_fields=['status', 'is_active', 'updated_at'])
-    
+    target_user.save(update_fields=["status", "is_active", "updated_at"])
+
     audit_action_create(
         user=requesting_user,
         action=AuditAction.USER_DELETED,
         details={
             "user_id": str(user_id),
-           "email": target_user.email,
-       },
-       category=AuditCategory.USER,
-       organization=requesting_user.organization,
-       target_type="user",
-       target_id=user_id,
+            "email": target_user.email,
+        },
+        category=AuditCategory.USER,
+        organization=requesting_user.organization,
+        target_type="user",
+        target_id=user_id,
     )

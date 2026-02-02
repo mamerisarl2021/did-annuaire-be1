@@ -1,13 +1,15 @@
 from ninja import Schema
 from pydantic import field_validator
 
+
 class OrgCreatePayload(Schema):
     """
-        Multipart payload.
-        Files:
-          - authorization_document (required)
-          - justification_document (optional)
+    Multipart payload.
+    Files:
+      - authorization_document (required)
+      - justification_document (optional)
     """
+
     allowed_email_domains: list[str]
     name: str
     org_type: str
@@ -19,7 +21,7 @@ class OrgCreatePayload(Schema):
     admin_first_name: str
     admin_last_name: str
     admin_phone: str
-    functions: str 
+    functions: str
 
 
 class AdminOrgFilterParams(Schema):
@@ -35,5 +37,3 @@ class AdminOrgFilterParams(Schema):
         if s not in allowed:
             raise ValueError(f"status must be one of {sorted(allowed)}")
         return s
-        
-    

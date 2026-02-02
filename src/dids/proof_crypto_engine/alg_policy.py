@@ -1,7 +1,9 @@
 ALLOWED_ALGS = {"RS256", "ES256", "ES384", "ES512", "EdDSA"}
 
+
 def choose_alg_from_jwk(jwk: dict, purposes: list[str]) -> str | None:
-    kty = jwk.get("kty"); crv = jwk.get("crv")
+    kty = jwk.get("kty")
+    crv = jwk.get("crv")
     if kty == "RSA":
         return "RS256"
     if kty == "EC":

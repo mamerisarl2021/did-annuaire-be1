@@ -5,15 +5,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dids', '0005_diddocument_did_env_active_idx'),
+        ("dids", "0005_diddocument_did_env_active_idx"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddConstraint(
-            model_name='publishrequest',
-            constraint=models.UniqueConstraint(condition=models.Q(('status', 'PENDING')), fields=('did', 'environment'), name='unique_pending_publish_request_per_did_env'),
+            model_name="publishrequest",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("status", "PENDING")),
+                fields=("did", "environment"),
+                name="unique_pending_publish_request_per_did_env",
+            ),
         ),
     ]

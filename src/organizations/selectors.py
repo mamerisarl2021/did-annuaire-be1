@@ -2,6 +2,7 @@ from src.organizations.models import Organization, OrganizationStatus
 from src.users.models import User, UserRole
 from django.db.models import QuerySet
 
+
 def organization_list_by_admins(*, status: str | None = None, user: User) -> QuerySet:
     """
     Returns a queryset of organizations visible to the given user.
@@ -27,7 +28,8 @@ def organization_list_by_admins(*, status: str | None = None, user: User) -> Que
 
     return qs
 
-def organization_stats_for_admin(*, user: User) -> dict[str,int]:
+
+def organization_stats_for_admin(*, user: User) -> dict[str, int]:
     """
     Returns organization counts scoped to the ORG_ADMIN's organization context.
 

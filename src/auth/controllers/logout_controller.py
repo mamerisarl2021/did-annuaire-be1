@@ -18,12 +18,14 @@ class LogoutController(BaseAPIController):
           - refresh?: string (optional when all=true)
           - all?: boolean (default false) — revoke all sessions for the user
         """
-        
+
         rl_key = f"logout:uid:{request.user.id}"
         if cache.get(rl_key):
-            return self.create_response(message="Too many requests. Try again shortly.", status_code=429)
+            return self.create_response(
+                message="Too many requests. Try again shortly.", status_code=429
+            )
         cache.set(rl_key, "1", timeout=60)
-        
+
         all_flag = bool(body.get("all") or False)
         refresh = (body.get("refresh") or "").strip()
 
@@ -43,8 +45,7 @@ class LogoutController(BaseAPIController):
                 status_code=400,
             )
 
-        
-    # Single-token revoke with ownership check
+        # Single-token revoke with ownership check
         try:
             tok = RefreshToken(refresh)
             token_user_id = str(tok.payload.get("user_id", ""))
@@ -53,5 +54,6 @@ class LogoutController(BaseAPIController):
             tok.blacklist()  # idempotent
             return self.create_response(message="Logged out.", status_code=200)
         except Exception:
-            return self.create_response(message="Invalid refresh token.", status_code=400)
-
+            return self.create_response(
+                message="Invalid refresh token.", status_code=400
+            )

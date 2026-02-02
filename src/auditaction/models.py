@@ -66,9 +66,9 @@ class AuditAction(models.TextChoices):
     # Email services
     EMAIL_SENT = "EMAIL_SENT", "Email delivered"
     EMAIL_SEND_FAILED = "EMAIL_SEND_FAILED", "Email delivery failed"
-    OTP_GENERATED="OTP_GENERATED", "OTP generated"
-    
-    ADMIN_NOT_FOUND = "ORG_ADMIN_NOT_FOUND" "Organization admin not found"
+    OTP_GENERATED = "OTP_GENERATED", "OTP generated"
+
+    ADMIN_NOT_FOUND = "ORG_ADMIN_NOT_FOUNDOrganization admin not found"
 
     # Celery tasks
 
