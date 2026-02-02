@@ -1,23 +1,26 @@
+import uuid
+
+from django.shortcuts import get_object_or_404
 from ninja import Body, Query
 from ninja_extra import api_controller, route
 from ninja_jwt.authentication import JWTAuth
-from django.shortcuts import get_object_or_404
 
 from src.api.pagination import Paginator
 from src.common.utils import validate_uuid
 from src.core.apis import BaseAPIController
-from src.core.exceptions import DomainValidationError
+from src.core.exceptions import APIError, DomainValidationError
 from src.core.policies import ensure_role_in
+from src.users import selectors, services
 from src.users.models import User, UserRole, UserStatus
-from src.users import services, selectors
-from src.core.exceptions import APIError
-
 from src.users.schemas import (
+    FilterParams,
+    OrganizationInfo,
     UserActivatePayload,
+    UserCreatePayload,
+    UserListItem,
+    UserProfileSchema,
     UserUpdatePayload,
-    FilterParams, UserCreatePayload, UserListItem, OrganizationInfo, UserProfileSchema,
 )
-
 
 
 @api_controller("/users", tags=["Users"], auth=JWTAuth())
@@ -114,7 +117,16 @@ class UserController(BaseAPIController):
             data=user_data.dict(),
             status_code=200,
         )
-
+    
+    @route.get("/{user_id}/info")
+    def get_user_info(self, user_id: uuid.UUID):
+        request_user = self.context.request.auth
+        user_data = selectors.user_get_info(user_id=user_id, requesting_user=request_user)
+        return self.create_response(
+            data=user_data,
+            status_code=200,
+        )
+    
     @route.post("/{user_id}/invite") # ✅
     def send_invitation(self, user_id: str):
         user_id = validate_uuid(user_id)
@@ -250,4 +262,10 @@ class UserController(BaseAPIController):
             status_code=200,
         )
         
-    # TODO: Reset password, Delete user
+    @route.delete("/{user_id}")
+    def delete_user(self, user_id: uuid.UUID):
+        request_user = self.context.request.auth
+        services.user_delete(user_id=user_id, requesting_user=request_user)
+        return self.create_response(message="User deleted successfully", status_code=200)
+    
+    # TODO: Reset password,
