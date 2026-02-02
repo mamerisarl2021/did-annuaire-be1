@@ -40,7 +40,6 @@ class DID(BaseModel):
     def __str__(self):
         return self.did
 
-
 class DIDDocument(BaseModel):
     """
     Versioned W3C DID Document.
@@ -129,7 +128,6 @@ class DIDDocument(BaseModel):
 
     def __str__(self):
         return f"{self.did.did}@v{self.version}({self.environment})"
-
 
 class DidDocumentKeyBinding(BaseModel):
     did_document = models.ForeignKey('dids.DIDDocument', on_delete=models.CASCADE, related_name='key_bindings')
@@ -223,7 +221,6 @@ class Certificate(BaseModel):
     )
 
     is_revoked = models.BooleanField(default=False)
-
 
 class UploadedPublicKey(BaseModel):
     """

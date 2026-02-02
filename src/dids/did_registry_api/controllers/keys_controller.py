@@ -46,7 +46,7 @@ class KeysController:
             return err(request, 400, "certificate_id is required",
                        path=f"/api/registry/dids/{did}/keys/rotate")
 
-        cert = get_object_or_404(Certificate, pk=certificate_id, organization=did_obj.organization)
+        cert = get_object_or_404(Certificate, pk=certificate_id, organization=did_obj.organization, owner=request.user)
 
         # Infer key_id from current doc (single-VM required)
         ref_doc = latest_draft(did_obj) or active_prod(did_obj) or did_obj.documents.order_by("-version").first()

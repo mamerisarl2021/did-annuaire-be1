@@ -114,6 +114,8 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
 
     # Détails supplémentaires requis pour le futur admin d'une organization
     functions = models.CharField(max_length=150, blank=True)
+    
+    refusal_reason = models.TextField(null=True, blank=True)
 
     objects = UserManager()
 

@@ -1,3 +1,4 @@
+import uuid
 import secrets
 import pyotp
 import qrcode
@@ -21,6 +22,7 @@ from src.auditaction.services import audit_action_create
 from src.users.schemas import UserUpdatePayload
 from src.users.selectors import user_get_invited_by_token
 from src.core.exceptions import APIError
+from . import selectors
 
 
 ########################################################################################################################################
@@ -358,7 +360,6 @@ def user_toggle_active(*, user_id: str, toggled_by: User) -> User:
 
     return user
 
-
 @transaction.atomic
 def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePayload) -> User:
     """
@@ -442,4 +443,40 @@ def user_update_user(*, user_id: str, updated_by: User, payload: UserUpdatePaylo
     )
 
     return user
+
+@transaction.atomic
+def user_delete(*, user_id: uuid.UUID, requesting_user: User):
+    """
+    Delete/deactivate a user - soft delete recommended
+    """
     
+    target_user = selectors.user_get_for_update(user_id=user_id)
+    
+    # Permission check - only org admins can delete users
+    if not requesting_user.is_org_admin:
+            raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
+    
+    # Check same organization      
+    if target_user.organization_id != requesting_user.organization_id:
+            raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
+        
+    # Prevent self-deletion
+    if target_user.id == requesting_user.id:
+        raise APIError(message="Cannot self delete", code="CANNOT_DELETE_SELF", status=400)
+        
+    target_user.status = UserStatus.DEACTIVATED
+    target_user.is_active = False
+    target_user.save(update_fields=['status', 'is_active', 'updated_at'])
+    
+    audit_action_create(
+        user=requesting_user,
+        action=AuditAction.USER_DELETED,
+        details={
+            "user_id": str(user_id),
+           "email": target_user.email,
+       },
+       category=AuditCategory.USER,
+       organization=requesting_user.organization,
+       target_type="user",
+       target_id=user_id,
+    )
