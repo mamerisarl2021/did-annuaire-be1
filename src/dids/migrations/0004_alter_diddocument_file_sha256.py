@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dids', '0003_initial'),
+        ("dids", "0003_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='diddocument',
-            name='file_sha256',
-            field=models.CharField(blank=True, help_text='SHA-256 of published did.json (PROD)', max_length=64, null=True),
+            model_name="diddocument",
+            name="file_sha256",
+            field=models.CharField(
+                blank=True,
+                help_text="SHA-256 of published did.json (PROD)",
+                max_length=64,
+                null=True,
+            ),
         ),
     ]

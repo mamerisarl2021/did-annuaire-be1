@@ -34,7 +34,7 @@ ALLOWED_HOSTS = ["*"] if DEBUG else env.list("ALLOWED_HOSTS", default=[])
 
 LOCAL_APPS = [
     "src.api.apps.ApiConfig",
-    #"src.api_keys.apps.ApiKeysConfig",
+    # "src.api_keys.apps.ApiKeysConfig",
     "src.auditaction.apps.AuditactionConfig",
     "src.common.apps.CommonConfig",
     "src.dids.apps.DidsConfig",
@@ -72,7 +72,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
-#    'request_id.middleware.RequestIdMiddleware',
+    #    'request_id.middleware.RequestIdMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -193,8 +193,8 @@ from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = LoggersSetup.setup_settings(INSTALLED_APPS, MIDDLEWARE)
-#LoggersSetup.setup_structlog()
-#LOGGING = LoggersSetup.setup_logging()
+# LoggersSetup.setup_structlog()
+# LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
 from config.settings.email_sending import *  # noqa
@@ -212,7 +212,7 @@ from config.settings.cors import *  # noqa
 
 if not (DIDS_ROOT := env("DIDS_ROOT", default=None)):
     raise ImproperlyConfigured("DIDS_ROOT environment variable is not set")
-    
+
 DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", default=False)
 
 # SITE_ID = 2

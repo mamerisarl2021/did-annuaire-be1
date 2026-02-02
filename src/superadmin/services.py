@@ -11,6 +11,7 @@ from src.auditaction.services import audit_action_create
 from src.auditaction.models import AuditCategory, AuditAction, Severity
 from src.core.exceptions import DomainConflictError
 
+
 @transaction.atomic
 def organization_validate(*, organization_id: UUID, validated_by: User) -> Organization:
     org = Organization.objects.get(id=organization_id)
@@ -29,8 +30,7 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
 
     # Send invitation to admin
     admin = (
-        org.users
-        .filter(role__contains=[UserRole.ORG_ADMIN])
+        org.users.filter(role__contains=[UserRole.ORG_ADMIN])
         .order_by("created_at", "id")
         .first()
     )
@@ -44,28 +44,35 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
                 audit_action_create(
                     user=validated_by,
                     action=AuditAction.EMAIL_SEND_FAILED,
-                    details={"organization_id": str(org.id), "admin_id": str(admin.id), "error": str(e)},
+                    details={
+                        "organization_id": str(org.id),
+                        "admin_id": str(admin.id),
+                        "error": str(e),
+                    },
                     category=AuditCategory.ORGANIZATION,
                     organization=org,
                     target_type="organization",
                     target_id=org.id,
-                    severity=Severity.ERROR
+                    severity=Severity.ERROR,
                 )
-    
+
         transaction.on_commit(_send)
     else:
         # audit that no admin was found
         audit_action_create(
             user=validated_by,
             action=AuditAction.ADMIN_NOT_FOUND,
-            details={"organization_id": str(org.id), "note": "No user with ORG_ADMIN role"},
+            details={
+                "organization_id": str(org.id),
+                "note": "No user with ORG_ADMIN role",
+            },
             category=AuditCategory.ORGANIZATION,
             organization=org,
             target_type="organization",
             target_id=org.id,
             severity=Severity.INFO,
         )
-    
+
     audit_action_create(
         user=validated_by,
         action=AuditAction.ORG_VALIDATED,
@@ -75,19 +82,22 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
         target_type="organization",
         target_id=org.id,
     )
-    
+
     return org
-    
+
+
 @transaction.atomic
-def organization_refuse(*, organization_id: UUID, refused_by: User, reason: str) -> Organization:
+def organization_refuse(
+    *, organization_id: UUID, refused_by: User, reason: str
+) -> Organization:
     org = Organization.objects.get(id=organization_id)
 
     if org.status != OrganizationStatus.PENDING:
-            raise DomainConflictError(
-                message="Organization cannot be validated in its current state",
-                code="ORG_INVALID_STATUS",
-                errors={"status": [org.status]},
-            )
+        raise DomainConflictError(
+            message="Organization cannot be validated in its current state",
+            code="ORG_INVALID_STATUS",
+            errors={"status": [org.status]},
+        )
     org.status = OrganizationStatus.REFUSED
     org.refused_at = timezone.now()
     org.refused_by = refused_by
@@ -133,7 +143,9 @@ def organization_refuse(*, organization_id: UUID, refused_by: User, reason: str)
 
 
 @transaction.atomic
-def organization_toggle_activation(*, organization_id: str, toggled_by: User) -> Organization:
+def organization_toggle_activation(
+    *, organization_id: str, toggled_by: User
+) -> Organization:
     org = Organization.objects.get(id=organization_id)
     if org.status == OrganizationStatus.ACTIVE:
         org.status = OrganizationStatus.SUSPENDED
@@ -167,4 +179,3 @@ def organization_delete(*, organization_id: UUID, deleted_by: User) -> None:
         category=AuditCategory.ORGANIZATION,
         target_type="organization",
     )
-

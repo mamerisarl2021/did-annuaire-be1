@@ -11,7 +11,10 @@ from src.organizations.models import Organization
 from src.organizations import services, selectors
 from src.users.models import UserRole
 from src.api.pagination import Paginator
-from src.organizations.presenters import org_to_detail_dto_admin_org, org_to_list_dto_admin_org
+from src.organizations.presenters import (
+    org_to_detail_dto_admin_org,
+    org_to_list_dto_admin_org,
+)
 
 
 @api_controller("/organizations", tags=["Organizations"])
@@ -72,7 +75,7 @@ class OrganizationController(BaseAPIController):
     #     message = "Organizations"
     #     if filters.status:
     #         message += f" (status={filters.status})"
-        
+
     #     return self.create_response(
     #         message=message,
     #         data={"items": data, "pagination": meta},
@@ -97,15 +100,15 @@ class OrganizationController(BaseAPIController):
     #     """
     #     user = self.context.request.auth
     #     ensure_role_in(user, UserRole.ORG_ADMIN)
-    
+
     #     stats = selectors.organization_stats_for_admin(user=user)
-    
+
     #     return self.create_response(
     #         message="Organization statistics",
     #         data=stats,
     #         status_code=200,
     #     )
-        
+
     @route.get("/id/{org_id}/status", auth=None)
     def get_organization_status(self, org_id: str):
         """
@@ -114,9 +117,7 @@ class OrganizationController(BaseAPIController):
         """
         org_id = validate_uuid(org_id)
         org = get_object_or_404(Organization, id=org_id)
-        
+
         return self.create_response(
-            message="Organization status",
-            data={"status": org.status},
-            status_code=200
+            message="Organization status", data={"status": org.status}, status_code=200
         )

@@ -25,7 +25,7 @@ from src.users.schemas import (
 
 @api_controller("/users", tags=["Users"], auth=JWTAuth())
 class UserController(BaseAPIController):
-    @route.post("/") # ✅
+    @route.post("/")  # ✅
     def create_user(self, body: UserCreatePayload = Body(...)):
         current_user = self.context.request.auth
         try:
@@ -59,40 +59,43 @@ class UserController(BaseAPIController):
             status_code=201,
         )
 
-    @route.get("/") # ✅
+    @route.get("/")  # ✅
     def list_users(self, filters: Query[FilterParams]):
         user = self.context.request.auth
 
         qs = selectors.user_list(
-                user=user,
-                status=filters.status,
-                search=filters.search,
-            )
+            user=user,
+            status=filters.status,
+            search=filters.search,
+        )
 
         paginator = Paginator(default_page_size=10, max_page_size=100)
         items, meta = paginator.paginate_queryset(qs, self.context.request)
 
-        data = [UserListItem(
-            id=u.id,
-            email=u.email,
-            full_name=u.full_name,
-            role=u.role,
-            status=u.status,
-            created_at=u.created_at,
-            organization=u.organization.name if u.organization else None,
-            invited_by=u.invited_by.email if u.invited_by else None,
-            functions=u.functions,
-            invitation_accepted_at=u.invitation_accepted_at,
-            can_publish_prod=u.can_publish_prod,
-        ) for u in items]
+        data = [
+            UserListItem(
+                id=u.id,
+                email=u.email,
+                full_name=u.full_name,
+                role=u.role,
+                status=u.status,
+                created_at=u.created_at,
+                organization=u.organization.name if u.organization else None,
+                invited_by=u.invited_by.email if u.invited_by else None,
+                functions=u.functions,
+                invitation_accepted_at=u.invitation_accepted_at,
+                can_publish_prod=u.can_publish_prod,
+            )
+            for u in items
+        ]
 
         return self.create_response(
             message="Users fetched",
             data={"items": data, "pagination": meta},
             status_code=200,
         )
- 
-    @route.get("/me") # ✅
+
+    @route.get("/me")  # ✅
     def get_current_user(self):
         user = self.context.request.auth
         user_data = UserProfileSchema(
@@ -117,17 +120,19 @@ class UserController(BaseAPIController):
             data=user_data.dict(),
             status_code=200,
         )
-    
+
     @route.get("/{user_id}/info")
     def get_user_info(self, user_id: uuid.UUID):
         request_user = self.context.request.auth
-        user_data = selectors.user_get_info(user_id=user_id, requesting_user=request_user)
+        user_data = selectors.user_get_info(
+            user_id=user_id, requesting_user=request_user
+        )
         return self.create_response(
             data=user_data,
             status_code=200,
         )
-    
-    @route.post("/{user_id}/invite") # ✅
+
+    @route.post("/{user_id}/invite")  # ✅
     def send_invitation(self, user_id: str):
         user_id = validate_uuid(user_id)
         current_user = self.context.request.auth
@@ -137,7 +142,9 @@ class UserController(BaseAPIController):
             User, id=user_id, organization=current_user.organization
         )
         services.user_send_invitation(user=user, invited_by=current_user)
-        return self.create_response(message="Invitation sent successfully", status_code=200)
+        return self.create_response(
+            message="Invitation sent successfully", status_code=200
+        )
 
     @route.post("/activate", auth=None)
     def activate_account(self, payload: UserActivatePayload):
@@ -162,7 +169,9 @@ class UserController(BaseAPIController):
                         code="TOTP_REQUIRED",
                     )
                 # Verify TOTP then activate
-                services.verify_otp(user=user, otp_type="totp", provided_code=payload.code)
+                services.verify_otp(
+                    user=user, otp_type="totp", provided_code=payload.code
+                )
                 user = services.user_activate_account(
                     token=payload.token, password=payload.password, enable_totp=True
                 )
@@ -197,20 +206,20 @@ class UserController(BaseAPIController):
         except DomainValidationError as e:
             return self.create_response(message=e.message, status_code=400, code=e.code)
 
-#    @route.post("/otp/sms/generate")
-#    def generate_sms_otp(self):
-#        user = self.context.request.auth
-#        services.user_generate_otp(user=user, otp_type="sms")
-#        return self.create_response(message="SMS OTP sent", status_code=200)
+    #    @route.post("/otp/sms/generate")
+    #    def generate_sms_otp(self):
+    #        user = self.context.request.auth
+    #        services.user_generate_otp(user=user, otp_type="sms")
+    #        return self.create_response(message="SMS OTP sent", status_code=200)
 
-#    @route.post("/otp/sms/verify")
-#    def verify_sms_otp(self, payload: OTPVerifyPayload):
-#        user = self.context.request.auth
-#        verify_otp(user=user, otp_type="sms", provided_code=payload.code)
-#        return self.create_response(message="SMS OTP verified", status_code=200)
+    #    @route.post("/otp/sms/verify")
+    #    def verify_sms_otp(self, payload: OTPVerifyPayload):
+    #        user = self.context.request.auth
+    #        verify_otp(user=user, otp_type="sms", provided_code=payload.code)
+    #        return self.create_response(message="SMS OTP verified", status_code=200)
 
     @route.post("/{user_id}/toggle")
-    def toggle_user(self, user_id: str): # ✅
+    def toggle_user(self, user_id: str):  # ✅
         user_id = validate_uuid(user_id)
         current_user = self.context.request.auth
         ensure_role_in(current_user, UserRole.ORG_ADMIN)
@@ -218,11 +227,15 @@ class UserController(BaseAPIController):
         try:
             user = services.user_toggle_active(user_id=user_id, toggled_by=current_user)
         except PermissionError as e:
-            return self.create_response(message=str(e), status_code=403, code="FORBIDDEN")
+            return self.create_response(
+                message=str(e), status_code=403, code="FORBIDDEN"
+            )
         except DomainValidationError as e:
             return self.create_response(message=e.message, status_code=400, code=e.code)
         except User.DoesNotExist:
-            return self.create_response(message="User not found", status_code=404, code="NOT_FOUND")
+            return self.create_response(
+                message="User not found", status_code=404, code="NOT_FOUND"
+            )
 
         verb = "activated" if user.status == UserStatus.ACTIVE else "deactivated"
         return self.create_response(
@@ -240,9 +253,7 @@ class UserController(BaseAPIController):
         ensure_role_in(current_user, UserRole.ORG_ADMIN, UserRole.ORG_MEMBER)
 
         services.user_update_user(
-            user_id=user_id,
-            updated_by=current_user,
-            payload=payload
+            user_id=user_id, updated_by=current_user, payload=payload
         )
 
         return self.create_response(
@@ -253,19 +264,21 @@ class UserController(BaseAPIController):
     @route.get("/stats")
     def users_stats(self):
         user = self.context.request.auth
-    
+
         stats = selectors.users_stats_for_actor(user=user)
-    
+
         return self.create_response(
             message="Users statistics",
             data=stats,
             status_code=200,
         )
-        
+
     @route.delete("/{user_id}")
     def delete_user(self, user_id: uuid.UUID):
         request_user = self.context.request.auth
         services.user_delete(user_id=user_id, requesting_user=request_user)
-        return self.create_response(message="User deleted successfully", status_code=200)
-    
+        return self.create_response(
+            message="User deleted successfully", status_code=200
+        )
+
     # TODO: Reset password,

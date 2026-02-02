@@ -77,7 +77,7 @@ class AuditActionController(ControllerBase):
     def get_action(self, audit_id: str):
         current = self.context.request.auth
         obj = get_object_or_404(AuditLog, id=audit_id)
-    
+
         # Scope check for non-platform admins
         if not current.is_platform_admin:
             if (
@@ -89,7 +89,7 @@ class AuditActionController(ControllerBase):
                     code="FORBIDDEN",
                     status=403,
                 )
-    
+
         return {
             "id": obj.id,
             "timestamp": obj.created_at.isoformat(),
@@ -107,19 +107,24 @@ class AuditActionController(ControllerBase):
         }
 
     @route.get("/stats/by-category")
-    def stats_by_category(self, date_from=None, date_to=None, organization_id=None,):
+    def stats_by_category(
+        self,
+        date_from=None,
+        date_to=None,
+        organization_id=None,
+    ):
         current = self.context.request.auth
-    
+
         scoped_org = (
             organization_id
             if current.is_platform_admin
             else _scope_org_id_for_user(current)
         )
-    
+
         data = selectors.audit_stats_by_category(
             organization_id=scoped_org,
             date_from=date_from,
             date_to=date_to,
         )
-    
+
         return {"items": data}

@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0002_remove_user_user_email_unique_and_more'),
+        ("users", "0002_remove_user_user_email_unique_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='email_otp_sent_at',
+            model_name="user",
+            name="email_otp_sent_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='user',
-            name='sms_otp_sent_at',
+            model_name="user",
+            name="sms_otp_sent_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

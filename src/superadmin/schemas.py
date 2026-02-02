@@ -1,6 +1,7 @@
 from ninja import Schema
 from pydantic import field_validator
 
+
 class OrgFilterParams(Schema):
     """Paramètres de filtrage et recherche pour organisations"""
 
@@ -17,7 +18,7 @@ class OrgFilterParams(Schema):
         if s not in allowed:
             raise ValueError(f"status must be one of {sorted(allowed)}")
         return s
-        
-    
+
+
 class OrgRefusePayload(Schema):
     reason: str

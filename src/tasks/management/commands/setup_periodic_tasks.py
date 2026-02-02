@@ -12,13 +12,25 @@ TASK_SPECS = [
     {
         "name": "JWT: flush expired tokens (daily 03:15)",
         "task_name": "jwt.flush_expired_tokens",
-        "cron": {"minute": "15", "hour": "3", "day_of_week": "*", "day_of_month": "*", "month_of_year": "*"},
+        "cron": {
+            "minute": "15",
+            "hour": "3",
+            "day_of_week": "*",
+            "day_of_month": "*",
+            "month_of_year": "*",
+        },
         "enabled": True,
     },
     {
         "name": "Debug heartbeat (every minute)",
         "task_name": "src.tasks.tasks.debug_task",
-        "cron": {"minute": "*/1", "hour": "*", "day_of_week": "*", "day_of_month": "*", "month_of_year": "*"},
+        "cron": {
+            "minute": "*/1",
+            "hour": "*",
+            "day_of_week": "*",
+            "day_of_month": "*",
+            "month_of_year": "*",
+        },
         "enabled": False,
     },
     # add more entries here as needed
@@ -35,9 +47,14 @@ class Command(BaseCommand):
             cron, _ = CrontabSchedule.objects.get_or_create(timezone=tz, **spec["cron"])
             PeriodicTask.objects.update_or_create(
                 name=spec["name"],
-                defaults={"task": spec["task_name"], "crontab": cron, "enabled": spec.get("enabled", True)},
+                defaults={
+                    "task": spec["task_name"],
+                    "crontab": cron,
+                    "enabled": spec.get("enabled", True),
+                },
             )
             self.stdout.write(self.style.SUCCESS(f"Scheduled: {spec['name']}"))
+
 
 # class Command(BaseCommand):
 #     help = """

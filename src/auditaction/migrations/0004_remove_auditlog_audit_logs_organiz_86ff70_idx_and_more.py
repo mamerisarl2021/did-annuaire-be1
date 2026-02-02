@@ -5,20 +5,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('auditaction', '0003_initial'),
-        ('organizations', '0002_initial'),
+        ("auditaction", "0003_initial"),
+        ("organizations", "0002_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveIndex(
-            model_name='auditlog',
-            name='audit_logs_organiz_86ff70_idx',
+            model_name="auditlog",
+            name="audit_logs_organiz_86ff70_idx",
         ),
         migrations.AddIndex(
-            model_name='auditlog',
-            index=models.Index(fields=['organization', 'action', '-created_at'], name='audit_logs_organiz_3dcf85_idx'),
+            model_name="auditlog",
+            index=models.Index(
+                fields=["organization", "action", "-created_at"],
+                name="audit_logs_organiz_3dcf85_idx",
+            ),
         ),
     ]

@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0004_alter_user_sms_otp_expires_at'),
+        ("users", "0004_alter_user_sms_otp_expires_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='refusal_reason',
+            model_name="user",
+            name="refusal_reason",
             field=models.TextField(blank=True, null=True),
         ),
     ]

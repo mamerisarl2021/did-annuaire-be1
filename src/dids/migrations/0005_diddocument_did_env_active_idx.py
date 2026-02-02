@@ -5,15 +5,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dids', '0004_alter_diddocument_file_sha256'),
+        ("dids", "0004_alter_diddocument_file_sha256"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='diddocument',
-            index=models.Index(fields=['did', 'environment', 'is_active'], name='did_env_active_idx'),
+            model_name="diddocument",
+            index=models.Index(
+                fields=["did", "environment", "is_active"], name="did_env_active_idx"
+            ),
         ),
     ]

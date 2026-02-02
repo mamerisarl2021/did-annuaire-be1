@@ -12,7 +12,8 @@ def published_dir_relpath_for_did(did: str) -> tuple[str, str, str, str]:
     rel_json = build_relpath(org, user, doc_type)  # "{org}/{user}/{doc_type}/did.json"
     rel_dir = rel_json.rsplit("/", 1)[0]
     return rel_dir, org, user, doc_type
-    
+
+
 def relpaths_for_did(did: str) -> dict[str, str]:
     """
     Compute relative paths (under DIDS_ROOT) for doc_type, user, and org scopes.

@@ -1,4 +1,3 @@
-
 from django.db import IntegrityError, transaction
 from django.db.models import Exists, Max, OuterRef, Subquery
 from django.http import JsonResponse
@@ -17,16 +16,36 @@ from src.core.apis import BaseAPIController
 from src.dids.did_registry_api.schemas.envelopes import ok, err
 from src.dids.did_document_compiler.builders import build_did_and_document
 from src.dids.did_registry_api.services.preview import preview_single
-from src.dids.models import PublishRequest, Certificate, DID, UploadedPublicKey, DIDDocument
-from src.dids.did_registry_api.selectors.dids import get_did_or_404, dids_for_org, dids_for_owner
-from src.dids.did_registry_api.policies.access import can_publish_prod, is_org_admin, can_manage_did
+from src.dids.models import (
+    PublishRequest,
+    Certificate,
+    DID,
+    UploadedPublicKey,
+    DIDDocument,
+)
+from src.dids.did_registry_api.selectors.dids import (
+    get_did_or_404,
+    dids_for_org,
+    dids_for_owner,
+)
+from src.dids.did_registry_api.policies.access import (
+    can_publish_prod,
+    is_org_admin,
+    can_manage_did,
+)
 from src.dids.did_registry_api.services.publish import publish_to_prod
 from src.dids.proof_crypto_engine.jws2020.verify import verify_detached_jws
-from src.dids.did_registry_api.selectors.did_documents import candidate_for_publish, latest_draft, active_prod
+from src.dids.did_registry_api.selectors.did_documents import (
+    candidate_for_publish,
+    latest_draft,
+    active_prod,
+)
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes, sha256_hex
-from src.dids.did_registry_api.notifications.email import send_publish_request_notification
+from src.dids.did_registry_api.notifications.email import (
+    send_publish_request_notification,
+)
 from src.dids.utils.ids import generate_key_id
-from src.dids.utils.validators import validate_did_document 
+from src.dids.utils.validators import validate_did_document
 from src.organizations.models import Organization
 from src.dids.services import bind_doc_to_keys
 
@@ -34,16 +53,24 @@ from src.dids.services import bind_doc_to_keys
 def _ensure_single_vm(doc: dict) -> dict:
     vms = doc.get("verificationMethod") or []
     if not isinstance(vms, list) or len(vms) != 1:
-        raise HttpError(400, "Exactly one verificationMethod is required by platform policy.")
+        raise HttpError(
+            400, "Exactly one verificationMethod is required by platform policy."
+        )
     return vms[0]
 
 
 def _kid_jwk_purposes(doc: dict) -> tuple[str, dict, list[str]]:
     vm = _ensure_single_vm(doc)
     kid = vm.get("id")
-    jwk = (vm.get("publicKeyJwk") or {})
+    jwk = vm.get("publicKeyJwk") or {}
     purposes: list[str] = []
-    for rel in ("authentication", "assertionMethod", "keyAgreement", "capabilityInvocation", "capabilityDelegation"):
+    for rel in (
+        "authentication",
+        "assertionMethod",
+        "keyAgreement",
+        "capabilityInvocation",
+        "capabilityDelegation",
+    ):
         for ref in doc.get(rel, []):
             if ref == kid:
                 purposes.append(rel)
@@ -57,7 +84,7 @@ def _verify_existing_proof(doc: dict, jwk: dict) -> bool:
     if not jws or ".." not in jws:
         return False
     protected_b64, signature_b64 = jws.split("..", 1)
-    to_sign = dict(doc);
+    to_sign = dict(doc)
     to_sign.pop("proof", None)
     payload_str = dumps_bytes(to_sign).decode("utf-8")
     return verify_detached_jws(protected_b64, signature_b64, payload_str, jwk)
@@ -81,8 +108,12 @@ class RegistryController(BaseAPIController):
         purposes = body.get("purposes")
 
         if not all([org_id, doc_type, cert_id]):
-            return err(request, 400, "organization_id, document_type, certificate_id are required",
-                       path="/api/registry/dids")
+            return err(
+                request,
+                400,
+                "organization_id, document_type, certificate_id are required",
+                path="/api/registry/dids",
+            )
 
         org = get_object_or_404(Organization, pk=org_id)
         owner = request.user
@@ -105,13 +136,19 @@ class RegistryController(BaseAPIController):
 
         vms = document.get("verificationMethod") or []
         if not isinstance(vms, list) or len(vms) != 1:
-            return err(request, 400, "Exactly one verificationMethod is required by platform policy.",
-                       path="/api/registry/dids")
+            return err(
+                request,
+                400,
+                "Exactly one verificationMethod is required by platform policy.",
+                path="/api/registry/dids",
+            )
 
         validate_did_document(document)
 
         try:
-            did_obj = DID.objects.create(did=did_str, organization=org, owner=owner, document_type=doc_type)
+            did_obj = DID.objects.create(
+                did=did_str, organization=org, owner=owner, document_type=doc_type
+            )
         except IntegrityError:
             return err(request, 409, "DID already exists", path="/api/registry/dids")
 
@@ -130,7 +167,11 @@ class RegistryController(BaseAPIController):
 
         # Create first DID Document (v1, DRAFT)
         did_doc = DIDDocument.objects.create(
-            did=did_obj, version=1, document=document, environment="DRAFT", is_active=False
+            did=did_obj,
+            version=1,
+            document=document,
+            environment="DRAFT",
+            is_active=False,
         )
 
         canon = dumps_bytes(document)
@@ -142,12 +183,23 @@ class RegistryController(BaseAPIController):
         # Audit trail binding
         bind_doc_to_keys(did_doc, {key_id: upk})
 
-        return ok(request,
-                  did_state={"state": "wait", "did": did_obj.did, "didDocument": document, "environment": "DRAFT"},
-                  did_doc_meta={"versionId": "1", "environment": "DRAFT", "published": False,
-                                "canonical_sha256": digest},
-                  did_reg_meta={"method": "web"},
-                  status=201,)
+        return ok(
+            request,
+            did_state={
+                "state": "wait",
+                "did": did_obj.did,
+                "didDocument": document,
+                "environment": "DRAFT",
+            },
+            did_doc_meta={
+                "versionId": "1",
+                "environment": "DRAFT",
+                "published": False,
+                "canonical_sha256": digest,
+            },
+            did_reg_meta={"method": "web"},
+            status=201,
+        )
 
     @route.get("/dids")
     def list_dids_org(self, request):
@@ -156,15 +208,17 @@ class RegistryController(BaseAPIController):
         Pagination via ?page=1&page_size=20.
         """
         user = request.user
-        org_id = getattr(user, "organization_id", None) or getattr(getattr(user, "organization", None), "id", None)
+        org_id = getattr(user, "organization_id", None) or getattr(
+            getattr(user, "organization", None), "id", None
+        )
         if not org_id:
             raise HttpError(400, "User has no organization context")
 
         # Subqueries to fetch latest active key material per DID
-        latest_pk_qs = (UploadedPublicKey.objects
-                        .filter(did_id=OuterRef("id"), is_active=True)
-                        .order_by("-version"))
-        
+        latest_pk_qs = UploadedPublicKey.objects.filter(
+            did_id=OuterRef("id"), is_active=True
+        ).order_by("-version")
+
         # Exists: is there an active PROD document?
         prod_active_exists = DIDDocument.objects.filter(
             did_id=OuterRef("id"),
@@ -172,34 +226,38 @@ class RegistryController(BaseAPIController):
             is_active=True,
         )
 
-        qs = (
-            dids_for_org(org_id)
-            .annotate(
-                is_published=Exists(prod_active_exists),
-                latest_version=Max("documents__version"),
-                latest_public_key_version=Subquery(latest_pk_qs.values("version")[:1]),
-                latest_public_key_jwk=Subquery(latest_pk_qs.values("public_key_jwk")[:1]),
-                latest_key_id=Subquery(latest_pk_qs.values("key_id")[:1]),
-        ))
+        qs = dids_for_org(org_id).annotate(
+            is_published=Exists(prod_active_exists),
+            latest_version=Max("documents__version"),
+            latest_public_key_version=Subquery(latest_pk_qs.values("version")[:1]),
+            latest_public_key_jwk=Subquery(latest_pk_qs.values("public_key_jwk")[:1]),
+            latest_key_id=Subquery(latest_pk_qs.values("key_id")[:1]),
+        )
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
         rows, meta = paginator.paginate_queryset(qs, request)
 
         items = []
         for d in rows:
-            items.append({
-                "did": d.did,
-                "organization_id": str(getattr(d.organization, "id", org_id)),
-                "owner_id": str(d.owner_id),
-                "document_type": d.document_type,
-                "latest_version": d.latest_version or 0,
-                "key_id": d.latest_key_id,
-                "public_key_version": d.latest_public_key_version,
-                "public_key_jwk": d.latest_public_key_jwk,
-                "is_published": bool(d.is_published),
-            })
+            items.append(
+                {
+                    "did": d.did,
+                    "organization_id": str(getattr(d.organization, "id", org_id)),
+                    "owner_id": str(d.owner_id),
+                    "document_type": d.document_type,
+                    "latest_version": d.latest_version or 0,
+                    "key_id": d.latest_key_id,
+                    "public_key_version": d.latest_public_key_version,
+                    "public_key_jwk": d.latest_public_key_jwk,
+                    "is_published": bool(d.is_published),
+                }
+            )
 
-        return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
+        return JsonResponse(
+            {"items": items, "pagination": meta},
+            status=200,
+            content_type="application/json",
+        )
 
     # def list_dids(self, request, org_id: str | None = None):
     #    """
@@ -238,15 +296,29 @@ class RegistryController(BaseAPIController):
     #    return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
 
     @route.get("/dids/preview")
-    def preview_get(self, request, organization_id: str, document_type: str, certificate_id: str,
-                    purposes: list[str] | None = Query(None)):
+    def preview_get(
+        self,
+        request,
+        organization_id: str,
+        document_type: str,
+        certificate_id: str,
+        purposes: list[str] | None = Query(None),
+    ):
         try:
-            data = preview_single(request.user, organization_id, document_type, certificate_id, purposes)
-            return ok(request,
-                      did_state={"state": "action", "did": data["did"], "didDocument": data["document"]},
-                      did_doc_meta={"canonical_sha256": data["canonical_sha256"]},
-                      did_reg_meta={"method": "web"},
-                      status=200, )
+            data = preview_single(
+                request.user, organization_id, document_type, certificate_id, purposes
+            )
+            return ok(
+                request,
+                did_state={
+                    "state": "action",
+                    "did": data["did"],
+                    "didDocument": data["document"],
+                },
+                did_doc_meta={"canonical_sha256": data["canonical_sha256"]},
+                did_reg_meta={"method": "web"},
+                status=200,
+            )
 
         except ValidationError as ve:
             return err(request, 400, str(ve), path="/api/registry/dids/preview")
@@ -263,16 +335,28 @@ class RegistryController(BaseAPIController):
         certificate_id = body.get("certificate_id")
         purposes = body.get("purposes")
         if not all([organization_id, document_type, certificate_id]):
-            return err(request, 400, "organization_id, document_type, certificate_id are required",
-                       path="/api/registry/dids/preview")
+            return err(
+                request,
+                400,
+                "organization_id, document_type, certificate_id are required",
+                path="/api/registry/dids/preview",
+            )
 
         try:
-            data = preview_single(request.user, organization_id, document_type, certificate_id, purposes)
-            return ok(request,
-                      did_state={"state": "action", "did": data["did"], "didDocument": data["document"]},
-                      did_doc_meta={"canonical_sha256": data["canonical_sha256"]},
-                      did_reg_meta={"method": "web"},
-                      status=200)
+            data = preview_single(
+                request.user, organization_id, document_type, certificate_id, purposes
+            )
+            return ok(
+                request,
+                did_state={
+                    "state": "action",
+                    "did": data["did"],
+                    "didDocument": data["document"],
+                },
+                did_doc_meta={"canonical_sha256": data["canonical_sha256"]},
+                did_reg_meta={"method": "web"},
+                status=200,
+            )
         except ValidationError as ve:
             return err(request, 400, str(ve), path="/api/registry/dids/preview")
         except ValueError as ve:
@@ -285,33 +369,48 @@ class RegistryController(BaseAPIController):
         body: { "version"?: int }
         """
         # OTP is required in the JSON body: { "otp_code": "123456", "version"?: int }.
-        
+
         did_obj = get_did_or_404(did)
-        
+
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "Only the DID owner can initiate publish flow.")
-              
+
         version_raw = (body or {}).get("version", None)
         try:
             version = int(version_raw) if version_raw is not None else None
         except (TypeError, ValueError):
-            return err(request, 400, "version must be an integer", path=f"/api/registry/dids/{did}/publish")     
-        
+            return err(
+                request,
+                400,
+                "version must be an integer",
+                path=f"/api/registry/dids/{did}/publish",
+            )
+
         # If a version was specified, ensure it's a DRAFT of this DID
         if version is not None:
-            exists = DIDDocument.objects.filter(did=did_obj, version=version, environment="DRAFT").exists()
+            exists = DIDDocument.objects.filter(
+                did=did_obj, version=version, environment="DRAFT"
+            ).exists()
             if not exists:
-                return err(request, 404, "Requested version not found or not DRAFT",
-                            path=f"/api/registry/dids/{did}/publish")
-                
+                return err(
+                    request,
+                    404,
+                    "Requested version not found or not DRAFT",
+                    path=f"/api/registry/dids/{did}/publish",
+                )
+
         doc = candidate_for_publish(did_obj, version)
         if not doc:
             raise HttpError(404, "No DRAFT document to publish")
-        
+
         # Enforce DRAFT only
         if getattr(doc, "environment", None) != "DRAFT":
-            return err(request, 400, "Only DRAFT documents can be published",
-                        path=f"/api/registry/dids/{did}/publish")
+            return err(
+                request,
+                400,
+                "Only DRAFT documents can be published",
+                path=f"/api/registry/dids/{did}/publish",
+            )
 
         # Approval gate
         # if not (is_org_admin(request.user, did_obj.organization) or can_publish_prod(request.user, did_obj.organization)):
@@ -330,14 +429,23 @@ class RegistryController(BaseAPIController):
                 if pr.did_document_id != doc.id:
                     pr.did_document = doc
                     pr.save(update_fields=["did_document"])
-              
+
             return ok(
                 request,
-                did_state={"state": "wait", "did": did_obj.did, "environment": "PROD",
-                            "reason": "approval_required", "publishRequestId": pr.id},
-                did_doc_meta={"versionId": str(doc.version), "environment": "PROD", "published": False},
+                did_state={
+                    "state": "wait",
+                    "did": did_obj.did,
+                    "environment": "PROD",
+                    "reason": "approval_required",
+                    "publishRequestId": pr.id,
+                },
+                did_doc_meta={
+                    "versionId": str(doc.version),
+                    "environment": "PROD",
+                    "published": False,
+                },
                 did_reg_meta={"method": "web"},
-                status=202
+                status=202,
             )
 
         # Signing disabled: publish as-is to PROD
@@ -350,24 +458,50 @@ class RegistryController(BaseAPIController):
                 doc.save(update_fields=["published_at", "published_by"])
             return ok(
                 request,
-                did_state={"state": "finished", "did": did_obj.did, "environment": "PROD", "location": url},
-                did_doc_meta={"versionId": str(doc.version), "environment": "PROD", "published": True},
+                did_state={
+                    "state": "finished",
+                    "did": did_obj.did,
+                    "environment": "PROD",
+                    "location": url,
+                },
+                did_doc_meta={
+                    "versionId": str(doc.version),
+                    "environment": "PROD",
+                    "published": True,
+                },
                 did_reg_meta={"method": "web"},
-                status=200
+                status=200,
             )
 
         # If signing re-enabled later, BYOS flow can be added back here.
-        return err(request, 409, "SIGNING_DISABLED", path=f"/api/registry/dids/{did}/publish")
+        return err(
+            request, 409, "SIGNING_DISABLED", path=f"/api/registry/dids/{did}/publish"
+        )
 
     @route.post("/dids/{did}/publish/signature")
     def submit_signature(self, request, did: str, body: dict = Body(...)):
         if not getattr(settings, "DIDS_SIGNING_ENABLED", False):
-            return err(request, 409, "SIGNING_DISABLED", path=f"/api/registry/dids/{did}/publish/signature")
-        return err(request, 409, "SIGNING_DISABLED", path=f"/api/registry/dids/{did}/publish/signature")
+            return err(
+                request,
+                409,
+                "SIGNING_DISABLED",
+                path=f"/api/registry/dids/{did}/publish/signature",
+            )
+        return err(
+            request,
+            409,
+            "SIGNING_DISABLED",
+            path=f"/api/registry/dids/{did}/publish/signature",
+        )
 
     @route.get("/dids/{did}/document")
-    def get_current_document(self, request, did: str, target: str = Query("draft", pattern="^(draft|prod)$"),
-                             version: int | None = None):
+    def get_current_document(
+        self,
+        request,
+        did: str,
+        target: str = Query("draft", pattern="^(draft|prod)$"),
+        version: int | None = None,
+    ):
         did_obj = get_did_or_404(did)
 
         # Resolve document
@@ -384,7 +518,10 @@ class RegistryController(BaseAPIController):
             if not can_manage_did(request.user, did_obj):
                 raise HttpError(403, "Forbidden: only the DID owner can read DRAFT")
         else:
-            if not (can_manage_did(request.user, did_obj) or is_org_admin(request.user, did_obj.organization)):
+            if not (
+                can_manage_did(request.user, did_obj)
+                or is_org_admin(request.user, did_obj.organization)
+            ):
                 raise HttpError(403, "Forbidden")
 
         # Canonical hash
@@ -393,25 +530,37 @@ class RegistryController(BaseAPIController):
 
         # Bindings with certificate info
         bindings = []
-        for kb in doc.key_bindings.select_related("uploaded_public_key", "uploaded_public_key__certificate").all():
+        for kb in doc.key_bindings.select_related(
+            "uploaded_public_key", "uploaded_public_key__certificate"
+        ).all():
             upk = kb.uploaded_public_key
             cert = getattr(upk, "certificate", None)
             cert_id = str(getattr(cert, "id", "")) if cert else None
             cert_file = getattr(cert, "file", None) if cert else None
-            cert_filename = (cert_file.name.split("/")[-1] if getattr(cert_file, "name", None) else None)
-            cert_url = (request.build_absolute_uri(cert_file.url) if getattr(cert_file, "url", None) else None)
+            cert_filename = (
+                cert_file.name.split("/")[-1]
+                if getattr(cert_file, "name", None)
+                else None
+            )
+            cert_url = (
+                request.build_absolute_uri(cert_file.url)
+                if getattr(cert_file, "url", None)
+                else None
+            )
 
-            bindings.append({
-                "key_id": upk.key_id,
-                "public_key_version": upk.version,
-                "public_key_jwk": upk.public_key_jwk,
-                "purposes": upk.purposes,
-                "certificate": {
-                    "id": cert_id,
-                    "filename": cert_filename,
-                    "url": cert_url,
-                },
-            })
+            bindings.append(
+                {
+                    "key_id": upk.key_id,
+                    "public_key_version": upk.version,
+                    "public_key_jwk": upk.public_key_jwk,
+                    "purposes": upk.purposes,
+                    "certificate": {
+                        "id": cert_id,
+                        "filename": cert_filename,
+                        "url": cert_url,
+                    },
+                }
+            )
 
         # Current key = first binding (single-VM policy)
         current_key = bindings[0] if bindings else None
@@ -434,5 +583,5 @@ class RegistryController(BaseAPIController):
                 "bindings": bindings,  # each binding includes its certificate details
             },
             did_reg_meta={"method": "web"},
-            status=200
+            status=200,
         )

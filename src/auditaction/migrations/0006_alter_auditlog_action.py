@@ -4,15 +4,46 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('auditaction', '0005_alter_auditlog_action'),
+        ("auditaction", "0005_alter_auditlog_action"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='auditlog',
-            name='action',
-            field=models.CharField(choices=[('AUTH_LOGIN_SUCCESS', 'Login success'), ('AUTH_LOGIN_FAILED', 'Login Failed'), ('AUTH_LOGOUT', 'Logout'), ('ORG_CREATED', 'Organisation créée'), ('ORG_VALIDATED', 'Organisation validée'), ('ORG_REFUSED', 'Organisation refusée'), ('ORG_SUSPENDED', 'Organisation suspendue'), ('ORG_DELETED', 'Organization supprimé'), ('ORGANIZATION_TOGGLED_ACTIVATION', 'Organization status toggled'), ('USER_INVITED', 'Utilisateur invité'), ('USER_ACTIVATED', 'Utilisateur activé'), ('USER_LOGIN', 'Connexion utilisateur'), ('USER_LOGOUT', 'Déconnexion utilisateur'), ('USER_SUSPENDED', 'Utilisateur suspendu'), ('USER_CREATED', 'Création Utilisateur'), ('USER_UPDATED', 'Mise à jour utilisateur'), ('DID_CREATED', 'DID créé'), ('DID_PUBLISHED_DRAFT', 'DID publié en draft'), ('DID_PUBLISHED_PUBLIC', 'DID publié publiquement'), ('DID_REVOKED', 'DID révoqué'), ('KEY_UPLOADED', 'Clé/certificat ajouté'), ('KEY_DELETED', 'Clé/certificat supprimé'), ('API_KEY_CREATED', 'Clé API créée'), ('API_KEY_REVOKED', 'Clé API révoquée'), ('EMAIL_SENT', 'Email delivered'), ('EMAIL_SEND_FAILED', 'Email delivery failed'), ('OTP_GENERATED', 'OTP generated')], db_index=True, max_length=50),
+            model_name="auditlog",
+            name="action",
+            field=models.CharField(
+                choices=[
+                    ("AUTH_LOGIN_SUCCESS", "Login success"),
+                    ("AUTH_LOGIN_FAILED", "Login Failed"),
+                    ("AUTH_LOGOUT", "Logout"),
+                    ("ORG_CREATED", "Organisation créée"),
+                    ("ORG_VALIDATED", "Organisation validée"),
+                    ("ORG_REFUSED", "Organisation refusée"),
+                    ("ORG_SUSPENDED", "Organisation suspendue"),
+                    ("ORG_DELETED", "Organization supprimé"),
+                    ("ORGANIZATION_TOGGLED_ACTIVATION", "Organization status toggled"),
+                    ("USER_INVITED", "Utilisateur invité"),
+                    ("USER_ACTIVATED", "Utilisateur activé"),
+                    ("USER_LOGIN", "Connexion utilisateur"),
+                    ("USER_LOGOUT", "Déconnexion utilisateur"),
+                    ("USER_SUSPENDED", "Utilisateur suspendu"),
+                    ("USER_CREATED", "Création Utilisateur"),
+                    ("USER_UPDATED", "Mise à jour utilisateur"),
+                    ("DID_CREATED", "DID créé"),
+                    ("DID_PUBLISHED_DRAFT", "DID publié en draft"),
+                    ("DID_PUBLISHED_PUBLIC", "DID publié publiquement"),
+                    ("DID_REVOKED", "DID révoqué"),
+                    ("KEY_UPLOADED", "Clé/certificat ajouté"),
+                    ("KEY_DELETED", "Clé/certificat supprimé"),
+                    ("API_KEY_CREATED", "Clé API créée"),
+                    ("API_KEY_REVOKED", "Clé API révoquée"),
+                    ("EMAIL_SENT", "Email delivered"),
+                    ("EMAIL_SEND_FAILED", "Email delivery failed"),
+                    ("OTP_GENERATED", "OTP generated"),
+                ],
+                db_index=True,
+                max_length=50,
+            ),
         ),
     ]

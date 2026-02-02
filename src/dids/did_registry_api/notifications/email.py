@@ -27,13 +27,24 @@ def _render_with_layout(inner_template: str | None, context: dict[str, Any]) -> 
     return render_to_string(DEFAULT_LAYOUT, context)
 
 
-def _send_html_email(to: Iterable[str], subject: str, html: str, text_fallback: str | None = None,
-                     cc: Iterable[str] | None = None, bcc: Iterable[str] | None = None) -> None:
-
+def _send_html_email(
+    to: Iterable[str],
+    subject: str,
+    html: str,
+    text_fallback: str | None = None,
+    cc: Iterable[str] | None = None,
+    bcc: Iterable[str] | None = None,
+) -> None:
     text = text_fallback or strip_tags(html)
 
-    email_send(to=list(to), subject=subject, html=html, text=text, cc=list(cc) if cc else None,
-               bcc=list(bcc) if bcc else None)
+    email_send(
+        to=list(to),
+        subject=subject,
+        html=html,
+        text=text,
+        cc=list(cc) if cc else None,
+        bcc=list(bcc) if bcc else None,
+    )
 
 
 def _org_admin_emails(org) -> list[str]:
@@ -41,8 +52,7 @@ def _org_admin_emails(org) -> list[str]:
     Return emails of ORG_ADMINs in the organization.
     """
     qs = (
-        User.objects
-        .filter(organization=org, is_active=True)
+        User.objects.filter(organization=org, is_active=True)
         .filter(role__contains=[UserRole.ORG_ADMIN])  # JSON array membership
         .exclude(email__isnull=True)
         .exclude(email="")
@@ -76,7 +86,10 @@ def send_publish_request_notification(pr: PublishRequest) -> None:
             "/dashboard/publish-requests",
         ),
     }
-    html = _render_with_layout(inner_template="publish_request_content.html",context=ctx,)
+    html = _render_with_layout(
+        inner_template="publish_request_content.html",
+        context=ctx,
+    )
     _send_html_email(to=recipients, subject=subject, html=html)
 
 
@@ -89,18 +102,21 @@ def send_publish_decision_notification(pr: PublishRequest) -> None:
         return
 
     did = pr.did.did
-    approved = (pr.status == PublishRequest.Status.APPROVED)
+    approved = pr.status == PublishRequest.Status.APPROVED
     subject = f"[DID Annuaire] Publication PROD {'approuvée' if approved else 'rejetée'} pour {did}"
 
-
     ctx = {
-            "title": "Décision de publication",
-            "did": did,
-            "version": pr.did_document.version,
-            "requested_by": getattr(pr.requested_by, "email", "Utilisateur"),
-            "status": "APPROVED" if pr.status == PublishRequest.Status.APPROVED else "REJECTED",
-            "note": pr.note.strip() if pr.note else "",
-            "dashboard_url": urljoin(settings.FR_APP_DOMAIN, "/dashboard/publish-requests"),
-        }
-    html = _render_with_layout(inner_template="publish_decision_content.html", context=ctx)
+        "title": "Décision de publication",
+        "did": did,
+        "version": pr.did_document.version,
+        "requested_by": getattr(pr.requested_by, "email", "Utilisateur"),
+        "status": "APPROVED"
+        if pr.status == PublishRequest.Status.APPROVED
+        else "REJECTED",
+        "note": pr.note.strip() if pr.note else "",
+        "dashboard_url": urljoin(settings.FR_APP_DOMAIN, "/dashboard/publish-requests"),
+    }
+    html = _render_with_layout(
+        inner_template="publish_decision_content.html", context=ctx
+    )
     _send_html_email(to=[to_email], subject=subject, html=html)

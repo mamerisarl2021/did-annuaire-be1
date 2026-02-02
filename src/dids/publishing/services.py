@@ -19,7 +19,9 @@ def safe_abs_path(rel_path: str) -> pathlib.Path:
     return target
 
 
-def remove_published_path(rel_path: str, *, prune_empty_parents: bool = False) -> Dict[str, object]:
+def remove_published_path(
+    rel_path: str, *, prune_empty_parents: bool = False
+) -> Dict[str, object]:
     """
     Remove an arbitrary published path (doc_type, user, or org folder) under DIDS_ROOT. Idempotent.
     Returns: {"removed": bool, "abs_path": str, "pruned": [str, ...]}
@@ -51,5 +53,7 @@ def remove_published_path(rel_path: str, *, prune_empty_parents: bool = False) -
 
 
 # Backward-compat legacy name
-def remove_published_folder(rel_dir: str, *, prune_empty_parents: bool = False) -> dict[str, object]:
+def remove_published_folder(
+    rel_dir: str, *, prune_empty_parents: bool = False
+) -> dict[str, object]:
     return remove_published_path(rel_dir, prune_empty_parents=prune_empty_parents)

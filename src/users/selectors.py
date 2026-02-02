@@ -11,6 +11,7 @@ from src.core.exceptions import APIError
 from src.core.exceptions import DomainValidationError
 from src.users.models import User, UserStatus, UserRole
 
+
 def user_list(
     *,
     user: User,
@@ -23,35 +24,39 @@ def user_list(
       - SUPERUSER -> all users
     """
     qs = User.objects.select_related("organization", "invited_by").only(
-        "id", "email", "first_name", "last_name", "can_publish_prod",
-        "role", "status", "created_at",
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "can_publish_prod",
+        "role",
+        "status",
+        "created_at",
         "organization__name",
         "invited_by__email",
     )
 
-    if not (
-            user.is_platform_admin
-            or UserRole.ORG_ADMIN.value in user.role
-        ):
-            raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
-    
+    if not (user.is_platform_admin or UserRole.ORG_ADMIN.value in user.role):
+        raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
+
     qs = User.objects.select_related("organization", "invited_by")
-    
+
     if not user.is_platform_admin:
         qs = qs.filter(organization=user.organization)
-        
+
     if status:
         qs = qs.filter(status=status)
 
     if search:
         s = search.strip()
         qs = qs.filter(
-            Q(email__icontains=s) |
-            Q(first_name__icontains=s) |
-            Q(last_name__icontains=s)
+            Q(email__icontains=s)
+            | Q(first_name__icontains=s)
+            | Q(last_name__icontains=s)
         )
 
     return qs.order_by("-created_at")
+
 
 def user_get_invited_by_token(*, token: str) -> User:
     try:
@@ -65,12 +70,10 @@ def user_get_invited_by_token(*, token: str) -> User:
             message="Le lien d'activation a expiré", code="INVITE_EXPIRED"
         )
     return user
-    
+
+
 def users_stats_for_actor(*, user) -> dict:
-    if not (
-        user.is_platform_admin
-        or UserRole.ORG_ADMIN.value in user.role
-    ):
+    if not (user.is_platform_admin or UserRole.ORG_ADMIN.value in user.role):
         raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
 
     base_qs = User.objects.all()
@@ -84,37 +87,25 @@ def users_stats_for_actor(*, user) -> dict:
     # --- by status ---
     by_status = {
         row["status"].lower(): row["count"]
-        for row in (
-            base_qs
-            .values("status")
-            .annotate(count=Count("id"))
-        )
+        for row in (base_qs.values("status").annotate(count=Count("id")))
     }
 
     # --- by role (single pass, JSON explode) ---
     role_qs = (
-        base_qs
-        .annotate(
-            role_item=RawSQL(
-                "jsonb_array_elements_text(role)",
-                []
-            )
-        )
+        base_qs.annotate(role_item=RawSQL("jsonb_array_elements_text(role)", []))
         .values("role_item")
         .annotate(count=Count("id"))
     )
 
-    by_role = {
-        row["role_item"].lower(): row["count"]
-        for row in role_qs
-    }
+    by_role = {row["role_item"].lower(): row["count"] for row in role_qs}
 
     return {
         "all": total,
         "by_status": by_status,
         "by_role": by_role,
     }
-    
+
+
 def user_get_by_id(*, user_id: uuid.UUID) -> User:
     """Get user by ID"""
     try:
@@ -122,38 +113,42 @@ def user_get_by_id(*, user_id: uuid.UUID) -> User:
     except User.DoesNotExist:
         raise APIError(message="User not found", code="USER_NOT_FOUND", status=404)
 
+
 def user_get_for_update(*, user_id: uuid.UUID) -> User:
     """Get user with select_for_update lock"""
     try:
         return User.objects.select_for_update().get(id=user_id)
     except User.DoesNotExist:
         raise APIError(message="User not found", code="USER_NOT_FOUND", status=404)
-        
+
+
 def user_get_info(*, user_id: uuid.UUID, requesting_user: User) -> dict:
     """
     Get user info - only org admins or the user themselves can access
     """
     target_user = user_get_by_id(user_id=user_id)
-    
+
     # Permission check
     if not (requesting_user.is_org_admin or requesting_user.id == target_user.id):
         raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
-    
+
     # Check same organization (unless platform admin)
     if not requesting_user.is_platform_admin:
         if target_user.organization_id != requesting_user.organization_id:
             raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
-    
+
     return {
-        'id': str(target_user.id),
-        'email': target_user.email,
-        'first_name': target_user.first_name,
-        'last_name': target_user.last_name,
+        "id": str(target_user.id),
+        "email": target_user.email,
+        "first_name": target_user.first_name,
+        "last_name": target_user.last_name,
         "phone": target_user.phone,
-        'role': target_user.role,
+        "role": target_user.role,
         "functions": target_user.functions,
         "can_publish_prod": target_user.can_publish_prod,
-        'status': target_user.status,
-        'organization_id': str(target_user.organization_id) if target_user.organization_id else None,
-        "is_auditor": UserRole.AUDITOR.value in target_user.role
+        "status": target_user.status,
+        "organization_id": str(target_user.organization_id)
+        if target_user.organization_id
+        else None,
+        "is_auditor": UserRole.AUDITOR.value in target_user.role,
     }

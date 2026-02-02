@@ -37,7 +37,9 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
 
-        qs = sa_selectors.organization_list_with_admins(status=filters.status, search=filters.search)
+        qs = sa_selectors.organization_list_with_admins(
+            status=filters.status, search=filters.search
+        )
 
         paginator = Paginator(default_page_size=10, max_page_size=20)
         items, meta = paginator.paginate_queryset(qs, self.context.request)
@@ -55,7 +57,9 @@ class SuperAdminController(BaseAPIController):
         if msg_parts:
             message += f" ({', '.join(msg_parts)})"
 
-        return self.create_response(message=message, data={"items": data, "pagination": meta}, status_code=200)
+        return self.create_response(
+            message=message, data={"items": data, "pagination": meta}, status_code=200
+        )
 
     @route.get("/organizations/{org_id}")
     def get_organization(self, org_id: str):
@@ -75,14 +79,18 @@ class SuperAdminController(BaseAPIController):
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
         services.organization_validate(organization_id=org_uuid, validated_by=user)
-        return self.create_response(message="Organization validated successfully", status_code=200)
+        return self.create_response(
+            message="Organization validated successfully", status_code=200
+        )
 
     @route.post("/organizations/{org_id}/refuse")
     def refuse(self, org_id: str, payload: OrgRefusePayload):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        services.organization_refuse(organization_id=org_uuid, refused_by=user, reason=payload.reason)
+        services.organization_refuse(
+            organization_id=org_uuid, refused_by=user, reason=payload.reason
+        )
         return self.create_response(message="Organization refused", status_code=200)
 
     @route.patch("/organizations/{org_id}/toggle-activation")
@@ -201,84 +209,81 @@ class SuperAdminController(BaseAPIController):
             message="Organizations statistics", data=stats, status_code=200
         )
 
-    
-    @route.post("/cleanup") 
+    @route.post("/cleanup")
     def cleanup_published_folder(self, request, body: dict = Body(...)):
-            """
-            Superuser-only. Remove a published path under DIDS_ROOT.
-            Body:
-            { "did": "<did:web:...>",
-                "scope": "doc_type" | "user" | "org",   # default "doc_type"
-                "prune_empty_parents": false            # applies when scope != "org"
-            }
-            Validates host and path containment; nginx remains RO; deletion is done by backend RW mount.
-            """
-            if not getattr(self.context.request.auth, "is_superuser", False):
-                raise HttpError(403, "Forbidden")
-    
-            did = (body or {}).get("did")
-            if not did or not isinstance(did, str):
-                raise HttpError(400, "did is required")
-    
-            scope = (body or {}).get("scope", "doc_type")
-            if scope not in {"doc_type", "user", "org"}:
-                raise HttpError(400, "Invalid scope: expected 'doc_type', 'user', or 'org'")
-    
-            # Safety: host must match configured host
-            host, org, user, doc_type = parse_did_web(did)
-            expected = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
-            if host != expected:
-                raise HttpError(400, f"Host mismatch: expected {expected}, got {host}")
-    
-            # Compute rel path for scope
-            paths = relpaths_for_did(did)
-            rel_map = {
-                "doc_type": paths["doc_type"],
-                "user": paths["user"],
-                "org": paths["org"],
-            }
-            rel_path = rel_map[scope]
-    
-            # Delete; prune parents only when not removing the org-level directly
-            prune = bool((body or {}).get("prune_empty_parents")) and scope != "org"
-            try:
-                result = remove_published_path(rel_path, prune_empty_parents=prune)
-            except ValueError as ve:
-                raise HttpError(400, str(ve))
-    
-            message = "Removed" if result["removed"] else "Not found"
-            return self.create_response(
-                message=message,
-                data={
-                    "did": did,
-                    "scope": scope,
-                    "org": org,
-                    "user": user,
-                    "document_type": doc_type,
-                    "rel_path": rel_path,
-                    "abs_path": result["abs_path"],
-                    "removed": result["removed"],
-                    "pruned": result.get("pruned", []),
-                },
-                status_code=200,
-            )
+        """
+        Superuser-only. Remove a published path under DIDS_ROOT.
+        Body:
+        { "did": "<did:web:...>",
+            "scope": "doc_type" | "user" | "org",   # default "doc_type"
+            "prune_empty_parents": false            # applies when scope != "org"
+        }
+        Validates host and path containment; nginx remains RO; deletion is done by backend RW mount.
+        """
+        if not getattr(self.context.request.auth, "is_superuser", False):
+            raise HttpError(403, "Forbidden")
+
+        did = (body or {}).get("did")
+        if not did or not isinstance(did, str):
+            raise HttpError(400, "did is required")
+
+        scope = (body or {}).get("scope", "doc_type")
+        if scope not in {"doc_type", "user", "org"}:
+            raise HttpError(400, "Invalid scope: expected 'doc_type', 'user', or 'org'")
+
+        # Safety: host must match configured host
+        host, org, user, doc_type = parse_did_web(did)
+        expected = getattr(
+            settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com"
+        )
+        if host != expected:
+            raise HttpError(400, f"Host mismatch: expected {expected}, got {host}")
+
+        # Compute rel path for scope
+        paths = relpaths_for_did(did)
+        rel_map = {
+            "doc_type": paths["doc_type"],
+            "user": paths["user"],
+            "org": paths["org"],
+        }
+        rel_path = rel_map[scope]
+
+        # Delete; prune parents only when not removing the org-level directly
+        prune = bool((body or {}).get("prune_empty_parents")) and scope != "org"
+        try:
+            result = remove_published_path(rel_path, prune_empty_parents=prune)
+        except ValueError as ve:
+            raise HttpError(400, str(ve))
+
+        message = "Removed" if result["removed"] else "Not found"
+        return self.create_response(
+            message=message,
+            data={
+                "did": did,
+                "scope": scope,
+                "org": org,
+                "user": user,
+                "document_type": doc_type,
+                "rel_path": rel_path,
+                "abs_path": result["abs_path"],
+                "removed": result["removed"],
+                "pruned": result.get("pruned", []),
+            },
+            status_code=200,
+        )
 
     @route.get("/health", auth=None)
     def health_stats(self):
         from orbit import get_watcher_status, get_failed_watchers
-        
+
         # Get status of all watchers
         status = get_watcher_status()
         # {'cache': {'installed': True, 'error': None, 'disabled': False}, ...}
-        
+
         # Get only failed watchers
         failed = get_failed_watchers()
         # {'celery': 'ModuleNotFoundError: No module named celery'}
-        
+
         return self.create_response(
-            data={
-                "orbit_watcher_status": status,
-                "orbit_failed_watchers": failed 
-            }
+            data={"orbit_watcher_status": status, "orbit_failed_watchers": failed}
         )
-                    
