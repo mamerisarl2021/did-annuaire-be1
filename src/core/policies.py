@@ -1,5 +1,4 @@
 from src.core.exceptions import APIError
-from src.users.models import UserRole
 
 
 def ensure_superuser(user) -> None:

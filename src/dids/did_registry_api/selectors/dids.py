@@ -1,9 +1,7 @@
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
-from src.dids.did_registry_api.policies.access import is_org_admin
 from src.dids.models import DID
-from src.organizations.models import Organization
 
 
 def get_did_or_404(did_str: str) -> DID:

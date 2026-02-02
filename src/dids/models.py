@@ -240,6 +240,8 @@ class Certificate(BaseModel):
     )
 
     is_revoked = models.BooleanField(default=False)
+    
+    compliance = models.JSONField(default=dict, blank=True)  # status/reason/encoding/detected/jose_crv
 
 
 class UploadedPublicKey(BaseModel):

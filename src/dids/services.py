@@ -15,7 +15,6 @@ from src.dids.did_registry_api.notifications.email import (
     send_publish_decision_notification,
 )
 from src.users.models import User
-from src.dids.did_registry_api.schemas.envelopes import err
 
 from .selectors import get_publish_request_for_update
 
@@ -179,7 +178,6 @@ def publish_request_reject(pr_id: uuid.UUID, decided_by: User, reason: str):
     transaction.on_commit(lambda: send_publish_decision_notification(pr))
 
     response_data = {
-        "url": url,
         "did": pr.did.did,
         "version": pr.did_document.version,
     }

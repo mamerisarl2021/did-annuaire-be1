@@ -1,4 +1,5 @@
-import json, base64
+import json
+import base64
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519
 

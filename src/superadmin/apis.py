@@ -2,7 +2,6 @@ from ninja import Query, Body
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
-from django.shortcuts import get_object_or_404
 from django.conf import settings
 
 from src.core.apis import BaseAPIController
@@ -18,7 +17,6 @@ from .schemas import OrgFilterParams, OrgRefusePayload
 from src.superadmin.presenters import (
     org_to_list_dto_superadmin,
     org_to_detail_dto_superadmin,
-    user_to_list_dto_superadmin,
 )
 from . import services
 from . import selectors
@@ -28,6 +26,7 @@ from . import selectors
 
 @api_controller("/superadmin", tags=["Super Admin"], auth=JWTAuth())
 class SuperAdminController(BaseAPIController):
+    
     @route.get("/organizations")
     def list_organizations(self, filters: Query[OrgFilterParams]):  # ← MODIFIÉ
         """
@@ -88,9 +87,7 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        services.organization_refuse(
-            organization_id=org_uuid, refused_by=user, reason=payload.reason
-        )
+        services.organization_refuse(organization_id=org_uuid, refused_by=user, reason=payload.reason)
         return self.create_response(message="Organization refused", status_code=200)
 
     @route.patch("/organizations/{org_id}/toggle-activation")
@@ -98,9 +95,7 @@ class SuperAdminController(BaseAPIController):
         user = self.context.request.auth
         ensure_superuser(user)
         org_uuid = validate_uuid(org_id)
-        org = services.organization_toggle_activation(
-            organization_id=org_uuid, toggled_by=user
-        )
+        org = services.organization_toggle_activation(organization_id=org_uuid, toggled_by=user)
         return self.create_response(
             message="Organization status updated",
             data={"id": org.id, "status": org.status},
@@ -287,3 +282,218 @@ class SuperAdminController(BaseAPIController):
         return self.create_response(
             data={"orbit_watcher_status": status, "orbit_failed_watchers": failed}
         )
+
+
+# from __future__ import annotations
+# from datetime import timedelta
+# from typing import Any, Dict, List
+
+# from django.http import JsonResponse
+# from django.utils import timezone
+# from django.db.models import Count, Q
+# from django.db.models.functions import TruncDay
+# from ninja_extra import api_controller, route
+# from ninja_jwt.authentication import JWTAuth
+
+# from src.dids.models import (
+#     DID,
+#     DIDDocument,
+#     PublishRequest,
+#     UploadedPublicKey,
+#     Certificate,
+# )
+
+
+# def _accumulate_purposes(rows: List[List[str]]) -> Dict[str, int]:
+#     acc: Dict[str, int] = {}
+#     for arr in rows:
+#         if not arr:
+#             continue
+#         for p in arr:
+#             if not isinstance(p, str):
+#                 continue
+#             acc[p] = acc.get(p, 0) + 1
+#     return acc
+
+
+# def _series(queryset, dt_field: str, days: int) -> List[Dict[str, Any]]:
+#     qs = (
+#         queryset.filter(**{f"{dt_field}__gte": timezone.now() - timedelta(days=days)})
+#         .annotate(bucket=TruncDay(dt_field))
+#         .values("bucket")
+#         .annotate(count=Count("id"))
+#         .order_by("bucket")
+#     )
+#     return [{"bucket": x["bucket"].date().isoformat(), "count": x["count"]} for x in qs]
+
+
+# `@api_controller`("/superadmin/dids", tags=["Superadmin"], auth=JWTAuth())
+# class SuperadminDIDsStatsController:
+#     `@route.get`("/stats")
+#     def global_stats(self, request, window_days: int = 30):
+#         """
+#         Global stats across all organizations. SUPERUSER only.
+#         """
+#         if not getattr(request.user, "is_superuser", False):
+#             return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
+#         now = timezone.now()
+#         since = now - timedelta(days=window_days)
+
+#         did_qs = DID.objects.all()
+
+#         dids_total = did_qs.count()
+#         dids_by_status = {
+#             row["status"]: row["c"]
+#             for row in did_qs.values("status").annotate(c=Count("id"))
+#         }
+
+#         docs_draft = DIDDocument.objects.filter(environment="DRAFT").count()
+#         docs_prod_active = DIDDocument.objects.filter(
+#             environment="PROD", is_active=True
+#         ).count()
+
+#         pr_pending = PublishRequest.objects.filter(
+#             status=PublishRequest.Status.PENDING
+#         ).count()
+#         pr_approved = PublishRequest.objects.filter(
+#             status=PublishRequest.Status.APPROVED, decided_at__gte=since
+#         ).count()
+#         pr_rejected = PublishRequest.objects.filter(
+#             status=PublishRequest.Status.REJECTED, decided_at__gte=since
+#         ).count()
+
+#         keys_active = UploadedPublicKey.objects.filter(is_active=True).count()
+#         rotations_last_window = UploadedPublicKey.objects.filter(
+#             version__gt=1, created_at__gte=since
+#         ).count()
+
+#         cert_count = Certificate.objects.all().count()
+#         compliance_rows = (
+#             Certificate.objects.all()
+#             .values("compliance__status")
+#             .annotate(c=Count("id"))
+#         )
+#         compliance_dist = {
+#             (row["compliance__status"] or "UNKNOWN"): row["c"]
+#             for row in compliance_rows
+#         }
+
+#         dids_by_type = {
+#             row["document_type"]: row["c"]
+#             for row in did_qs.values("document_type").annotate(c=Count("id"))
+#         }
+#         prod_active_by_type = {
+#             row["did__document_type"]: row["c"]
+#             for row in DIDDocument.objects.filter(
+#                 environment="PROD", is_active=True
+#             )
+#             .values("did__document_type")
+#             .annotate(c=Count("id"))
+#         }
+#         by_document_type = []
+#         for dt, cnt in dids_by_type.items():
+#             by_document_type.append(
+#                 {
+#                     "document_type": dt,
+#                     "dids": cnt,
+#                     "prod_active": prod_active_by_type.get(dt, 0),
+#                 }
+#             )
+
+#         curves_rows = (
+#             UploadedPublicKey.objects.all()
+#             .values("public_key_jwk__crv")
+#             .annotate(c=Count("id"))
+#         )
+#         by_curve = {
+#             (row["public_key_jwk__crv"] or "unknown"): row["c"] for row in curves_rows
+#         }
+
+#         purposes_rows = list(UploadedPublicKey.objects.all().values_list("purposes", flat=True))
+#         by_purpose = _accumulate_purposes(purposes_rows)
+
+#         published_docs_qs = DIDDocument.objects.filter(
+#             environment="PROD", published_at__isnull=False
+#         )
+#         published_last_window = published_docs_qs.filter(published_at__gte=since).count()
+#         published_series = _series(published_docs_qs, "published_at", window_days)
+
+#         rotations_qs = UploadedPublicKey.objects.filter(version__gt=1)
+#         rotations_series = _series(rotations_qs, "created_at", window_days)
+
+#         pending_reqs = list(
+#             PublishRequest.objects.filter(status=PublishRequest.Status.PENDING)
+#             .select_related("did", "requested_by", "did_document", "did__organization")
+#             .order_by("-created_at")[:10]
+#         )
+#         pending_requests = [
+#             {
+#                 "id": str(pr.id),
+#                 "did": pr.did.did,
+#                 "version": pr.did_document.version,
+#                 "organization_id": str(getattr(pr.did.organization, "id", "")),
+#                 "requested_by": getattr(pr.requested_by, "email", None),
+#                 "requested_at": pr.created_at.isoformat() if pr.created_at else None,
+#             }
+#             for pr in pending_reqs
+#         ]
+
+#         recent_publishes_qs = (
+#             DIDDocument.objects.filter(
+#                 environment="PROD", is_active=True, published_at__isnull=False
+#             )
+#             .select_related("did")
+#             .order_by("-published_at")[:5]
+#         )
+#         recent_publishes = [
+#             {
+#                 "did": doc.did.did,
+#                 "version": doc.version,
+#                 "published_at": doc.published_at.isoformat()
+#                 if doc.published_at
+#                 else None,
+#                 "published_relpath": doc.published_relpath,
+#             }
+#             for doc in recent_publishes_qs
+#         ]
+
+#         payload = {
+#             "scope": "global",
+#             "as_of": now.isoformat(),
+#             "window_days": window_days,
+#             "totals": {
+#                 "dids": dids_total,
+#                 "dids_by_status": dids_by_status,
+#                 "documents": {"draft": docs_draft, "prod_active": docs_prod_active},
+#                 "publish_requests": {
+#                     "pending": pr_pending,
+#                     "approved_last_window": pr_approved,
+#                     "rejected_last_window": pr_rejected,
+#                 },
+#                 "keys": {
+#                     "active_uploaded_keys": keys_active,
+#                     "rotations_last_window": rotations_last_window,
+#                 },
+#                 "certificates": {
+#                     "count": cert_count,
+#                     "compliance": compliance_dist,
+#                 },
+#             },
+#             "breakdowns": {
+#                 "by_document_type": by_document_type,
+#                 "by_curve": by_curve,
+#                 "by_purpose": by_purpose,
+#             },
+#             "activity": {
+#                 "publish_prod": {"count": published_last_window},
+#                 "rotations": {"count": rotations_last_window},
+#             },
+#             "time_series": {
+#                 "published_prod": published_series,
+#                 "rotations": rotations_series,
+#             },
+#             "pending_requests": pending_requests,
+#             "top": {"most_recent_publishes": recent_publishes},
+#         }
+#         return JsonResponse(payload, status=200)

@@ -1,4 +1,6 @@
-import json, base64, os
+import json
+import base64
+import os
 from src.dids.proof_crypto_engine.canonical.jcs import dumps_bytes
 
 

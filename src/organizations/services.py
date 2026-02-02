@@ -68,7 +68,7 @@ def organization_create(
     )
 
     # Créer l'admin (statut PENDING)
-    admin = User.objects.create_user(
+    User.objects.create_user(
         email=admin_email,
         first_name=admin_first_name,
         last_name=admin_last_name,

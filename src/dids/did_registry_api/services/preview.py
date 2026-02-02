@@ -1,10 +1,8 @@
-import uuid
 from django.shortcuts import get_object_or_404
 from ninja.errors import HttpError
 
 from src.dids.utils.ids import generate_key_id
 from src.organizations.models import Organization
-from src.users.models import User
 from src.dids.models import Certificate
 from src.dids.did_document_compiler.builders import build_did_and_document
 from src.dids.utils.validators import validate_did_document  # adapte si autre chemin

@@ -8,7 +8,7 @@ from ninja_jwt.authentication import JWTAuth
 from src.api.pagination import Paginator
 from src.common.utils import validate_uuid
 from src.core.apis import BaseAPIController
-from src.core.exceptions import APIError, DomainValidationError
+from src.core.exceptions import DomainValidationError
 from src.core.policies import ensure_role_in
 from src.users import selectors, services
 from src.users.models import User, UserRole, UserStatus

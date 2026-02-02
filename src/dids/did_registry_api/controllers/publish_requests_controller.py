@@ -1,25 +1,16 @@
 import uuid
 import logging
 
-from django.shortcuts import get_object_or_404
-from django.db import transaction
-from django.utils import timezone
 
 from ninja_extra import api_controller, route
 from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
 from ninja import Body
 
-from src.dids.models import PublishRequest
 from src.dids.did_registry_api.selectors.publish_requests import list_publish_requests
 from src.dids.did_registry_api.policies.access import is_org_admin
-from src.dids.did_registry_api.schemas.envelopes import ok, err
+from src.dids.did_registry_api.schemas.envelopes import ok
 from src.dids.services import publish_request_approve, publish_request_reject
-from src.dids.did_registry_api.notifications.email import (
-    send_publish_decision_notification,
-)
-from src.auditaction.services import audit_action_create
-from src.auditaction.models import AuditAction, AuditCategory
 
 logger = logging.getLogger(__name__)
 

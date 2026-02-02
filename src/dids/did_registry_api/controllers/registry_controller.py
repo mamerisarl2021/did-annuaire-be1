@@ -26,7 +26,6 @@ from src.dids.models import (
 from src.dids.did_registry_api.selectors.dids import (
     get_did_or_404,
     dids_for_org,
-    dids_for_owner,
 )
 from src.dids.did_registry_api.policies.access import (
     can_publish_prod,

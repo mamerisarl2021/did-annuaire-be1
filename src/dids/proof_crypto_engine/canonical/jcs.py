@@ -1,4 +1,5 @@
-import json, hashlib
+import json
+import hashlib
 
 try:
     import rfc8785

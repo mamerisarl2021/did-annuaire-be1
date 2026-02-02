@@ -1,5 +1,4 @@
 from __future__ import annotations
-from django.db.models import Max
 from src.dids.models import DID, UploadedPublicKey
 
 

@@ -21,7 +21,7 @@ def safe_abs_path(rel_path: str) -> pathlib.Path:
 
 def remove_published_path(
     rel_path: str, *, prune_empty_parents: bool = False
-) -> Dict[str, object]:
+) -> dict[str, object]:
     """
     Remove an arbitrary published path (doc_type, user, or org folder) under DIDS_ROOT. Idempotent.
     Returns: {"removed": bool, "abs_path": str, "pruned": [str, ...]}
@@ -35,7 +35,7 @@ def remove_published_path(
         raise ValueError("Refusing to remove publish root")
 
     shutil.rmtree(target)
-    pruned: List[str] = []
+    pruned: list[str] = []
     if prune_empty_parents:
         root = _publish_root()
         cur = target.parent

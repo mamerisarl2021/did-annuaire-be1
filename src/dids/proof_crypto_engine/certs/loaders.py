@@ -1,13 +1,11 @@
 from __future__ import annotations
-from typing import Optional, List
 import hashlib
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12, Encoding
 
-
-def _first_cert_from_pkcs7(data: bytes, is_pem: bool) -> Optional[x509.Certificate]:
+def _first_cert_from_pkcs7(data: bytes, is_pem: bool) -> x509.Certificate | None:
     try:
-        certs: List[x509.Certificate] = (
+        certs: list[x509.Certificate] = (
             pkcs7.load_pem_pkcs7_certificates(data)
             if is_pem
             else pkcs7.load_der_pkcs7_certificates(data)
@@ -17,9 +15,7 @@ def _first_cert_from_pkcs7(data: bytes, is_pem: bool) -> Optional[x509.Certifica
         return None
 
 
-def load_x509(
-    file_bytes: bytes, fmt: str, password: Optional[str] = None
-) -> x509.Certificate:
+def load_x509(file_bytes: bytes, fmt: str, password: str | None = None) -> x509.Certificate:
     f = (fmt or "").upper()
     if f == "PEM":
         try:

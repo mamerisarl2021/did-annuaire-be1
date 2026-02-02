@@ -1,20 +1,13 @@
 from ninja_extra import api_controller, route
-from ninja_jwt.authentication import JWTAuth
-from ninja import File, UploadedFile, Form, Query
+from ninja import File, UploadedFile, Form
 from django.shortcuts import get_object_or_404
 
-from src.core.policies import ensure_role_in
-from .schemas import OrgCreatePayload, AdminOrgFilterParams
+from .schemas import OrgCreatePayload
 from src.common.utils import validate_uuid
 from src.core.apis import BaseAPIController
 from src.organizations.models import Organization
-from src.organizations import services, selectors
+from src.organizations import services
 from src.users.models import UserRole
-from src.api.pagination import Paginator
-from src.organizations.presenters import (
-    org_to_detail_dto_admin_org,
-    org_to_list_dto_admin_org,
-)
 
 
 @api_controller("/organizations", tags=["Organizations"])
