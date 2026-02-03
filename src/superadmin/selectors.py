@@ -62,7 +62,7 @@ def organization_get_with_admin(*, org_id) -> Organization:
 
 def _admin_prefetch() -> Prefetch:
     admin_qs = (
-        User.objects.filter(role=UserRole.ORG_ADMIN)
+        User.objects.filter(role__contains=[UserRole.ORG_ADMIN])
         .only(
             "id",
             "email",
