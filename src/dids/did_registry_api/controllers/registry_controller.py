@@ -598,5 +598,6 @@ class RegistryController(BaseAPIController):
             lim = 10
         lim = max(1, min(lim, 100))
     
-        items = selectors.random_prod_did_urls(limit=lim)
+        items = selectors.random_prod_dids(limit=lim)
         return JsonResponse({"items": items, "count": len(items)}, status=200)
+        
