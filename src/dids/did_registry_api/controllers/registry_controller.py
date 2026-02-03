@@ -47,6 +47,7 @@ from src.dids.utils.ids import generate_key_id
 from src.dids.utils.validators import validate_did_document
 from src.organizations.models import Organization
 from src.dids.services import bind_doc_to_keys
+from src.dids import selectors
 
 
 def _ensure_single_vm(doc: dict) -> dict:
@@ -478,21 +479,21 @@ class RegistryController(BaseAPIController):
             request, 409, "SIGNING_DISABLED", path=f"/api/registry/dids/{did}/publish"
         )
 
-    @route.post("/dids/{did}/publish/signature")
-    def submit_signature(self, request, did: str, body: dict = Body(...)):
-        if not getattr(settings, "DIDS_SIGNING_ENABLED", False):
-            return err(
-                request,
-                409,
-                "SIGNING_DISABLED",
-                path=f"/api/registry/dids/{did}/publish/signature",
-            )
-        return err(
-            request,
-            409,
-            "SIGNING_DISABLED",
-            path=f"/api/registry/dids/{did}/publish/signature",
-        )
+    # @route.post("/dids/{did}/publish/signature")
+    # def submit_signature(self, request, did: str, body: dict = Body(...)):
+    #     if not getattr(settings, "DIDS_SIGNING_ENABLED", False):
+    #         return err(
+    #             request,
+    #             409,
+    #             "SIGNING_DISABLED",
+    #             path=f"/api/registry/dids/{did}/publish/signature",
+    #         )
+    #     return err(
+    #         request,
+    #         409,
+    #         "SIGNING_DISABLED",
+    #         path=f"/api/registry/dids/{did}/publish/signature",
+    #     )
 
     @route.get("/dids/{did}/document")
     def get_current_document(
@@ -585,3 +586,17 @@ class RegistryController(BaseAPIController):
             did_reg_meta={"method": "web"},
             status=200,
         )
+
+    @route.get("/dids/random-urls", auth=None)
+    def random_urls(self, request, limit: int = 10):
+        """
+        Return up to `limit` random public DID URLs (active PROD).
+        """
+        try:
+            lim = int(limit)
+        except Exception:
+            lim = 10
+        lim = max(1, min(lim, 100))
+    
+        items = selectors.random_prod_did_urls(limit=lim)
+        return JsonResponse({"items": items, "count": len(items)}, status=200)

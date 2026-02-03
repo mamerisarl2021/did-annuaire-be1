@@ -1,6 +1,9 @@
 from __future__ import annotations
 from django.db.models import Count
+from django.conf import settings
+from django.db.models.functions import Random
 
+from src.dids.resolver.services import parse_did_web
 from src.dids.models import DID, DIDDocument, PublishRequest
 
 
@@ -10,6 +13,37 @@ def get_publish_request_for_update(pr_id: str) -> PublishRequest:
     """
     return PublishRequest.objects.select_for_update().get(pk=pr_id)
 
+
+def random_prod_did_urls(limit: int = 10) -> list[str]:
+    """
+    Return up to `limit` random public DID URLs for active PROD documents.
+    """
+    qs = (
+        DIDDocument.objects
+        .filter(environment="PROD", is_active=True)
+        .select_related("did")
+        .order_by(Random())[: max(1, min(int(limit or 10), 100))]
+    )
+
+    urls: list[str] = []
+    for doc in qs:
+        # If we have a stored relative path, prefer it
+        rel = (doc.published_relpath or "").lstrip("/") if doc.published_relpath else None
+        if rel:
+            host = getattr(settings, "DID_DOMAIN_HOST", None)
+            if host:
+                urls.append(f"https://{host}/{rel}")
+                continue
+            # Fallback to DID host if DID_DOMAIN_HOST is not set
+            host_from_did, *_ = parse_did_web(doc.did.did)
+            urls.append(f"https://{host_from_did}/{rel}")
+            continue
+
+        # Fallback: derive from DID parts
+        host, org, user, doc_type = parse_did_web(doc.did.did)
+        urls.append(f"https://{host}/{org}/{user}/{doc_type}/did.json")
+
+    return urls
 
 def registry_stats_for_org(organization_id) -> dict[str, object]:
     """
