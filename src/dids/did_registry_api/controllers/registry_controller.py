@@ -210,8 +210,9 @@ class RegistryController(BaseAPIController):
         org_id = getattr(user, "organization_id", None) or getattr(
             getattr(user, "organization", None), "id", None
         )
-        if not org_id:
-            raise HttpError(400, "User has no organization context")
+        if not request.user.is_platform_admin:
+            if not org_id:
+                raise HttpError(400, "User has no organization context")
 
         # Subqueries to fetch latest active key material per DID
         latest_pk_qs = UploadedPublicKey.objects.filter(

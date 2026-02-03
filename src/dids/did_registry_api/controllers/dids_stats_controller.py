@@ -42,7 +42,7 @@ def _series(queryset, dt_field: str, days: int) -> List[Dict[str, Any]]:
     return [{"bucket": x["bucket"].date().isoformat(), "count": x["count"]} for x in qs]
 
 
-@api_controller("/dids", tags=["DIDs"], auth=JWTAuth())
+@api_controller("/registry", tags=["DID Registry"], auth=JWTAuth())
 class DIDsStatsController:
     @route.get("/stats")
     def stats(self, request, window_days: int = 30):
