@@ -587,7 +587,7 @@ class RegistryController(BaseAPIController):
             status=200,
         )
 
-    @route.get("/dids/random-urls")
+    @route.get("/dids/random-urls", auth=None)
     def random_urls(self, request, limit: int = 10):
         """
         Return up to `limit` random public DID URLs (active PROD).
