@@ -6,6 +6,9 @@ from src.api.exception_handler import attach_exception_handlers
 from src.dids.did_registry_api.controllers.certificates_controller import (
     CertificatesController,
 )
+from src.dids.did_registry_api.controllers.dids_stats_controller import (
+    DIDsStatsController,
+)
 from src.dids.did_registry_api.controllers.keys_controller import KeysController
 from src.dids.did_registry_api.controllers.publish_requests_controller import (
     PublishRequestsController,
@@ -50,4 +53,5 @@ api.register_controllers(
     ResolverController,
     LogoutController,
     PublishHealthController,
+    DIDsStatsController,
 )
