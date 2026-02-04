@@ -11,6 +11,7 @@ from ninja.errors import HttpError
 from ninja_extra import api_controller, route
 from ninja_jwt.authentication import JWTAuth
 
+from src.dids import services
 from src.api.pagination import Paginator
 from src.core.apis import BaseAPIController
 from src.dids.did_registry_api.schemas.envelopes import ok, err
@@ -32,7 +33,6 @@ from src.dids.did_registry_api.policies.access import (
     is_org_admin,
     can_manage_did,
 )
-from src.dids.did_registry_api.services.publish import publish_to_prod
 from src.dids.proof_crypto_engine.jws2020.verify import verify_detached_jws
 from src.dids.did_registry_api.selectors.did_documents import (
     candidate_for_publish,
@@ -250,6 +250,7 @@ class RegistryController(BaseAPIController):
                     "key_id": d.latest_key_id,
                     "public_key_version": d.latest_public_key_version,
                     "public_key_jwk": d.latest_public_key_jwk,
+                    "status": d.status,
                     "is_published": bool(d.is_published),
                 }
             )
@@ -400,6 +401,15 @@ class RegistryController(BaseAPIController):
                     path=f"/api/registry/dids/{did}/publish",
                 )
 
+        if did_obj.status == DID.DIDStatus.DEACTIVATED:
+            # Irreversible: do not allow further publishes
+            return err(
+                request,
+                409,
+                "DID_DEACTIVATED",
+                path=f"/api/registry/dids/{did}/publish",
+            )
+
         doc = candidate_for_publish(did_obj, version)
         if not doc:
             raise HttpError(404, "No DRAFT document to publish")
@@ -451,7 +461,7 @@ class RegistryController(BaseAPIController):
 
         # Signing disabled: publish as-is to PROD
         if not getattr(settings, "DIDS_SIGNING_ENABLED", False):
-            url = publish_to_prod(doc)
+            url = services.publish_to_prod(doc)
             # audit trail on the document
             if hasattr(doc, "published_at") and hasattr(doc, "published_by"):
                 doc.published_at = timezone.now()

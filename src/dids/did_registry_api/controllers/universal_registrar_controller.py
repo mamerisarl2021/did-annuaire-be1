@@ -11,7 +11,7 @@ from ninja.errors import HttpError
 from django.shortcuts import get_object_or_404
 from ninja_jwt.authentication import JWTAuth
 
-from src.dids.did_registry_api.services.publish import publish_to_prod
+from src.dids import services
 from src.dids.models import DID, DIDDocument
 from src.dids.did_registry_api.policies.access import can_manage_did
 from src.dids.did_document_compiler.builders import build_did_document_from_db
@@ -110,29 +110,28 @@ class UniversalRegistrarController:
         Body: { did: string,  }
         Owner-only. Publishes a minimal {"deactivated":} DID Document in PROD.
         """
-        # otp_code: string
         did_str = body.get("did")
         if not did_str:
             raise HttpError(400, "did is required")
 
-        # verify_or_raise(request.user, body.get("otp_code"), scope="deactivate")
-
         did_obj = get_object_or_404(DID, did=did_str)
+
+        # Irreversible: block if already deactivated
+        if did_obj.status == DID.DIDStatus.DEACTIVATED:
+            return err(
+                request, 409, "DID_DEACTIVATED",
+                path="/api/universal-registrar/deactivate",
+            )
 
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "Only the DID owner can deactivate the DID")
 
-        # Document minimal deactivation
         doc = deactivate_did(did_obj)
-        # Crée une nouvelle version DRAFT, puis publie en PROD
-        next_version = (
-            (
-                DIDDocument.objects.filter(did=did_obj).aggregate(Max("version"))[
-                    "version__max"
-                ]
-            )
-            or 0
-        ) + 1
+
+        next_version = ((DIDDocument.objects
+        .filter(did=did_obj)
+        .aggregate(Max("version"))['version__max']) or 0) + 1
+
         did_doc = DIDDocument.objects.create(
             did=did_obj,
             version=next_version,
@@ -141,24 +140,22 @@ class UniversalRegistrarController:
             is_active=False,
         )
 
-        url = publish_to_prod(did_doc)
-        if hasattr(doc, "published_at") and hasattr(doc, "published_by"):
+        url = services.publish_to_prod(did_doc)
+
+        # Fix: set timestamps on did_doc (the model), not on doc (the dict)
+        if hasattr(did_doc, "published_at") and hasattr(did_doc, "published_by"):
             did_doc.published_at = timezone.now()
             did_doc.published_by = request.user
             did_doc.save(update_fields=["published_at", "published_by"])
+
+        if did_obj.status != DID.DIDStatus.DEACTIVATED:
+            did_obj.status = DID.DIDStatus.DEACTIVATED
+            did_obj.save(update_fields=["status"])
+
         return ok(
             request,
-            did_state={
-                "state": "finished",
-                "did": did_obj.did,
-                "environment": "PROD",
-                "location": url,
-            },
-            did_doc_meta={
-                "versionId": str(did_doc.version),
-                "environment": "PROD",
-                "published": True,
-            },
+            did_state={"state": "finished", "did": did_obj.did, "environment": "PROD", "location": url},
+            did_doc_meta={"versionId": str(did_doc.version), "environment": "PROD", "deactivated": True},
             did_reg_meta={"method": "web"},
             status=200,
         )
@@ -171,14 +168,3 @@ class UniversalRegistrarController:
         return JsonResponse(
             {"items": items}, status=200, content_type="application/json"
         )
-
-    # def list_did_methods(self, request):
-    #   from src.dids.utils import did_methods
-
-
-#     base_resolver = request.build_absolute_uri("/api/universal-resolver/identifiers/{did}")
-#     items = [
-#         {**m, "resolverEndpointTemplate": base_resolver}
-#         for m in did_methods.methods
-#     ]
-#     return JsonResponse({"items": items}, status=200, content_type="application/json")
