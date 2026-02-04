@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from ninja.errors import HttpError
 
-from src.dids.models import UploadedPublicKey, DidDocumentKeyBinding, PublishRequest
+from src.dids.models import UploadedPublicKey, DidDocumentKeyBinding, PublishRequest, Certificate
 from src.auditaction.models import AuditAction, AuditCategory
 from src.auditaction.services import audit_action_create
 from src.dids.did_registry_api.policies.access import is_org_admin
@@ -15,6 +15,8 @@ from src.dids.did_registry_api.notifications.email import (
     send_publish_decision_notification,
 )
 from src.users.models import User
+from .proof_crypto_engine.certs.jwk_normalize import jwk_from_public_key
+from .proof_crypto_engine.certs.loaders import load_x509, compute_fingerprint
 
 from .selectors import get_publish_request_for_update
 
@@ -185,3 +187,41 @@ def publish_request_reject(pr_id: uuid.UUID, decided_by: User, reason: str):
     # pr.delete()
 
     return response_data
+
+def detect_effective_format(fmt: str, data: bytes) -> str:
+    f = (fmt or "").upper()
+    if f in {"CRT", "AUTO"}:
+        return "PEM" if (b"-----BEGIN" in data and b"-----END" in data) else "DER"
+    return f
+
+
+def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: str | None):
+    cert = load_x509(file_bytes, fmt, password=password)
+    jwk = jwk_from_public_key(cert.public_key())
+    fingerprint = compute_fingerprint(cert)
+    return jwk, fingerprint
+
+
+def upsert_certificate(*, owner, organization, file_obj, fmt: str, jwk: dict, fingerprint: str, ) -> tuple[
+    Certificate, bool]:
+    """
+    Create or reuse a certificate by (organization, fingerprint).
+    Returns (cert, created).
+    """
+    existing = (
+        Certificate.objects
+        .filter(organization=organization, fingerprint=fingerprint)
+        .first()
+    )
+    if existing:
+        return existing, False
+
+    cert = Certificate.objects.create(
+        owner=owner,
+        organization=organization,
+        file=file_obj,
+        format=fmt,
+        extracted_jwk=jwk,
+        fingerprint=fingerprint,
+    )
+    return cert, True

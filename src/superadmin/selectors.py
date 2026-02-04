@@ -6,6 +6,7 @@ from django.db.models import Max, Exists, OuterRef, Q, QuerySet
 
 from src.dids.models import DID, DIDDocument
 
+
 def organization_list_all() -> QuerySet[Organization]:
     """Return all organizations (no filter)."""
     return Organization.objects.all().order_by("-created_at")
@@ -17,7 +18,7 @@ def organization_list_by_status(*, status: str) -> QuerySet[Organization]:
 
 
 def organization_list(
-    *, status: str = None, search: str = None
+        *, status: str = None, search: str = None
 ) -> QuerySet[Organization]:
     """
     List organisations with optional filters
@@ -44,7 +45,7 @@ def organization_list(
 
 
 def organization_list_with_admins(
-    *, status: str = None, search: str = None
+        *, status: str = None, search: str = None
 ) -> QuerySet[Organization]:
     """
     List organisations ORG_ADMIN prefetched
@@ -82,12 +83,8 @@ def _admin_prefetch() -> Prefetch:
     return Prefetch("users", queryset=admin_qs, to_attr="admin_user")
 
 
-def did_list_all_with_context(
-        *,
-        q: str | None = None,
-        organization_id: str | None = None,
-        status: str | None = None,
-) -> QuerySet:
+def did_list_all_with_context(*, q: str | None = None, organization_id: str | None = None, status: str | None = None,
+                              ) -> QuerySet:
     """
     Global queryset for DIDs (superadmin scope), annotated for list views.
     - q: search in did and document_type (icontains)
@@ -122,13 +119,10 @@ def did_list_all_with_context(
     return qs
 
 
-def users_list_all(
-    *,
-    q: str | None = None,
-    organization_id: str | None = None,
-    role: str  | None= None,          # e.g., "ORG_ADMIN", "AUDITOR", "ORG_MEMBER"
-    is_active: bool | None = None,     # true/false
-    status: str | None = None,         # if your User.status is used
+def users_list_all(*, q: str | None = None, organization_id: str | None = None,
+                   role: str | None = None,  # e.g., "ORG_ADMIN", "AUDITOR", "ORG_MEMBER"
+                   is_active: bool | None = None,  # true/false
+                   status: str | None = None,  # if your User.status is used
 ) -> QuerySet:
     """
     Superadmin scope: build a filtered queryset for users across all organizations.

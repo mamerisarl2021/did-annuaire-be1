@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db.models.functions import Random
 
 from src.dids.resolver.services import parse_did_web
-from src.dids.models import DID, DIDDocument, PublishRequest
+from src.dids.models import DID, DIDDocument, PublishRequest, Certificate
 
 
 def get_publish_request_for_update(pr_id: str) -> PublishRequest:
@@ -12,7 +12,6 @@ def get_publish_request_for_update(pr_id: str) -> PublishRequest:
     Loads a publish request by ID with a row-level lock for update
     """
     return PublishRequest.objects.select_for_update().get(pk=pr_id)
-
 
 def random_prod_dids(limit: int = 10) -> list[str]:
     """
@@ -78,3 +77,19 @@ def publish_requests_stats_for_org(organization_id) -> dict[str, int]:
         "approved": qs.filter(status=PublishRequest.Status.APPROVED).count(),
         "rejected": qs.filter(status=PublishRequest.Status.REJECTED).count(),
     }
+
+def get_cert_by_fingerprint_in_org(*, fingerprint: str, organization_id) -> Certificate | None:
+    return (
+        Certificate.objects
+        .select_related("organization", "owner")
+        .filter(fingerprint=fingerprint, organization_id=organization_id)
+        .first()
+    )
+
+def cert_exists_in_other_org(*, fingerprint: str, organization_id) -> bool:
+    return (
+        Certificate.objects
+        .exclude(organization_id=organization_id)
+        .filter(fingerprint=fingerprint)
+        .exists()
+    )
