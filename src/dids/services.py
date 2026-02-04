@@ -1,3 +1,4 @@
+import json
 import os
 import uuid
 
@@ -6,17 +7,19 @@ from django.utils import timezone
 
 from ninja.errors import HttpError
 
-from src.dids.models import UploadedPublicKey, DidDocumentKeyBinding, PublishRequest, Certificate
+from src.dids.models import UploadedPublicKey, DidDocumentKeyBinding, PublishRequest, Certificate, DIDDocument, DID
 from src.auditaction.models import AuditAction, AuditCategory
 from src.auditaction.services import audit_action_create
 from src.dids.did_registry_api.policies.access import is_org_admin
-from src.dids.did_registry_api.services.publish import publish_to_prod
 from src.dids.did_registry_api.notifications.email import (
     send_publish_decision_notification,
 )
 from src.users.models import User
+from .did_document_compiler.ordering import order_did_document
 from .proof_crypto_engine.certs.jwk_normalize import jwk_from_public_key
 from .proof_crypto_engine.certs.loaders import load_x509, compute_fingerprint
+from .publishing.fs import atomic_write
+from .publishing.paths import build_relpath
 
 from .selectors import get_publish_request_for_update
 
@@ -44,7 +47,7 @@ def derive_user_slug(user) -> str:
             return str(val)
     return str(user.pk)
 
-
+@transaction.atomic
 def deactivate_did(did_obj) -> dict:
     return {
         "@context": ["https://www.w3.org/ns/did/v1"],
@@ -201,7 +204,7 @@ def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: st
     fingerprint = compute_fingerprint(cert)
     return jwk, fingerprint
 
-
+@transaction.atomic
 def upsert_certificate(*, owner, organization, file_obj, fmt: str, jwk: dict, fingerprint: str, ) -> tuple[
     Certificate, bool]:
     """
@@ -225,3 +228,63 @@ def upsert_certificate(*, owner, organization, file_obj, fmt: str, jwk: dict, fi
         fingerprint=fingerprint,
     )
     return cert, True
+
+
+
+@transaction.atomic
+def activate_prod(did_obj, new_doc_model: DIDDocument) -> None:
+    did_obj.documents.filter(environment="PROD", is_active=True).exclude(
+        pk=new_doc_model.pk
+    ).update(is_active=False)
+    new_doc_model.is_active = True
+    new_doc_model.save(update_fields=["is_active"])
+
+@transaction.atomic
+def _sync_did_status_after_publish(doc: DIDDocument) -> None:
+    """
+    When a PROD document is published, update the parent DID.status:
+      - deactivated:true → DEACTIVATED
+      - else → ACTIVE
+    """
+    if doc.environment != "PROD":
+        return
+    payload = doc.document or {}
+    is_deactivated = bool(isinstance(payload, dict) and payload.get("deactivated"))
+    new_status = DID.DIDStatus.DEACTIVATED if is_deactivated else DID.DIDStatus.ACTIVE
+    if doc.did.status != new_status:
+        doc.did.status = new_status
+        doc.did.save(update_fields=["status"])
+
+def publish_to_prod(doc_model: DIDDocument) -> str:
+    """
+    - write did.json to DIDS_ROOT
+    - flip is_active flags (this one True; others False) for (did, 'PROD')
+    - set published_relpath/file_sha256/file_etag/published_at/published_by, etc.
+    """
+    did = doc_model.did
+    org = (
+        getattr(did.organization, "slug", None)
+        or getattr(did.organization, "namespace", None)
+        or str(did.organization_id)
+    )
+    user = (
+        getattr(did.owner, "slug", None)
+        or getattr(did.owner, "username", None)
+        or str(did.owner_id)
+    )
+    ordered = order_did_document(doc_model.document)
+    payload = json.dumps(ordered, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
+    rel = build_relpath(org, user, did.document_type)
+    file_sha, etag = atomic_write(rel, payload)
+    doc_model.file_sha256 = file_sha
+    doc_model.file_etag = etag
+    doc_model.published_relpath = rel
+    doc_model.environment = "PROD"
+    doc_model.save(
+        update_fields=["file_sha256", "file_etag", "published_relpath", "environment"]
+    )
+    activate_prod(did, doc_model)
+    _sync_did_status_after_publish(doc_model)
+    return f"https://{build_host()}/{rel}"

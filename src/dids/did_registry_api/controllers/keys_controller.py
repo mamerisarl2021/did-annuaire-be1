@@ -8,7 +8,7 @@ from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
 
 from src.dids.did_registry_api.selectors.did_documents import latest_draft, active_prod
-from src.dids.models import Certificate, UploadedPublicKey, DIDDocument
+from src.dids.models import Certificate, UploadedPublicKey, DIDDocument, DID
 from src.dids.did_registry_api.selectors.dids import get_did_or_404
 from src.dids.did_registry_api.selectors.keys import list_key_versions
 from src.dids.did_registry_api.policies.access import can_manage_did
@@ -55,6 +55,14 @@ class KeysController:
             organization=did_obj.organization,
             owner=request.user,
         )
+
+        if did_obj.status == DID.DIDStatus.DEACTIVATED:
+            return err(
+                request,
+                409,
+                "DID_DEACTIVATED",
+                path=f"/api/registry/dids/{did}/keys/rotate",
+            )
 
         # Infer key_id from current doc (single-VM required)
         ref_doc = (
