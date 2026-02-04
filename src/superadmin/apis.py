@@ -187,7 +187,7 @@ class SuperAdminController(BaseAPIController):
         )
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
-        rows, meta = paginator.paginate_queryset(qs, request, page=page, page_size=page_size)
+        rows, meta = paginator.paginate_queryset(qs, request, page_size=page_size)
 
         items = []
         for d in rows:
@@ -206,6 +206,7 @@ class SuperAdminController(BaseAPIController):
 
         return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
 
+    @route.get("/users")
     def list_users(
             self,
             request,
