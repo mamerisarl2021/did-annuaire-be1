@@ -169,13 +169,13 @@ class SuperAdminController(BaseAPIController):
 
     @route.get("/dids")
     def list_dids(
-        self,
-        request,
-        page: int = 1,
-        page_size: int = 20,
-        q: str | None = None,
-        organization_id: str | None = None,
-        status: str | None = None,  # DRAFT | ACTIVE | DEACTIVATED
+            self,
+            request,
+            page: int = 1,
+            page_size: int = 20,
+            q: str | None = None,
+            organization_id: str | None = None,
+            status: str | None = None,  # DRAFT | ACTIVE | DEACTIVATED
     ):
         user = self.context.request.auth
         ensure_superuser(user)
@@ -187,7 +187,7 @@ class SuperAdminController(BaseAPIController):
         )
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
-        rows, meta = paginator.paginate_queryset(qs, request, page_size=page_size)
+        rows, meta = paginator.paginate_queryset(qs, request)
 
         items = []
         for d in rows:
@@ -231,7 +231,7 @@ class SuperAdminController(BaseAPIController):
         )
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
-        rows, meta = paginator.paginate_queryset(qs, request, page=page, page_size=page_size)
+        rows, meta = paginator.paginate_queryset(qs, request)
 
         items = []
         for u in rows:
