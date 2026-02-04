@@ -231,7 +231,7 @@ class SuperAdminController(BaseAPIController):
         )
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
-        rows, meta = paginator.paginate_queryset(qs, request, page=page, page_size=page_size)
+        rows, meta = paginator.paginate_queryset(qs, request)
 
         items = []
         for u in rows:
