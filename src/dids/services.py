@@ -309,7 +309,7 @@ def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: st
     Parse certificate and extract JWK with compliance information.
     Falls back to Java extractor for certificates with explicit EC parameters.
     """
-    java_fallback_enabled = getattr(settings, "CERT_JAVA_FALLBACK_ENABLED", False)
+    java_fallback_enabled = getattr(settings, "CERT_JAVA_FALLBACK_ENABLED", True)
 
     # First attempt: Try to load with cryptography library
     try:
