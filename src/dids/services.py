@@ -310,8 +310,7 @@ def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: st
     Falls back to Java extractor for certificates with explicit EC parameters.
     """
     java_fallback_enabled = getattr(settings, "CERT_JAVA_FALLBACK_ENABLED", False)
-    cert = load_x509(file_bytes, fmt, password=password)
-    fingerprint = compute_fingerprint(cert)
+
     # First attempt: Try to load with cryptography library
     try:
         cert = load_x509(file_bytes, fmt, password=password)
