@@ -18,7 +18,7 @@ class CertificatesController:
         """
         Validates and normalizes the certificate, returns JWK + fingerprint without persisting.
         """
-        org = get_object_or_404(Organization, pk=organization_id)
+        _ = get_object_or_404(Organization, pk=organization_id)
 
         fmt = (format or "").upper()
         allowed = {"PEM", "DER", "PKCS7", "PKCS12", "CRT", "AUTO"}
