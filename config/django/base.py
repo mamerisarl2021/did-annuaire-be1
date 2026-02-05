@@ -233,3 +233,8 @@ if ADMIN_USER_NAME and ADMIN_USER_EMAIL:
     ADMINS.append(ADMIN_USER_EMAIL)  # Only add the email string
 
 MANAGERS = ADMINS
+
+# Java fallback for EC explicit parameters
+CERT_JAVA_FALLBACK_ENABLED = env.bool("CERT_JAVA_FALLBACK_ENABLED", default=False)
+CERT_JAVA_JAR = env.str("CERT_JAVA_JAR", default="/app/bin/ecdsa-extractor.jar")
+CERT_JAVA_TIMEOUT_S = env.int("CERT_JAVA_TIMEOUT_S", default=10)

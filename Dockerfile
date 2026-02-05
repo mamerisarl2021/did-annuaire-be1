@@ -42,8 +42,14 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 bash curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    libpq5 \
+    bash \
+    curl \
+    ca-certificates \
+    openjdk-21-jre-headless \
+    && rm -rf /var/lib/apt/lists/* \
+
+RUN java -version
 
 RUN useradd -m -r appuser && \
     mkdir -p /app  /app/staticfiles /app/mediafiles && \
@@ -62,6 +68,8 @@ COPY --chown=appuser:appuser gunicorn.conf.py .
 COPY --chown=appuser:appuser entrypoint.sh .
 COPY --chown=appuser:appuser manage.py .
 RUN chmod +x /app/entrypoint.sh
+
+COPY --chown=appuser:appuser artifacts/ecdsa-extractor.jar /app/bin/
 
 USER appuser
 
