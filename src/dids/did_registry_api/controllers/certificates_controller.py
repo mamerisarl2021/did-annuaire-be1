@@ -13,14 +13,8 @@ from src.dids.did_registry_api.schemas.envelopes import ok, err
 @api_controller("/registry", tags=["DID Registry"], auth=JWTAuth())
 class CertificatesController:
     @route.post("/certificates/preview")
-    def preview(
-            self,
-            request,
-            organization_id: str = Form(...),
-            format: str = Form(...),
-            file: UploadedFile = File(...),
-            password: str | None = Form(None),
-    ):
+    def preview(self, request, organization_id: str = Form(...), format: str = Form(...), file: UploadedFile = File(...),
+                password: str | None = Form(None),):
         """
         Validates and normalizes the certificate, returns JWK + fingerprint without persisting.
         """
@@ -48,14 +42,8 @@ class CertificatesController:
         )
 
     @route.post("/certificates")
-    def upload(
-            self,
-            request,
-            organization_id: str = Form(...),
-            format: str = Form(...),
-            file: UploadedFile = File(...),
-            password: str | None = Form(None),
-    ):
+    def upload(self, request, organization_id: str = Form(...), format: str = Form(...), file: UploadedFile = File(...),
+               password: str | None = Form(None),):
         """
         Idempotent by (organization, fingerprint):
         - If a cert with same fingerprint already exists in this org → return it (200).
