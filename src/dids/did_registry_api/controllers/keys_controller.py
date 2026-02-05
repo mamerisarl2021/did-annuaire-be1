@@ -25,8 +25,8 @@ class KeysController:
     @route.get("/dids/{did}/keys")
     def list_keys(self, request, did: str) -> list[dict]:
         did_obj = get_did_or_404(did)
-        if not can_manage_did(request.user, did_obj):
-            raise HttpError(403, "Forbidden")
+        #if not can_manage_did(request.user, did_obj):
+        #    raise HttpError(403, "Forbidden")
         return list_key_versions(did_obj)
 
     @route.post("/dids/{did}/keys/rotate")

@@ -12,8 +12,6 @@ def latest_key_versions(did: DID) -> dict[str, UploadedPublicKey]:
             out[upk.key_id] = upk
     return out
 
-
-# TODO add jwks
 def list_key_versions(did: DID) -> list[dict]:
     items: dict[str, list[UploadedPublicKey]] = {}
     for upk in UploadedPublicKey.objects.filter(did=did).order_by("key_id", "version"):
