@@ -311,9 +311,12 @@ def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: st
     """
     java_fallback_enabled = getattr(settings, "CERT_JAVA_FALLBACK_ENABLED", True)
 
+    # Determine effective format early
+    effective_fmt = detect_effective_format(fmt, file_bytes)
+
     # First attempt: Try to load with cryptography library
     try:
-        cert = load_x509(file_bytes, fmt, password=password)
+        cert = load_x509(file_bytes, effective_fmt, password=password)
         fingerprint = compute_fingerprint(cert)
         jwk, compliance = _native_jwk_and_compliance(cert)
         return jwk, fingerprint, compliance
@@ -329,18 +332,10 @@ def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: st
             raise
 
         # Java fallback path for explicit parameters
-        # We need to get the raw DER bytes
-        effective_fmt = detect_effective_format(fmt, file_bytes)
-
+        # Convert to DER if needed
         if effective_fmt == "PEM":
-            # Convert PEM to DER for Java processing
             try:
-                # Try to extract DER from PEM (this might fail for explicit params too)
-                from cryptography.hazmat.primitives.serialization import load_pem_x509_certificate
-                # Use a more lenient loader or just pass PEM to Java
-                # For now, convert PEM to DER manually
-
-                # Extract base64 content between BEGIN/END CERTIFICATE
+                # Extract DER from PEM
                 pem_str = file_bytes.decode('ascii')
                 match = re.search(
                     r'-----BEGIN CERTIFICATE-----\s*(.+?)\s*-----END CERTIFICATE-----',
@@ -354,18 +349,25 @@ def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: st
             except Exception:
                 # If conversion fails, raise the original error
                 raise load_error
-        else:
+        elif effective_fmt == "DER":
             # Already DER format
             der_bytes = file_bytes
+        else:
+            # For PKCS7/PKCS12, we need to extract the certificate first
+            # This is tricky because cryptography can't load them with explicit params
+            # For now, raise the error - these formats are rare with explicit params
+            raise ValueError(
+                f"Java fallback not supported for {effective_fmt} format with explicit EC parameters. "
+                f"Please convert to PEM or DER format first."
+            ) from load_error
 
         # Call Java fallback
         try:
             jwk, compliance = jwk_from_der_via_java(der_bytes)
 
-            # We need fingerprint, but we can't compute it from cert object
-            # Compute it from DER bytes directly
-            import hashlib
-            fingerprint = hashlib.sha256(der_bytes).hexdigest().upper()
+            # Compute fingerprint from DER bytes directly
+            from src.dids.proof_crypto_engine.certs.loaders import compute_fingerprint_from_der
+            fingerprint = compute_fingerprint_from_der(der_bytes)
 
             return jwk, fingerprint, compliance
 
@@ -374,8 +376,6 @@ def parse_and_normalize_certificate(*, file_bytes: bytes, fmt: str, password: st
             raise ValueError(
                 f"Certificate parsing failed (native: {load_error}; java: {java_error})"
             ) from load_error
-
-
 
 @transaction.atomic
 def upsert_certificate(*, owner, organization, file_obj, fmt: str, jwk: dict, fingerprint: str, ) -> tuple[
