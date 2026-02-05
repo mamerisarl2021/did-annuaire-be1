@@ -61,7 +61,7 @@ class CertificatesController:
         eff_fmt = services.detect_effective_format(fmt, data)
 
         try:
-            jwk, fingerprint = services.parse_and_normalize_certificate(file_bytes=data, fmt=eff_fmt, password=password)
+            jwk, fingerprint, compliance = services.parse_and_normalize_certificate(file_bytes=data, fmt=eff_fmt, password=password)
         except Exception as e:
             raise HttpError(400, f"Certificate parsing failed: {e}")
 
