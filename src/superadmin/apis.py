@@ -199,7 +199,6 @@ class SuperAdminController(BaseAPIController):
                     "document_type": d.document_type,
                     "status": d.status,
                     "latest_version": d.latest_version or 0,
-                    "is_published": bool(getattr(d, "is_published", False)),
                     "created_at": d.created_at.isoformat() if getattr(d, "created_at", None) else None,
                 }
             )

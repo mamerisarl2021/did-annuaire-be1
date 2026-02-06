@@ -1,6 +1,8 @@
-from importlib import resources
 import jsonschema
 import json
+
+from importlib import resources
+from enum import StrEnum
 
 
 def validate_did_document(doc: dict):
@@ -11,3 +13,12 @@ def validate_did_document(doc: dict):
     ):
         schema = json.load(f)
     jsonschema.validate(instance=doc, schema=schema)
+
+#-------------------CONSTANTS----------------------#
+
+class DIDRegistrarState(StrEnum):
+    FINISHED = "finished"
+    ACTION = "action"
+    UPDATE = "update"
+    WAIT = "wait"
+    ERROR = "error"
