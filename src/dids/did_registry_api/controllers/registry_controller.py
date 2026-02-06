@@ -26,7 +26,7 @@ from src.dids.models import (
 )
 from src.dids.did_registry_api.selectors.dids import (
     get_did_or_404,
-    dids_for_org,
+    dids_for_org, dids_for_org_with_state,
 )
 from src.dids.did_registry_api.policies.access import (
     can_publish_prod,
@@ -211,9 +211,9 @@ class RegistryController(BaseAPIController):
         org_id = getattr(user, "organization_id", None) or getattr(
             getattr(user, "organization", None), "id", None
         )
-        if not request.user.is_platform_admin:
-            if not org_id:
-                raise HttpError(400, "User has no organization context")
+
+        if not org_id:
+            raise HttpError(400, "User has no organization context")
 
         # Subqueries to fetch latest active key material per DID
         latest_pk_qs = UploadedPublicKey.objects.filter(
@@ -227,7 +227,7 @@ class RegistryController(BaseAPIController):
             is_active=True,
         )
 
-        qs = dids_for_org(org_id).annotate(
+        qs = dids_for_org_with_state(org_id).annotate(
             is_published=Exists(prod_active_exists),
             latest_version=Max("documents__version"),
             latest_public_key_version=Subquery(latest_pk_qs.values("version")[:1]),
@@ -251,7 +251,7 @@ class RegistryController(BaseAPIController):
                     "public_key_version": d.latest_public_key_version,
                     "public_key_jwk": d.latest_public_key_jwk,
                     "status": d.status,
-                    "is_published": bool(d.is_published),
+                    "state": getattr(d, "state", "action"),
                 }
             )
 
@@ -260,42 +260,6 @@ class RegistryController(BaseAPIController):
             status=200,
             content_type="application/json",
         )
-
-    # def list_dids(self, request, org_id: str | None = None):
-    #    """
-    #    Lists DIDs:
-    #    - default: caller-owned DIDs
-    #    - when org_id is provided and caller is ORG_ADMIN or SUPERUSER: all DIDs in that org
-    #      otherwise: restrict to caller-owned within that org
-    #    Pagination: ?page=1&page_size=20 (via src/api/pagination.Paginator)
-    #    """
-    #    user = request.user
-
-    #    if org_id:
-    #        org = get_object_or_404(Organization, pk=org_id)
-    #        if is_org_admin(user, org) or getattr(user, "is_superuser", False):
-    #            qs = dids_for_org(org_id)
-    #        else:
-    #            qs = dids_for_owner(user.id).filter(organization_id=org_id)
-    #    else:
-    #        qs = dids_for_owner(user.id)
-
-    # Annotate latest version to avoid a per-row aggregate
-    #    qs = qs.annotate(latest_version=Max("documents__version"))
-
-    #    paginator = Paginator(default_page_size=20, max_page_size=100)
-    #    rows, meta = paginator.paginate_queryset(qs, request)
-
-    #    items = []
-    #    for d in rows:
-    #        items.append({
-    #            "did": d.did,
-    #            "organization_id": str(getattr(d.organization, "id", d.organization_id)),
-    #            "owner_id": str(d.owner_id),
-    #            "document_type": d.document_type,
-    #            "latest_version": d.latest_version or 0,
-    #        })
-    #    return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
 
     @route.get("/dids/preview")
     def preview_get(

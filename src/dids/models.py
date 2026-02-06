@@ -112,10 +112,6 @@ class DIDDocument(BaseModel):
         help_text="Relative path under /.well-known (e.g., preprod/{org}/{user}/{type}/did.json)",
     )
 
-    @property
-    def is_published(self) -> bool:
-        return self.environment == "PROD" and bool(self.is_active)
-
     class Meta:
         ordering = ["-version"]
         constraints = [
