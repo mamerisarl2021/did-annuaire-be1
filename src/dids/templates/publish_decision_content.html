@@ -1,0 +1,68 @@
+<!-- Content fragment for publish decision emails -->
+<p>
+  Bonjour {{ requested_by|default:"Utilisateur" }},
+</p>
+
+<p>
+  Votre demande de publication pour le DID
+  <code>{{ did }}</code> (version {{ version }}) a été traitée.
+</p>
+
+<!-- Status badge -->
+<p style="margin:16px 0;">
+  {% if status == "APPROVED" %}
+    <span style="display:inline-block;padding:6px 12px;background:#28a745;color:#ffffff;
+                 border-radius:4px;font-weight:bold;font-size:14px;">
+      APPROUVÉ
+    </span>
+  {% elif status == "REJECTED" or status == "REFUSED" %}
+    <span style="display:inline-block;padding:6px 12px;background:#dc3545;color:#ffffff;
+                 border-radius:4px;font-weight:bold;font-size:14px;">
+      REJETÉ
+    </span>
+  {% else %}
+    <span style="display:inline-block;padding:6px 12px;background:#6c757d;color:#ffffff;
+                 border-radius:4px;font-weight:bold;font-size:14px;">
+      {{ status }}
+    </span>
+  {% endif %}
+</p>
+
+{% if note %}
+<p style="margin-top:12px;">
+  <strong>Note du décideur :</strong><br>
+  {{ note }}
+</p>
+{% endif %}
+
+<p style="margin-top:24px;">
+  Pour consulter votre demande ou gérer vos publications, cliquez sur le bouton ci-dessous :
+</p>
+
+<p style="margin-top:16px;">
+  <a href="{{ dashboard_url }}" 
+     style="background:#0b5ed7;color:#ffffff;padding:10px 16px;text-decoration:none;
+            border-radius:4px;font-weight:bold;display:inline-block;">
+    Accéder au tableau de bord
+  </a>
+</p>
+
+<p style="margin-top:24px;font-size:12px;color:#777;">
+  Cet email a été généré automatiquement. Merci de ne pas y répondre.
+</p>
+
+<!-- Dark mode adjustments (optional inline) -->
+<style>
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
+  }
+  a {
+    color: #ffffff !important;
+  }
+  span {
+    color: #ffffff !important;
+  }
+}
+</style>

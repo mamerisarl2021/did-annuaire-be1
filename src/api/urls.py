@@ -3,15 +3,28 @@ from ninja_jwt.controller import NinjaJWTDefaultController
 
 from src.api.exception_handler import attach_exception_handlers
 
-from src.dids.did_registry_api.controllers.certificates_controller import CertificatesController
+from src.dids.did_registry_api.controllers.certificates_controller import (
+    CertificatesController,
+)
+from src.dids.did_registry_api.controllers.dids_stats_controller import (
+    DIDsStatsController,
+)
 from src.dids.did_registry_api.controllers.keys_controller import KeysController
-from src.dids.did_registry_api.controllers.publish_requests_controller import PublishRequestsController
+from src.dids.did_registry_api.controllers.publish_requests_controller import (
+    PublishRequestsController,
+)
 from src.dids.did_registry_api.controllers.registry_controller import RegistryController
-from src.dids.did_registry_api.controllers.universal_registrar_controller import UniversalRegistrarController
+from src.dids.did_registry_api.controllers.universal_registrar_controller import (
+    UniversalRegistrarController,
+)
+from src.diagnostics.controllers.publish_health_controller import (
+    PublishHealthController,
+)
 from src.dids.resolver.controllers import ResolverController
 
 from src.organizations.apis import OrganizationController
 from src.users.apis import UserController
+
 # from src.api_keys.apis import APIKeyController
 from src.auditaction.apis import AuditActionController
 from src.superadmin.apis import SuperAdminController
@@ -39,4 +52,6 @@ api.register_controllers(
     CertificatesController,
     ResolverController,
     LogoutController,
+    PublishHealthController,
+    DIDsStatsController,
 )

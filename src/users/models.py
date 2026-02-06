@@ -1,25 +1,28 @@
+from django.contrib.postgres.indexes import GinIndex
+from django.db.models import CheckConstraint, Q
+from django.db import models
+
 from src.common.models import BaseModel
+
 
 from django.contrib.auth.models import (
     AbstractBaseUser,
     PermissionsMixin,
     BaseUserManager,
 )
-from django.db import models
 
 
 class UserRole(models.TextChoices):
-    SUPERUSER = "SUPERUSER", "Super Utilisateur"
-    ORG_ADMIN = "ORG_ADMIN", "Admin Organisation"
-    ORG_MEMBER = "ORG_MEMBER", "Membre Organisation"
-    AUDITOR = "AUDITOR", "Auditeur"
+    ORG_ADMIN = "ORG_ADMIN", "Organization Admin"
+    ORG_MEMBER = "ORG_MEMBER", "Organization Member"
+    AUDITOR = "AUDITOR", "Auditor"
 
 
 class UserStatus(models.TextChoices):
-    PENDING = "PENDING", "En Attente"
-    INVITED = "INVITED", "Invité"
-    ACTIVE = "ACTIVE", "Actif"
-    DEACTIVATED = "SUSPENDED", "Désactivé"
+    PENDING = "PENDING", "Pending"
+    INVITED = "INVITED", "Invited"
+    ACTIVE = "ACTIVE", "Active"
+    DEACTIVATED = "DEACTIVATED", "Deactivated"
 
 
 class UserManager(BaseUserManager):
@@ -37,13 +40,16 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("is_active", True)
-        extra_fields.setdefault("role", UserRole.SUPERUSER)
-        extra_fields.setdefault("status", UserStatus.ACTIVE)
-
-        return self.create_user(email=email, password=password, **extra_fields)
+        extra_fields.update(
+            {
+                "is_staff": True,
+                "is_superuser": True,
+                "is_active": True,
+                "status": UserStatus.ACTIVE,
+                "organization": None,
+            }
+        )
+        return self.create_user(email, password, **extra_fields)
 
 
 class User(AbstractBaseUser, BaseModel, PermissionsMixin):
@@ -65,15 +71,11 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     )  # Null pour SuperUser
 
     # Rôle et statut
-    role = models.CharField(
-        max_length=20,
-        choices=UserRole.choices,
-        default=UserRole.ORG_MEMBER,
-        db_index=True,
+    role = models.JSONField(
+        default=list,
+        help_text="List of role tokens (e.g., ['ORG_MEMBER','AUDITOR']).",
     )
-    status = models.CharField(
-        max_length=20, choices=UserStatus.choices, default=UserStatus.PENDING
-    )
+    status = models.CharField(max_length=20, choices=UserStatus.choices)
 
     # Invitation
     invitation_token = models.CharField(max_length=255, blank=True, db_index=True)
@@ -94,10 +96,12 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     # 2FA - Email OTP
     email_otp_code = models.CharField(max_length=6, blank=True)
     email_otp_expires_at = models.DateTimeField(null=True, blank=True)
+    email_otp_sent_at = models.DateTimeField(null=True, blank=True)
 
     # 2FA - SMS OTP
     sms_otp_code = models.CharField(max_length=6, blank=True)
-    sms_otp_expires_at = models.DateTimeField(null=True, blank=True)
+    sms_otp_expires_at = models.DateTimeField(null=True, blank=False)
+    sms_otp_sent_at = models.DateTimeField(null=True, blank=True)
 
     # Permissions
     can_publish_prod = models.BooleanField(default=False)
@@ -105,10 +109,12 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     # Django required
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
-    last_login_at = models.DateTimeField(null=True, blank=True)
+    last_login = models.DateTimeField(null=True, blank=True)
 
     # Détails supplémentaires requis pour le futur admin d'une organization
     functions = models.CharField(max_length=150, blank=True)
+
+    refusal_reason = models.TextField(null=True, blank=True)
 
     objects = UserManager()
 
@@ -120,12 +126,41 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
         verbose_name = "User"
         verbose_name_plural = "Users"
         constraints = [
-            models.UniqueConstraint(fields=["email"], name="user_email_unique"),
+            CheckConstraint(
+                check=Q(is_superuser=True, organization__isnull=True)
+                | Q(is_superuser=False),
+                name="superuser_requires_null_org",
+            )
+        ]
+        indexes = [
+            GinIndex(
+                fields=["role"], name="user_role_gin", opclasses=["jsonb_path_ops"]
+            ),
         ]
 
     def __str__(self):
-        return f"{self.email} ({self.get_role_display()})"
+        return (
+            f"{self.email} {[self.role]}"
+            if self.role
+            else f"{self.email} [SUPER_ADMIN]"
+        )
+
+    @property
+    def is_platform_admin(self):
+        return self.is_superuser
+
+    @property
+    def is_org_admin(self) -> bool:
+        return UserRole.ORG_ADMIN.value in self.role
+
+    @property
+    def can_publish_prod_effective(self) -> bool:
+        return self.is_org_admin or self.can_publish_prod
 
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    def save(self, *args, **kwargs):
+        self.is_active = self.status == UserStatus.ACTIVE
+        super().save(*args, **kwargs)

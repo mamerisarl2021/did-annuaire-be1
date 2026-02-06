@@ -42,8 +42,21 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 bash curl ca-certificates \
+    libpq5 \
+    bash \
+    curl \
+    ca-certificates \
+    wget \
+    gnupg \
+    && wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb bookworm main" | tee /etc/apt/sources.list.d/adoptium.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends temurin-21-jre \
+    && apt-get remove -y wget gnupg \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
+
+RUN java -version
 
 RUN useradd -m -r appuser && \
     mkdir -p /app  /app/staticfiles /app/mediafiles && \
@@ -62,6 +75,8 @@ COPY --chown=appuser:appuser gunicorn.conf.py .
 COPY --chown=appuser:appuser entrypoint.sh .
 COPY --chown=appuser:appuser manage.py .
 RUN chmod +x /app/entrypoint.sh
+
+COPY --chown=appuser:appuser artifacts/ecdsa-extractor.jar /app/bin/
 
 USER appuser
 

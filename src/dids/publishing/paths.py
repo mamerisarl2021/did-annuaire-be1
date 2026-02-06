@@ -1,5 +1,6 @@
 import os
 
+
 def build_host() -> str:
     return os.environ.get("DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
 

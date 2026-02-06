@@ -45,11 +45,14 @@ class AuditAction(models.TextChoices):
         "Utilisateur suspendu",
     )
     USER_CREATED = "USER_CREATED", "Création Utilisateur"
+    USER_UPDATED = "USER_UPDATED", "Mise à jour utilisateur"
 
     # DIDs
     DID_CREATED = "DID_CREATED", "DID créé"
     DID_PUBLISHED_DRAFT = "DID_PUBLISHED_DRAFT", "DID publié en draft"
     DID_PUBLISHED_PUBLIC = "DID_PUBLISHED_PUBLIC", "DID publié publiquement"
+    PUBLISH_REQUEST_APPROVED = "PUBLISH_REQUEST_APPROVED", "Publication did Acccepté"
+    PUBLISH_REQUEST_REJECTED = "PUBLISH_REQUEST_REJECTED", "Publication did rejeté"
     DID_REVOKED = "DID_REVOKED", "DID révoqué"
 
     # Clés et certificats
@@ -63,6 +66,9 @@ class AuditAction(models.TextChoices):
     # Email services
     EMAIL_SENT = "EMAIL_SENT", "Email delivered"
     EMAIL_SEND_FAILED = "EMAIL_SEND_FAILED", "Email delivery failed"
+    OTP_GENERATED = "OTP_GENERATED", "OTP generated"
+
+    ADMIN_NOT_FOUND = "ORG_ADMIN_NOT_FOUNDOrganization admin not found"
 
     # Celery tasks
 
@@ -121,7 +127,7 @@ class AuditLog(BaseModel):
         db_table = "audit_logs"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["organization", "-created_at"]),
+            models.Index(fields=["organization", "action", "-created_at"]),
             models.Index(fields=["category", "-created_at"]),
             models.Index(fields=["action"]),
             models.Index(fields=["user"]),
@@ -129,5 +135,6 @@ class AuditLog(BaseModel):
         ]
 
     def __str__(self) -> str:
-        who = self.user.email if self.user else "system"
-        return f"[{self.category}] {self.action} by {who} at {self.created_at:%Y-%m-%d %H:%M:%S}"
+        actor = self.user.email if self.user else "system"
+        target = f"{self.target_type}:{self.target_id}" if self.target_type else ""
+        return f"[{self.category}] {self.action} by {actor} {target} at {self.created_at:%Y-%m-%d %H:%M:%S}"

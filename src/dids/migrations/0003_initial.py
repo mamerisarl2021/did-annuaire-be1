@@ -6,99 +6,167 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('dids', '0002_initial'),
-        ('organizations', '0001_initial'),
+        ("dids", "0002_initial"),
+        ("organizations", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='certificate',
-            name='owner',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='certificates', to=settings.AUTH_USER_MODEL),
+            model_name="certificate",
+            name="owner",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="certificates",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='did',
-            name='organization',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dids', to='organizations.organization'),
+            model_name="did",
+            name="organization",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="dids",
+                to="organizations.organization",
+            ),
         ),
         migrations.AddField(
-            model_name='did',
-            name='owner',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='owned_dids', to=settings.AUTH_USER_MODEL),
+            model_name="did",
+            name="owner",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="owned_dids",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='diddocument',
-            name='did',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='documents', to='dids.did'),
+            model_name="diddocument",
+            name="did",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="documents",
+                to="dids.did",
+            ),
         ),
         migrations.AddField(
-            model_name='diddocument',
-            name='published_by',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='published_documents', to=settings.AUTH_USER_MODEL),
+            model_name="diddocument",
+            name="published_by",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="published_documents",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='diddocumentkeybinding',
-            name='did_document',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='key_bindings', to='dids.diddocument'),
+            model_name="diddocumentkeybinding",
+            name="did_document",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="key_bindings",
+                to="dids.diddocument",
+            ),
         ),
         migrations.AddField(
-            model_name='publishrequest',
-            name='decided_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='decided_publish', to=settings.AUTH_USER_MODEL),
+            model_name="publishrequest",
+            name="decided_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="decided_publish",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='publishrequest',
-            name='did',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='publish_requests', to='dids.did'),
+            model_name="publishrequest",
+            name="did",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="publish_requests",
+                to="dids.did",
+            ),
         ),
         migrations.AddField(
-            model_name='publishrequest',
-            name='did_document',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='publish_requests', to='dids.diddocument'),
+            model_name="publishrequest",
+            name="did_document",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="publish_requests",
+                to="dids.diddocument",
+            ),
         ),
         migrations.AddField(
-            model_name='publishrequest',
-            name='requested_by',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='requested_publish', to=settings.AUTH_USER_MODEL),
+            model_name="publishrequest",
+            name="requested_by",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="requested_publish",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='uploadedpublickey',
-            name='certificate',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='did_keys', to='dids.certificate'),
+            model_name="uploadedpublickey",
+            name="certificate",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="did_keys",
+                to="dids.certificate",
+            ),
         ),
         migrations.AddField(
-            model_name='uploadedpublickey',
-            name='did',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='keys', to='dids.did'),
+            model_name="uploadedpublickey",
+            name="did",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="keys",
+                to="dids.did",
+            ),
         ),
         migrations.AddField(
-            model_name='diddocumentkeybinding',
-            name='uploaded_public_key',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='doc_bindings', to='dids.uploadedpublickey'),
+            model_name="diddocumentkeybinding",
+            name="uploaded_public_key",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="doc_bindings",
+                to="dids.uploadedpublickey",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='diddocument',
-            constraint=models.UniqueConstraint(fields=('did', 'version'), name='did_document_version_unique'),
+            model_name="diddocument",
+            constraint=models.UniqueConstraint(
+                fields=("did", "version"), name="did_document_version_unique"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='diddocument',
-            constraint=models.UniqueConstraint(condition=models.Q(('is_active', True)), fields=('did', 'environment'), name='unique_active_diddoc_per_env'),
+            model_name="diddocument",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("is_active", True)),
+                fields=("did", "environment"),
+                name="unique_active_diddoc_per_env",
+            ),
         ),
         migrations.AddIndex(
-            model_name='publishrequest',
-            index=models.Index(fields=['did', 'environment', 'status'], name='dids_publis_did_id_e41683_idx'),
+            model_name="publishrequest",
+            index=models.Index(
+                fields=["did", "environment", "status"],
+                name="dids_publis_did_id_e41683_idx",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='uploadedpublickey',
-            constraint=models.UniqueConstraint(fields=('did', 'key_id', 'version'), name='did_keyid_version_unique'),
+            model_name="uploadedpublickey",
+            constraint=models.UniqueConstraint(
+                fields=("did", "key_id", "version"), name="did_keyid_version_unique"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='diddocumentkeybinding',
-            constraint=models.UniqueConstraint(fields=('did_document', 'uploaded_public_key'), name='doc_keybinding_unique'),
+            model_name="diddocumentkeybinding",
+            constraint=models.UniqueConstraint(
+                fields=("did_document", "uploaded_public_key"),
+                name="doc_keybinding_unique",
+            ),
         ),
     ]

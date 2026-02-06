@@ -47,7 +47,7 @@ class Organization(BaseModel):
     )
     authorization_document = models.FileField(
         upload_to="organizations/authorizations/",
-        help_text="Autorisation de l’organisation (document signé par le représentant légal de l’organisation)"
+        help_text="Autorisation de l’organisation (document signé par le représentant légal de l’organisation)",
     )
 
     # Statut
@@ -86,6 +86,9 @@ class Organization(BaseModel):
         constraints = [
             models.UniqueConstraint(fields=["email"], name="org_email_unique"),
             models.UniqueConstraint(fields=["slug"], name="org_slug_unique"),
+        ]
+        indexes = [
+            models.Index(fields=["status", "-created_at"]),
         ]
 
     def __str__(self):

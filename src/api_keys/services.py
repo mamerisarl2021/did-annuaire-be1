@@ -42,7 +42,7 @@ def api_key_create(
 
 
 @transaction.atomic
-def api_key_revoke(*, api_key_id: int, revoked_by) -> APIKey:
+def api_key_revoke(*, api_key_id: str, revoked_by) -> APIKey:
     """Révoquer une clé API"""
 
     api_key = APIKey.objects.get(id=api_key_id)

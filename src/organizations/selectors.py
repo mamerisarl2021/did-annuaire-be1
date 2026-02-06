@@ -1,80 +1,50 @@
-from django.db.models import Prefetch, QuerySet, Q
+from src.organizations.models import Organization, OrganizationStatus
 from src.users.models import User, UserRole
-
-from src.organizations.models import Organization
-
-
-def organization_list_all() -> QuerySet[Organization]:
-    """Return all organizations (no filter)."""
-    return Organization.objects.all().order_by("-created_at")
+from django.db.models import QuerySet
 
 
-def organization_list_by_status(*, status: str) -> QuerySet[Organization]:
-    """Return organizations filtered by a single status."""
-    return Organization.objects.filter(status=status).order_by("-created_at")
-
-
-def organization_list(
-    *, status: str = None, search: str = None
-) -> QuerySet[Organization]:
+def organization_list_by_admins(*, status: str | None = None, user: User) -> QuerySet:
     """
-    Liste les organisations avec filtres optionnels
-
-    Args:
-        status: Filtrer par statut (PENDING, ACTIVE, SUSPENDED, REFUSED)
-        search: Recherche dans name et slug
-
-    Returns:
-        QuerySet d'organisations triées par date de création décroissante
+    Returns a queryset of organizations visible to the given user.
+    - ORG_ADMIN: only their own org
+    - Optional: filter by status
     """
     qs = Organization.objects.all()
 
-    # Filtre par statut
+    # Scope by org for ORG_ADMIN
+    if UserRole.ORG_ADMIN in user.role:
+        if user.organization_id is not None:
+            qs = qs.filter(id=user.organization_id)
+        else:
+            # should not happen, maybe superuser? fallback empty
+            qs = qs.none()
+
+    # Apply status filter
     if status:
-        qs = qs.filter(status=status)
+        qs = qs.filter(status=status.upper())
 
-    # Recherche textuelle (nom ou slug)
-    if search:
-        search_term = search.strip()
-        qs = qs.filter(Q(name__icontains=search_term) | Q(slug__icontains=search_term))
+    # Order by creation date descending
+    qs = qs.order_by("-created_at")
 
-    return qs.order_by("-created_at")
+    return qs
 
 
-def organization_list_with_admins(
-    *, status: str = None, search: str = None
-) -> QuerySet[Organization]:
+def organization_stats_for_admin(*, user: User) -> dict[str, int]:
     """
-    Liste les organisations avec ORG_ADMIN prefetched
+    Returns organization counts scoped to the ORG_ADMIN's organization context.
 
-    Args:
-        status: Filtrer par statut
-        search: Recherche dans name et slug
+    Only the organization that the admin belongs to is counted.
     """
-    qs = organization_list(status=status, search=search)
-    return qs.prefetch_related(_admin_prefetch())
+    org_id = user.organization_id
 
+    # If somehow no org, return zeros
+    if not org_id:
+        return {"all": 0, "active": 0, "suspended": 0}
 
-def organization_get_with_admin(*, org_id) -> Organization:
-    """Single organisation avec son ORG_ADMIN prefetched"""
-    return Organization.objects.prefetch_related(_admin_prefetch()).get(id=org_id)
+    qs = Organization.objects.filter(id=org_id)
 
-
-def _admin_prefetch() -> Prefetch:
-    admin_qs = (
-        User.objects.filter(role=UserRole.ORG_ADMIN)
-        .only(
-            "id",
-            "email",
-            "first_name",
-            "last_name",
-            "phone",
-            "functions",
-            "status",
-            "invitation_sent_at",
-            "invitation_accepted_at",
-            "created_at",
-        )
-        .order_by("created_at")
-    )
-    return Prefetch("users", queryset=admin_qs, to_attr="admin_user")
+    return {
+        "all": qs.count(),
+        "active": qs.filter(status=OrganizationStatus.ACTIVE).count(),
+        "suspended": qs.filter(status=OrganizationStatus.SUSPENDED).count(),
+    }

@@ -1,10 +1,11 @@
 from typing import Iterable, Any
-from src.emails.services import email_send
+from urllib.parse import urljoin
 
-
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
+from src.emails.services import email_send
 from src.dids.models import PublishRequest
 from src.users.models import User, UserRole
 
@@ -26,25 +27,39 @@ def _render_with_layout(inner_template: str | None, context: dict[str, Any]) -> 
     return render_to_string(DEFAULT_LAYOUT, context)
 
 
-def _send_html_email(to: Iterable[str], subject: str, html: str, text_fallback: str | None = None,
-                     cc: Iterable[str] | None = None, bcc: Iterable[str] | None = None) -> None:
-
+def _send_html_email(
+    to: Iterable[str],
+    subject: str,
+    html: str,
+    text_fallback: str | None = None,
+    cc: Iterable[str] | None = None,
+    bcc: Iterable[str] | None = None,
+) -> None:
     text = text_fallback or strip_tags(html)
 
-    email_send(to=list(to), subject=subject, html=html, text=text, cc=list(cc) if cc else None,
-               bcc=list(bcc) if bcc else None)
+    email_send(
+        to=list(to),
+        subject=subject,
+        html=html,
+        text=text,
+        cc=list(cc) if cc else None,
+        bcc=list(bcc) if bcc else None,
+    )
 
 
 def _org_admin_emails(org) -> list[str]:
     """
-    Renvoie les emails des ORG_ADMIN d'une organisation. Adapte le filtre à ton modèle.
+    Return emails of ORG_ADMINs in the organization.
     """
-    try:
-        qs = User.objects.filter(organization=org, role=UserRole.ORG_ADMIN, is_active=True).only("email")
-        return [u.email for u in qs if u.email]
-    except Exception:
-        # Fallback: aucun destinataire
-        return []
+    qs = (
+        User.objects.filter(organization=org, is_active=True)
+        .filter(role__contains=[UserRole.ORG_ADMIN])  # JSON array membership
+        .exclude(email__isnull=True)
+        .exclude(email="")
+        .values_list("email", flat=True)
+        .distinct()
+    )
+    return list(qs)
 
 
 def send_publish_request_notification(pr: PublishRequest) -> None:
@@ -60,21 +75,21 @@ def send_publish_request_notification(pr: PublishRequest) -> None:
     subject = f"[DID Annuaire] Demande de publication PROD pour {did}"
     ctx = {
         "title": "Demande de publication en production",
-        "org_name": getattr(org, "name", str(org)),
+        "org_name": org.name if hasattr(org, "name") else "—",
         "did": did,
         "version": pr.did_document.version,
         "requested_by": getattr(pr.requested_by, "email", None),
-        "environment": pr.environment,
+        "environment": pr.environment.upper(),
         "publish_request_id": pr.id,
-        # Le layout par défaut doit inclure {{ content|safe }}. On fournit 'content' via un mini fragment.
-        "content": (
-            f"<p>Une demande de publication en <strong>PROD</strong> a été créée pour le DID "
-            f"<code>{did}</code> (version {pr.did_document.version}).</p>"
-            f"<p>Demandeur: {getattr(pr.requested_by, 'email', 'inconnu')}.</p>"
-            f"<p>ID de demande: <strong>{pr.id}</strong>.</p>"
+        "admin_url": urljoin(
+            settings.FR_APP_DOMAIN,
+            "/dashboard/publish-requests",
         ),
     }
-    html = _render_with_layout(inner_template=None, context=ctx)
+    html = _render_with_layout(
+        inner_template="publish_request_content.html",
+        context=ctx,
+    )
     _send_html_email(to=recipients, subject=subject, html=html)
 
 
@@ -87,24 +102,21 @@ def send_publish_decision_notification(pr: PublishRequest) -> None:
         return
 
     did = pr.did.did
-    approved = (pr.status == PublishRequest.Status.APPROVED)
+    approved = pr.status == PublishRequest.Status.APPROVED
     subject = f"[DID Annuaire] Publication PROD {'approuvée' if approved else 'rejetée'} pour {did}"
-
-    note = (pr.note or "").strip()
-    decision_line = "Votre demande de publication a été approuvée." if approved else "Votre demande de publication a été rejetée."
-    note_line = f"<p>Note: {note}</p>" if note else ""
 
     ctx = {
         "title": "Décision de publication",
         "did": did,
         "version": pr.did_document.version,
-        "status": pr.status,
-        "decided_by": getattr(pr.decided_by, "email", None),
-        "content": (
-            f"<p>{decision_line}</p>"
-            f"<p>DID: <code>{did}</code> (version {pr.did_document.version}).</p>"
-            f"{note_line}"
-        ),
+        "requested_by": getattr(pr.requested_by, "email", "Utilisateur"),
+        "status": "APPROVED"
+        if pr.status == PublishRequest.Status.APPROVED
+        else "REJECTED",
+        "note": pr.note.strip() if pr.note else "",
+        "dashboard_url": urljoin(settings.FR_APP_DOMAIN, "/dashboard/publish-requests"),
     }
-    html = _render_with_layout(inner_template=None, context=ctx)
+    html = _render_with_layout(
+        inner_template="publish_decision_content.html", context=ctx
+    )
     _send_html_email(to=[to_email], subject=subject, html=html)

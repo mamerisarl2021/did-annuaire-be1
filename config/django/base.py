@@ -12,7 +12,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 
-import dj_database_url 
+import dj_database_url
+
+from django.core.exceptions import ImproperlyConfigured
 
 from config.env import APPS_DIR, BASE_DIR, env
 
@@ -32,7 +34,7 @@ ALLOWED_HOSTS = ["*"] if DEBUG else env.list("ALLOWED_HOSTS", default=[])
 
 LOCAL_APPS = [
     "src.api.apps.ApiConfig",
-    #"src.api_keys.apps.ApiKeysConfig",
+    # "src.api_keys.apps.ApiKeysConfig",
     "src.auditaction.apps.AuditactionConfig",
     "src.common.apps.CommonConfig",
     "src.dids.apps.DidsConfig",
@@ -70,6 +72,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
+    #    'request_id.middleware.RequestIdMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -102,7 +105,7 @@ TEMPLATES = [
 
 
 ORBIT_CONFIG = {
-    "ENABLED": True,
+    "ENABLED": False,
     "SLOW_QUERY_THRESHOLD_MS": 500,
     "STORAGE_LIMIT": 1000,
     # Core watchers
@@ -121,6 +124,7 @@ ORBIT_CONFIG = {
     "RECORD_JOBS": True,
     "RECORD_REDIS": True,
     "RECORD_GATES": True,
+    #'WATCHER_FAIL_SILENTLY': True,
     # Security
     "AUTH_CHECK": lambda request: request.user.is_staff,
     "IGNORE_PATHS": ["/orbit/", "/static/", "/media/"],
@@ -149,7 +153,7 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
-# DATABASES["default"]["ATOMIC_REQUESTS"] = True
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -189,8 +193,8 @@ from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = LoggersSetup.setup_settings(INSTALLED_APPS, MIDDLEWARE)
-LoggersSetup.setup_structlog()
-LOGGING = LoggersSetup.setup_logging()
+# LoggersSetup.setup_structlog()
+# LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
 from config.settings.email_sending import *  # noqa
@@ -206,8 +210,10 @@ from config.settings.cors import *  # noqa
 
 # INSTALLED_APPS, MIDDLEWARE = DebugToolbarSetup.do_settings(INSTALLED_APPS, MIDDLEWARE)
 
-DIDS_ROOT = env("DIDS_ROOT", default=os.path.join(BASE_DIR, "dids_storage"))
-DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", "False")
+if not (DIDS_ROOT := env("DIDS_ROOT", default=None)):
+    raise ImproperlyConfigured("DIDS_ROOT environment variable is not set")
+
+DIDS_SIGNING_ENABLED = env.bool("DIDS_SIGNING_ENABLED", default=False)
 
 # SITE_ID = 2
 # STORAGES = {
@@ -227,3 +233,8 @@ if ADMIN_USER_NAME and ADMIN_USER_EMAIL:
     ADMINS.append(ADMIN_USER_EMAIL)  # Only add the email string
 
 MANAGERS = ADMINS
+
+# Java fallback for EC explicit parameters
+CERT_JAVA_FALLBACK_ENABLED = env.bool("CERT_JAVA_FALLBACK_ENABLED", default=False)
+CERT_JAVA_JAR = env.str("CERT_JAVA_JAR", default="/app/bin/ecdsa-extractor.jar")
+CERT_JAVA_TIMEOUT_S = env.int("CERT_JAVA_TIMEOUT_S", default=10)
