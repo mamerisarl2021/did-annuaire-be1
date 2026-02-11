@@ -16,7 +16,7 @@ dependencies = [
     "django-extensions",
     "django-ninja",
     "django-ninja-jwt[crypto]",
-    "django-orbit==0.6.3",
+    "django-orbit>=0.6.3",
     "django-request-id>=1.0.0",
     "django-structlog[celery]",
     "gunicorn",
