@@ -39,7 +39,7 @@ jobs:
 
 
       - name: Run scan image with Trivy scan
-        uses: aquasecurity/trivy-action@0.69.1
+        uses: aquasecurity/trivy-action@0.65.0
         with:
           image-ref: ctrldaviddee/annuaire_did_be:staging-latest
           format: table
