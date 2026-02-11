@@ -4,7 +4,7 @@ on:
     workflows: [ "build-and-push-backend-prime" ]
     types: [ completed ]
 jobs:
-  deploy:
+  deploy-staging-prime:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging-prime' }}
     runs-on: ubuntu-latest
     steps:
@@ -39,3 +39,8 @@ jobs:
             
             echo "➡️ Starting new stack"
             docker compose -f compose.yml up -d --remove-orphans
+            
+            echo "➡️ Waiting for services to be ready"
+            docker compose -f compose.yml ps 
+            
+            echo "➡️ Done"
