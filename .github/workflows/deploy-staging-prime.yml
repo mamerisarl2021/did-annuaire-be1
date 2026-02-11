@@ -39,3 +39,8 @@ jobs:
             
             echo "➡️ Starting new stack"
             docker compose -f compose.yml up -d --remove-orphans
+            
+            echo "➡️ Waiting for services to be ready"
+            docker compose -f compose.yml ps 
+            
+            echo "➡️ Done"
