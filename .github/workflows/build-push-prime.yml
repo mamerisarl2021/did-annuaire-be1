@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-push:
+  build-push-prime:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
