@@ -356,7 +356,7 @@ requires-dist = [
     { name = "django-extensions" },
     { name = "django-ninja" },
     { name = "django-ninja-jwt", extras = ["crypto"] },
-    { name = "django-orbit", specifier = "==0.6.3" },
+    { name = "django-orbit", specifier = ">=0.6.3" },
     { name = "django-request-id", specifier = ">=1.0.0" },
     { name = "django-structlog", extras = ["celery"] },
     { name = "gunicorn" },
