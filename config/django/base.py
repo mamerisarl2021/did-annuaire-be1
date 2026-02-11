@@ -105,7 +105,7 @@ TEMPLATES = [
 
 
 ORBIT_CONFIG = {
-    "ENABLED": False,
+    "ENABLED": True,
     "SLOW_QUERY_THRESHOLD_MS": 500,
     "STORAGE_LIMIT": 1000,
     # Core watchers
@@ -120,11 +120,18 @@ ORBIT_CONFIG = {
     "RECORD_HTTP_CLIENT": True,
     "RECORD_MAIL": True,
     "RECORD_SIGNALS": True,
+    
     # Advanced watchers (v0.5.0+)
     "RECORD_JOBS": True,
     "RECORD_REDIS": True,
     "RECORD_GATES": True,
+    
+    # v0.6.0 watchers
+    'RECORD_TRANSACTIONS': True,
+    'RECORD_STORAGE': True,
+    
     #'WATCHER_FAIL_SILENTLY': True,
+    
     # Security
     "AUTH_CHECK": lambda request: request.user.is_staff,
     "IGNORE_PATHS": ["/orbit/", "/static/", "/media/"],
