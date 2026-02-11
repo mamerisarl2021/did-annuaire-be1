@@ -2,7 +2,7 @@ import os
 
 
 def build_host() -> str:
-    return os.environ.get("DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
+    return os.environ.get("DID_DOMAIN_HOST", "annuairedid-be.qcdigitalhub.com")
 
 
 def build_relpath(org_slug: str, user_slug: str, doc_type: str) -> str:
