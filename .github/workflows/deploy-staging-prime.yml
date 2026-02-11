@@ -1,0 +1,41 @@
+name: deploy-staging-prime-backend
+on:
+  workflow_run:
+    workflows: [ "build-and-push-backend-prime" ]
+    types: [ completed ]
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging-prime' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+
+      - name: Docker prune
+        run: docker system prune -af
+
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ANNUAIRE_DID_BACKEND_HOST }}
+          username: ${{ secrets.ANNUAIRE_DID_BACKEND_USER }}
+          password: ${{ secrets.ANNUAIRE_DID_BACKEND_PASSWORD }}
+          script: |
+            set -euo pipefail
+            cd ${{ secrets.ANNUAIRE_DID_BACKEND_FILES }}
+            
+            echo "➡️  Creating docker network 'annuaire_staging_net'"
+            docker network create annuaire_staging_net 2>/dev/null || true
+            
+            echo "➡️ Pulling latest image"
+            docker compose -f compose.yml pull
+            
+            echo "➡️ Stopping current stack"
+            docker compose -f compose.yml down || true
+            
+            echo "➡️ Starting new stack"
+            docker compose -f compose.yml up -d --remove-orphans

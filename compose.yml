@@ -4,28 +4,14 @@ services:
     container_name: annuaire-nginx
     restart: unless-stopped
     ports:
-      - "8889:80"
+      - "8086:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - static_volume:/static:ro
       - media_volume:/media:ro
       - dids_volume:/app/data/dids:ro
     depends_on:
-      - annuaire-frontend
       - annuaire-backend
-    networks:
-      - annuaire_staging_net
-
-  annuaire-frontend:
-    image: ctrldaviddee/annuaire_did:staging-latest
-    container_name: annuaire-frontend
-    restart: unless-stopped
-    env_file:
-      - .env.frontend
-    environment:
-      - NODE_ENV=production
-    expose:
-      - "3000"
     networks:
       - annuaire_staging_net
 
@@ -61,7 +47,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}", "-d annuaire_did"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres}",
+          "-d annuaire_did",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
