@@ -46,6 +46,7 @@ class AuditAction(models.TextChoices):
     )
     USER_CREATED = "USER_CREATED", "Création Utilisateur"
     USER_UPDATED = "USER_UPDATED", "Mise à jour utilisateur"
+    USER_DELETED = "USER_DELETED", "Suppression utilisateur"
 
     # DIDs
     DID_CREATED = "DID_CREATED", "DID créé"

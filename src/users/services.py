@@ -478,13 +478,13 @@ def user_delete(*, user_id: uuid.UUID, requesting_user: User):
 
     target_user = selectors.user_get_for_update(user_id=user_id)
 
-    # Permission check - only org admins can delete users
-    if not requesting_user.is_org_admin:
+    # Permission check - only org admins and superuser can delete users
+    if not (requesting_user.is_org_admin or requesting_user.is_platform_admin):
         raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
 
     # Check same organization
-    if target_user.organization_id != requesting_user.organization_id:
-        raise APIError(message="Permission Denied", code="FORBIDDEN", status=403)
+    if target_user.organization_id != requesting_user.organization_id and not requesting_user.is_platform_admin:
+        raise APIError(message="not Permission Denied", code="FORBIDDEN", status=403)
 
     # Prevent self-deletion
     if target_user.id == requesting_user.id:
@@ -495,6 +495,7 @@ def user_delete(*, user_id: uuid.UUID, requesting_user: User):
     target_user.status = UserStatus.DEACTIVATED
     target_user.is_active = False
     target_user.save(update_fields=["status", "is_active", "updated_at"])
+    target_user.delete()
 
     audit_action_create(
         user=requesting_user,
