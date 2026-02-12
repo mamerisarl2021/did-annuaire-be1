@@ -28,7 +28,7 @@ class PublishHealthController(BaseAPIController):
         ensure_superuser(user)
 
         root = getattr(settings, "DIDS_ROOT", "/app/data/dids/.well-known")
-        host = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-be.qcdigitalhub.com")
+        host = getattr(settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
 
         p = pathlib.Path(root)
         exists = p.exists()

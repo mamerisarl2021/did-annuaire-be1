@@ -98,7 +98,7 @@ def jwk_from_der_via_java(der_bytes: bytes) :
             pass
 
 def build_host() -> str:
-    return os.environ.get("DID_DOMAIN_HOST", "annuairedid-be.qcdigitalhub.com")
+    return os.environ.get("DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com")
 
 
 def build_did(org_slug: str, user_slug: str, doc_type: str) -> str:

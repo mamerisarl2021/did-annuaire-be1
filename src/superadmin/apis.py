@@ -311,9 +311,10 @@ class SuperAdminController(BaseAPIController):
 
         # Safety: host must match configured host
         host, org, user, doc_type = parse_did_web(did)
-        expected = getattr(
-            settings, "DID_DOMAIN_HOST", "annuairedid-be.qcdigitalhub.com"
-        )
+        # expected = getattr(
+        #     settings, "DID_DOMAIN_HOST", "annuairedid-fe.qcdigitalhub.com"
+        # )
+        expected = "annuairedid-be.qcdigitalhub.com"
         if host != expected:
             raise HttpError(400, f"Host mismatch: expected {expected}, got {host}")
 
