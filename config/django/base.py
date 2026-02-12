@@ -200,8 +200,8 @@ from config.settings.loggers.settings import *  # noqa
 from config.settings.loggers.setup import LoggersSetup  # noqa
 
 INSTALLED_APPS, MIDDLEWARE = LoggersSetup.setup_settings(INSTALLED_APPS, MIDDLEWARE)
-# LoggersSetup.setup_structlog()
-# LOGGING = LoggersSetup.setup_logging()
+LoggersSetup.setup_structlog()
+LOGGING = LoggersSetup.setup_logging()
 
 from config.settings.celery import *  # noqa
 from config.settings.email_sending import *  # noqa
