@@ -237,7 +237,9 @@ ADMIN_USER_EMAIL = env("ADMIN_USER_EMAIL")
 ADMINS = []
 
 if ADMIN_USER_NAME and ADMIN_USER_EMAIL:
-    ADMINS.append(ADMIN_USER_EMAIL)  # Only add the email string
+    ADMINS.append((ADMIN_USER_NAME, ADMIN_USER_EMAIL))
+    # ADMINS.append(ADMIN_USER_EMAIL)  # Only add the email string django 6
+    # ADMINS.append(f'"{ADMIN_USER_NAME}" <{ADMIN_USER_EMAIL}>')
 
 MANAGERS = ADMINS
 
