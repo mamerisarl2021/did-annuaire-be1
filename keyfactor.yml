@@ -1,0 +1,53 @@
+networks:
+  annuaire_staging_net:
+    external: true
+  ejbca_internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+services:
+  ejbca-database:
+    image: postgres:18
+    container_name: ejbca-database
+    environment:
+      - POSTGRES_USER=ejbca
+      - POSTGRES_PASSWORD=foo@123
+      - POSTGRES_DB=ejbca
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - ejbca_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ejbca -d ejbca"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    restart: unless-stopped
+
+  ejbca-node1:
+    hostname: ejbca-node1
+    container_name: EJBCA
+    image: keyfactor/ejbca-ce:latest
+    depends_on:
+      ejbca-database:
+        condition: service_healthy
+    networks:
+      - annuaire_staging_net
+      - ejbca_internal
+    environment:
+      - DATABASE_JDBC_URL=jdbc:postgresql://ejbca-database:5432/ejbca
+      - DATABASE_USER=ejbca
+      - DATABASE_PASSWORD=foo@123
+      - LOG_LEVEL=INFO
+      - LOG_LEVEL_SETUP=INFO
+      - TLS_SETUP_ENABLED=simple
+    ports:
+      - "84:8080"
+      - "446:8443"
