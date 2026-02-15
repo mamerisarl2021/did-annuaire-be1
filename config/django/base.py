@@ -105,7 +105,7 @@ TEMPLATES = [
 
 
 ORBIT_CONFIG = {
-    "ENABLED": True,
+    "ENABLED": False,
     "SLOW_QUERY_THRESHOLD_MS": 500,
     "STORAGE_LIMIT": 1000,
     # Core watchers
