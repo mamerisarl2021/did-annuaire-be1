@@ -11,6 +11,7 @@ from typing import Literal
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django.core.cache import cache
 
 from src.auditaction.models import AuditCategory
 from src.auditaction.models import AuditAction
@@ -509,3 +510,190 @@ def user_delete(*, user_id: uuid.UUID, requesting_user: User):
         target_type="user",
         target_id=user_id,
     )
+
+
+@transaction.atomic
+def user_request_password_reset(*, email: str, request=None) -> dict:
+    """
+    Request password reset link via email.
+
+    Security:
+    - Always returns success (don't reveal if email exists)
+    - Rate limited: 3 requests per hour per email
+    - Only sends to ACTIVE users
+    - Token expires in 1 hour
+    """
+    email = email.strip().lower()
+
+    # Cache-based rate limiting
+    rl_key = f"password_reset:email:{email}"
+    attempts = cache.get(rl_key, 0)
+
+    if attempts >= 3:
+        return {
+            "success": True,
+            "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
+        }
+
+    cache.set(rl_key, attempts + 1, timeout=3600)  # 1 hour
+
+    # Get user - still return success if not found (security)
+    user = selectors.user_get_by_email(email=email)
+    if not user or user.status != UserStatus.ACTIVE:
+        return {
+            "success": True,
+            "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
+        }
+
+    # Generate token (following invitation pattern)
+    token = secrets.token_urlsafe(32)
+    now = timezone.now()
+
+    user.password_reset_token = token
+    user.password_reset_token_expires_at = now + timedelta(hours=1)
+    user.password_reset_token_created_at = now
+    user.save(update_fields=[
+        'password_reset_token',
+        'password_reset_token_expires_at',
+        'password_reset_token_created_at',
+        'updated_at'
+    ])
+
+    # Send email (French template, following invitation pattern)
+    reset_url = f"{settings.FR_APP_DOMAIN}/auth/reset-password?token={token}"
+
+    email_send(
+        to=[user.email],
+        subject="Réinitialisation de mot de passe - DID Annuaire",
+        html=f"""
+            <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
+                <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Réinitialisation de mot de passe</h2>
+                <p>Bonjour {user.full_name},</p>
+                <p>Vous avez demandé la réinitialisation de votre mot de passe pour <strong>DID Annuaire</strong>.</p>
+                <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+                <p style="text-align: center; margin: 20px 0;">
+                    <a href="{reset_url}"
+                       style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                        Réinitialiser mon mot de passe
+                    </a>
+                </p>
+                <p style="font-size: 0.9em; color: #666; text-align: center;">
+                    Ce lien expire dans 1 heure.
+                </p>
+                <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
+                    Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. Votre mot de passe restera inchangé.
+                </p>
+                <p style="font-size: 0.9em; color: #666;">
+                    Ce message est automatique. Merci de ne pas y répondre directement.
+                </p>
+            </div>
+        """,
+    )
+
+    # Audit log
+    audit_action_create(
+        user=user,
+        category=AuditCategory.USER,
+        organization=user.organization,
+        action=AuditAction.PASSWORD_RESET_REQUESTED,
+        details={
+            "user_id": str(user.id),
+            "email": user.email,
+            "token_expires_at": user.password_reset_token_expires_at.isoformat(),
+        },
+        target_type="user",
+        target_id=str(user.id),
+        request=request,
+    )
+
+    return {
+        "success": True,
+        "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
+    }
+
+
+@transaction.atomic
+def user_reset_password(*, token: str, new_password: str, request=None) -> dict:
+    """
+    Reset password using valid token.
+
+    Validation:
+    - Token must exist and not expired
+    - Password must pass Django validators
+    - Token invalidated after success (single-use)
+    """
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    # Get user by token (returns None if expired or not found)
+    user = selectors.user_get_by_reset_token(token=token)
+
+    if not user:
+        raise DomainValidationError(
+            message="Le lien de réinitialisation est invalide ou a expiré.",
+            code="RESET_TOKEN_INVALID"
+        )
+
+    # Validate password using Django validators
+    try:
+        validate_password(new_password, user=user)
+    except DjangoValidationError as e:
+        audit_action_create(
+            user=user,
+            category=AuditCategory.USER,
+            organization=user.organization,
+            action=AuditAction.PASSWORD_RESET_FAILED,
+            details={
+                "user_id": str(user.id),
+                "reason": "password_validation_failed",
+                "errors": list(e.messages),
+            },
+            target_type="user",
+            target_id=str(user.id),
+            request=request,
+        )
+        error_msg = " ".join(e.messages)
+        raise DomainValidationError(
+            message=f"Le mot de passe ne respecte pas les critères de sécurité: {error_msg}",
+            code="PASSWORD_VALIDATION_FAILED"
+        )
+
+    # Set new password
+    user.set_password(new_password)
+
+    # Invalidate token (single-use)
+    user.password_reset_token = ""
+    user.password_reset_token_expires_at = None
+    user.password_reset_token_created_at = None
+
+    user.save(update_fields=[
+        'password',
+        'password_reset_token',
+        'password_reset_token_expires_at',
+        'password_reset_token_created_at',
+        'updated_at'
+    ])
+
+    # Success audit log
+    audit_action_create(
+        user=user,
+        category=AuditCategory.USER,
+        organization=user.organization,
+        action=AuditAction.PASSWORD_RESET_COMPLETED,
+        details={
+            "user_id": str(user.id),
+            "email": user.email,
+        },
+        target_type="user",
+        target_id=str(user.id),
+        request=request,
+    )
+
+    return {
+        "success": True,
+        "message": "Votre mot de passe a été réinitialisé avec succès.",
+        "user": {
+            "email": user.email,
+            "full_name": user.full_name,
+        }
+    }

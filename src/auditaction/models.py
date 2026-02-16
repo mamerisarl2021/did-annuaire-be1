@@ -47,6 +47,9 @@ class AuditAction(models.TextChoices):
     USER_CREATED = "USER_CREATED", "Création Utilisateur"
     USER_UPDATED = "USER_UPDATED", "Mise à jour utilisateur"
     USER_DELETED = "USER_DELETED", "Suppression utilisateur"
+    PASSWORD_RESET_REQUESTED = "PASSWORD_RESET_REQUESTED", "Réinitialisation mot de passe demandée"
+    PASSWORD_RESET_COMPLETED = "PASSWORD_RESET_COMPLETED", "Mot de passe réinitialisé"
+    PASSWORD_RESET_FAILED = "PASSWORD_RESET_FAILED", "Échec réinitialisation mot de passe"
 
     # DIDs
     DID_CREATED = "DID_CREATED", "DID créé"

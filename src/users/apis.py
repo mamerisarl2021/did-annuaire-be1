@@ -15,6 +15,8 @@ from src.users.models import User, UserRole, UserStatus
 from src.users.schemas import (
     FilterParams,
     OrganizationInfo,
+    PasswordResetConfirmPayload,
+    PasswordResetRequestPayload,
     UserActivatePayload,
     UserCreatePayload,
     UserListItem,
@@ -281,4 +283,47 @@ class UserController(BaseAPIController):
             message="User deleted successfully", status_code=200
         )
 
-    # TODO: Reset password,
+    @route.post("/password/reset-request", auth=None)
+    def request_password_reset(self, payload: PasswordResetRequestPayload):
+        """
+        Request password reset link via email.
+
+        Public endpoint. Rate limited to 3 requests per hour per email.
+        Always returns success (security).
+        """
+        result = services.user_request_password_reset(
+            email=payload.email,
+            request=self.context.request
+        )
+
+        return self.create_response(
+            message=result["message"],
+            status_code=200,
+        )
+
+    @route.post("/password/reset-confirm", auth=None)
+    def reset_password(self, payload: PasswordResetConfirmPayload):
+        """
+        Reset password using token from email.
+
+        Public endpoint. Token is single-use and expires in 1 hour.
+        """
+        try:
+            result = services.user_reset_password(
+                token=payload.token,
+                new_password=payload.new_password,
+                request=self.context.request
+            )
+
+            return self.create_response(
+                message=result["message"],
+                data=result.get("user"),
+                status_code=200,
+            )
+
+        except DomainValidationError as e:
+            return self.create_response(
+                message=e.message,
+                status_code=400,
+                code=e.code
+            )

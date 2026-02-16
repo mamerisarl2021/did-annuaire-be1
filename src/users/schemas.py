@@ -79,3 +79,31 @@ class UserUpdatePayload(Schema):
     functions: str | None
     can_publish_prod: bool | None
     is_auditor: bool | None
+
+
+class PasswordResetRequestPayload(Schema):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def _email_normalize(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+class PasswordResetConfirmPayload(Schema):
+    token: str
+    new_password: str
+
+    @field_validator("token")
+    @classmethod
+    def _token_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Le token est requis")
+        return v.strip()
+
+    @field_validator("new_password")
+    @classmethod
+    def _password_not_empty(cls, v: str) -> str:
+        if not v or len(v) < 8:
+            raise ValueError("Le mot de passe doit contenir au moins 8 caractères")
+        return v
