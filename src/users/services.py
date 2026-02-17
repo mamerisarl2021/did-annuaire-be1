@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 import secrets
 import pyotp
@@ -12,6 +13,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.core.cache import cache
+from django.utils.html import escape
 
 from src.auditaction.models import AuditCategory
 from src.auditaction.models import AuditAction
@@ -110,7 +112,19 @@ def verify_otp(
 
     raise ValueError(f"Unsupported OTP type: {otp_type}")
 
-
+def invalidate_password_reset_token(user: User) -> None:
+    """
+    Clear any pending password reset token for this user.
+    Call this whenever a user's password is changed through ANY mechanism
+    (reset flow, account settings, admin action, etc.) to ensure old
+    reset links cannot be reused.
+    """
+    if user.password_reset_token or user.password_reset_token_expires_at:
+        user.password_reset_token = None
+        user.password_reset_token_expires_at = None
+        user.password_reset_token_created_at = None
+        # Note: caller is responsible for saving the user or including
+        # these fields in their own save(update_fields=[...]) call.
 # **************************************************************************************************************************************
 # ######################################################################################################################################
 
@@ -251,9 +265,11 @@ def user_activate_account(
     if enable_totp:
         user.totp_enabled = True
     user.is_active = True
+    # Clear any lingering password reset tokens
+    invalidate_password_reset_token(user)
     user.save()
     audit_action_create(
-        user=user,  # actor: here it is the user themselves
+        user=user,
         category=AuditCategory.USER,
         action=AuditAction.USER_ACTIVATED,
         organization=user.organization,
@@ -525,21 +541,39 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
     """
     email = email.strip().lower()
 
-    # Cache-based rate limiting
-    rl_key = f"password_reset:email:{email}"
-    attempts = cache.get(rl_key, 0)
+    # Cache-based rate limiting (atomic increment)
+    rl_key = f"users:password_reset:email:{email}"
+    try:
+        attempts = cache.incr(rl_key)
+    except ValueError:
+        # Key doesn't exist yet — initialize it
+        cache.set(rl_key, 1, timeout=3600)  # 1 hour window
+        attempts = 1
 
-    if attempts >= 3:
+    if attempts > 3:
         return {
             "success": True,
             "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
         }
 
-    cache.set(rl_key, attempts + 1, timeout=3600)  # 1 hour
-
     # Get user - still return success if not found (security)
     user = selectors.user_get_by_email(email=email)
     if not user or user.status != UserStatus.ACTIVE:
+        # Log the attempt for security monitoring (no PII — hash the email)
+        email_hash = hashlib.sha256(email.encode()).hexdigest()[:16]
+        audit_action_create(
+            user=None,
+            category=AuditCategory.AUTH,
+            organization=None,
+            action=AuditAction.PASSWORD_RESET_REQUESTED,
+            details={
+                "email_hash": email_hash,
+                "reason": "user_not_found" if not user else "user_not_active",
+            },
+            target_type="user",
+            target_id=None,
+            request=request,
+        )
         return {
             "success": True,
             "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
@@ -568,7 +602,7 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
         html=f"""
             <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
                 <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Réinitialisation de mot de passe</h2>
-                <p>Bonjour {user.full_name},</p>
+                <p>Bonjour {escape(user.full_name)},</p>
                 <p>Vous avez demandé la réinitialisation de votre mot de passe pour <strong>DID Annuaire</strong>.</p>
                 <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
                 <p style="text-align: center; margin: 20px 0;">
@@ -610,7 +644,6 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
         "success": True,
         "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
     }
-
 
 @transaction.atomic
 def user_reset_password(*, token: str, new_password: str, request=None) -> dict:
@@ -662,9 +695,7 @@ def user_reset_password(*, token: str, new_password: str, request=None) -> dict:
     user.set_password(new_password)
 
     # Invalidate token (single-use)
-    user.password_reset_token = ""
-    user.password_reset_token_expires_at = None
-    user.password_reset_token_created_at = None
+    invalidate_password_reset_token(user)
 
     user.save(update_fields=[
         'password',
@@ -692,8 +723,4 @@ def user_reset_password(*, token: str, new_password: str, request=None) -> dict:
     return {
         "success": True,
         "message": "Votre mot de passe a été réinitialisé avec succès.",
-        "user": {
-            "email": user.email,
-            "full_name": user.full_name,
-        }
     }

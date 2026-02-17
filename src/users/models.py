@@ -104,7 +104,7 @@ class User(AbstractBaseUser, BaseModel, PermissionsMixin):
     sms_otp_sent_at = models.DateTimeField(null=True, blank=True)
 
     # Password Reset
-    password_reset_token = models.CharField(max_length=255, blank=True, db_index=True)
+    password_reset_token = models.CharField(max_length=255, blank=True, db_index=True, unique=True)
     password_reset_token_expires_at = models.DateTimeField(null=True, blank=True)
     password_reset_token_created_at = models.DateTimeField(null=True, blank=True)
 

@@ -104,6 +104,6 @@ class PasswordResetConfirmPayload(Schema):
     @field_validator("new_password")
     @classmethod
     def _password_not_empty(cls, v: str) -> str:
-        if not v or len(v) < 8:
-            raise ValueError("Le mot de passe doit contenir au moins 8 caractères")
+        if not v or not v.strip():
+            raise ValueError("Le mot de passe est requis")
         return v

@@ -135,7 +135,6 @@ def user_get_by_reset_token(*, token: str) -> User | None:
     Get user by password reset token.
     Returns None if token not found, expired, or invalid.
     """
-    from django.utils import timezone
     try:
         return User.objects.get(
             password_reset_token=token,
