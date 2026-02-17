@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
-from common.notifications.email import render_with_layout, send_html_email
+from src.common.notifications.email import render_with_layout, send_html_email
 from src.auditaction.models import AuditAction, AuditCategory
 from src.core.exceptions import DomainConflictError
 from src.organizations.models import Organization, OrganizationStatus
