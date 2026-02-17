@@ -50,6 +50,7 @@ class AuditAction(models.TextChoices):
     PASSWORD_RESET_REQUESTED = "PASSWORD_RESET_REQUESTED", "Réinitialisation mot de passe demandée"
     PASSWORD_RESET_COMPLETED = "PASSWORD_RESET_COMPLETED", "Mot de passe réinitialisé"
     PASSWORD_RESET_FAILED = "PASSWORD_RESET_FAILED", "Échec réinitialisation mot de passe"
+    PASSWORD_RESET_ABUSE_DETECTED = "PASSWORD_RESET_ABUSE_DETECTED", "Abus détecté - réinitialisation mot de passe"
 
     # DIDs
     DID_CREATED = "DID_CREATED", "DID créé"

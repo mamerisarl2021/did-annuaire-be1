@@ -125,6 +125,93 @@ def invalidate_password_reset_token(user: User) -> None:
         user.password_reset_token_created_at = None
         # Note: caller is responsible for saving the user or including
         # these fields in their own save(update_fields=[...]) call.
+
+
+def _get_client_ip(request) -> str | None:
+    """Extract client IP from Django request, handling reverse proxies."""
+    if not request:
+        return None
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
+# Password reset abuse detection thresholds
+_IP_RESET_LIMIT = 10          # max reset requests per IP per window
+_IP_RESET_WINDOW = 3600       # 1 hour window (seconds)
+_IP_DISTINCT_EMAIL_LIMIT = 5  # max distinct emails per IP before alert
+
+
+def _track_password_reset_by_ip(*, request, email: str) -> None:
+    """
+    Track password reset requests per IP to detect enumeration attacks
+    or automated abuse (e.g., one IP hitting many different emails).
+
+    Logs a WARNING-severity audit event when thresholds are exceeded.
+    This does NOT block the request (per-email rate limiting handles that);
+    it only creates audit trail for monitoring/alerting.
+    """
+    ip = _get_client_ip(request)
+    if not ip:
+        return
+
+    ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+    # Track total requests from this IP
+    ip_count_key = f"users:password_reset:ip_count:{ip}"
+    try:
+        ip_attempts = cache.incr(ip_count_key)
+    except ValueError:
+        cache.set(ip_count_key, 1, timeout=_IP_RESET_WINDOW)
+        ip_attempts = 1
+
+    # Track distinct emails from this IP using a counter.
+    # We hash email+IP to create per-email flags under this IP.
+    email_flag_key = f"users:password_reset:ip_email:{ip}:{hashlib.sha256(email.encode()).hexdigest()[:12]}"
+    is_new_email = cache.get(email_flag_key) is None
+    if is_new_email:
+        cache.set(email_flag_key, 1, timeout=_IP_RESET_WINDOW)
+
+        # Increment distinct email counter for this IP
+        ip_email_count_key = f"users:password_reset:ip_emails:{ip}"
+        try:
+            distinct_emails = cache.incr(ip_email_count_key)
+        except ValueError:
+            cache.set(ip_email_count_key, 1, timeout=_IP_RESET_WINDOW)
+            distinct_emails = 1
+    else:
+        ip_email_count_key = f"users:password_reset:ip_emails:{ip}"
+        distinct_emails = cache.get(ip_email_count_key, 1)
+
+    # Check thresholds and log security alert if exceeded
+    is_volume_abuse = ip_attempts == _IP_RESET_LIMIT  # log once at threshold
+    is_enumeration = distinct_emails == _IP_DISTINCT_EMAIL_LIMIT  # log once at threshold
+
+    if is_volume_abuse or is_enumeration:
+        reasons = []
+        if is_volume_abuse:
+            reasons.append(f"volume_exceeded ({ip_attempts} requests)")
+        if is_enumeration:
+            reasons.append(f"enumeration_suspected ({distinct_emails} distinct emails)")
+
+        audit_action_create(
+            user=None,
+            category=AuditCategory.AUTH,
+            organization=None,
+            action=AuditAction.PASSWORD_RESET_ABUSE_DETECTED,
+            details={
+                "ip_hash": ip_hash,
+                "total_attempts": ip_attempts,
+                "distinct_emails": distinct_emails,
+                "reasons": reasons,
+                "window_seconds": _IP_RESET_WINDOW,
+                "severity": "WARNING",
+            },
+            target_type="security",
+            target_id=ip_hash,
+            request=request,
+        )
 # **************************************************************************************************************************************
 # ######################################################################################################################################
 
@@ -206,7 +293,7 @@ def user_send_invitation(*, user: User, invited_by: User):
         user.invitation_sent_at,
         seconds=120,
         code="INVITE_RATE_LIMIT",
-        message="Veuillez patienter avant de renvoyer l’invitation.",
+        message="Veuillez patienter avant de renvoyer l'invitation.",
     )
 
     token = secrets.token_urlsafe(32)
@@ -555,6 +642,9 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
             "success": True,
             "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
         }
+
+    # Track per-IP patterns for abuse detection (non-blocking)
+    _track_password_reset_by_ip(request=request, email=email)
 
     # Get user - still return success if not found (security)
     user = selectors.user_get_by_email(email=email)
