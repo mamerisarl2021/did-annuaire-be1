@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.utils.html import escape
 
+from common.notifications.email import render_with_layout, send_html_email
 from src.auditaction.models import AuditCategory
 from src.auditaction.models import AuditAction
 from src.core.exceptions import DomainValidationError
@@ -686,33 +687,15 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
     # Send email (French template, following invitation pattern)
     reset_url = f"{settings.FR_APP_DOMAIN}/auth/reset-password?token={token}"
 
-    email_send(
-        to=[user.email],
-        subject="Réinitialisation de mot de passe - DID Annuaire",
-        html=f"""
-            <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
-                <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Réinitialisation de mot de passe</h2>
-                <p>Bonjour {escape(user.full_name)},</p>
-                <p>Vous avez demandé la réinitialisation de votre mot de passe pour <strong>DID Annuaire</strong>.</p>
-                <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
-                <p style="text-align: center; margin: 20px 0;">
-                    <a href="{reset_url}"
-                       style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                        Réinitialiser mon mot de passe
-                    </a>
-                </p>
-                <p style="font-size: 0.9em; color: #666; text-align: center;">
-                    Ce lien expire dans 1 heure.
-                </p>
-                <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
-                    Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. Votre mot de passe restera inchangé.
-                </p>
-                <p style="font-size: 0.9em; color: #666;">
-                    Ce message est automatique. Merci de ne pas y répondre directement.
-                </p>
-            </div>
-        """,
-    )
+    email_subject = f"[DID Annuaire] Réinitialisation de mot de passe"
+    ctx = {
+        "domain": settings.FR_APP_DOMAIN,
+        "product_name": "DID Annuaire",
+        "name": user.full_name,
+        "action_url": reset_url
+    }
+    html = render_with_layout(inner_template="request_password_reset.html", context=ctx)
+    send_html_email(to=[user.email], subject=email_subject, html=html)
 
     # Audit log
     audit_action_create(
