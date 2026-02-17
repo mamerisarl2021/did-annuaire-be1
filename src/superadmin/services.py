@@ -1,9 +1,10 @@
 from uuid import UUID
 
+from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
 
-from src.emails.services import email_send
+from src.common.notifications.email import render_with_layout, send_html_email
 from src.users.models import User, UserRole
 from src.users import services
 from src.organizations.models import Organization, OrganizationStatus
@@ -11,6 +12,46 @@ from src.auditaction.services import audit_action_create
 from src.auditaction.models import AuditCategory, AuditAction, Severity
 from src.core.exceptions import DomainConflictError
 
+
+def _notify_org_admin_decision(
+    *,
+    org: Organization,
+    status: str,
+    reason: str = "",
+) -> None:
+    """
+    Send a validation/refusal decision email to the org's admin.
+    Uses a single dynamic template for both outcomes.
+    """
+    admin = (
+        org.users.filter(role__contains=[UserRole.ORG_ADMIN])
+        .order_by("created_at", "id")
+        .first()
+    )
+    if not admin:
+        return
+
+    status_labels = {
+        "VALIDATED": "validée",
+        "REFUSED": "refusée",
+    }
+    label = status_labels.get(status, status.lower())
+
+    ctx = {
+        "title": f"Inscription {label} — {org.name}",
+        "org_name": org.name,
+        "status": status,
+        "reason": reason,
+        "contact_email": getattr(settings, "SUPPORT_EMAIL", ""),
+    }
+    html = render_with_layout(
+        inner_template="organization_validate_decision.html", context=ctx
+    )
+    send_html_email(
+        to=[admin.email],
+        subject=f"[DID Annuaire] Inscription {label} — {org.name}",
+        html=html,
+    )
 
 @transaction.atomic
 def organization_validate(*, organization_id: UUID, validated_by: User) -> Organization:
@@ -85,7 +126,6 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
 
     return org
 
-
 @transaction.atomic
 def organization_refuse(
     *, organization_id: UUID, refused_by: User, reason: str
@@ -104,25 +144,8 @@ def organization_refuse(
     org.refusal_reason = reason
     org.save()
 
-    # Notifier l'admin
-    admin = org.users.filter(role=UserRole.ORG_ADMIN).first()
-    if admin:
-        email_send(
-            to=[admin.email],
-            subject=f"Inscription refusée - {org.name}",
-            html=f"""
-                <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
-                    <h2 style="color: #d9534f; border-bottom: 2px solid #d9534f; padding-bottom: 10px;">Demande d'inscription refusée</h2>
-                    <p>Votre demande d'inscription pour <strong>{org.name}</strong> a malheureusement été examinée et <strong>refusée</strong>.</p>
-                    <p><strong>Raison du refus :</strong><br>{reason}</p>
-                    <p>Nous vous invitons à corriger les points mentionnés ci-dessus et à soumettre une nouvelle demande lorsque cela sera possible.</p>
-                    <p>Pour toute question ou clarification, n'hésitez pas à <a href="mailto:support@example.com" style="color: #0056b3; text-decoration: underline;">nous contacter</a>.</p>
-                    <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
-                        Ce message est automatique. Merci de ne pas y répondre directement.
-                    </p>
-                </div>
-            """,
-        )
+    # Notify admin of refusal
+    _notify_org_admin_decision(org=org, status="REFUSED", reason=reason)
 
     # Audit
     audit_action_create(
@@ -140,7 +163,6 @@ def organization_refuse(
     )
 
     return org
-
 
 @transaction.atomic
 def organization_toggle_activation(

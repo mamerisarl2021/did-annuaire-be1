@@ -1,0 +1,56 @@
+<!-- Content fragment for organization validation decision emails -->
+<p>
+  Bonjour,
+</p>
+
+<p>
+  Votre demande d'inscription pour l'organisation
+  <strong>{{ org_name }}</strong> a été traitée.
+</p>
+
+<!-- Status badge -->
+<p style="margin:16px 0;">
+  {% if status == "VALIDATED" %}
+    <span style="display:inline-block;padding:6px 12px;background:#28a745;color:#ffffff;
+                 border-radius:4px;font-weight:bold;font-size:14px;">
+      VALIDÉE
+    </span>
+  {% elif status == "REFUSED" %}
+    <span style="display:inline-block;padding:6px 12px;background:#dc3545;color:#ffffff;
+                 border-radius:4px;font-weight:bold;font-size:14px;">
+      REFUSÉE
+    </span>
+  {% else %}
+    <span style="display:inline-block;padding:6px 12px;background:#6c757d;color:#ffffff;
+                 border-radius:4px;font-weight:bold;font-size:14px;">
+      {{ status }}
+    </span>
+  {% endif %}
+</p>
+
+{% if reason %}
+<p style="margin-top:12px;">
+  <strong>Raison du refus :</strong><br>
+  {{ reason }}
+</p>
+
+<p>
+  Nous vous invitons à corriger les points mentionnés ci-dessus
+  et à soumettre une nouvelle demande lorsque cela sera possible.
+</p>
+{% endif %}
+
+{% if status == "VALIDATED" %}
+<p>
+  Votre organisation est désormais active. Un email d'invitation
+  sera envoyé à l'administrateur pour activer son compte.
+</p>
+{% endif %}
+
+{% if contact_email %}
+<p style="margin-top:16px;">
+  Pour toute question ou clarification, n'hésitez pas à
+  <a href="mailto:{{ contact_email }}" style="color:#0b5ed7;text-decoration:underline;">
+    nous contacter</a>.
+</p>
+{% endif %}
