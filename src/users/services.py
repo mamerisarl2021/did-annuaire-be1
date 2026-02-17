@@ -9,11 +9,13 @@ import io
 from datetime import timedelta
 from typing import Literal
 
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.core.cache import cache
-from django.utils.html import escape
+
 
 from common.notifications.email import render_with_layout, send_html_email
 from src.auditaction.models import AuditCategory
@@ -21,7 +23,6 @@ from src.auditaction.models import AuditAction
 from src.core.exceptions import DomainValidationError
 from src.core.ratelimit import enforce_min_interval
 from src.users.models import User, UserStatus, UserRole
-from src.emails.services import email_send
 from src.auditaction.services import audit_action_create
 from src.users.schemas import UserUpdatePayload
 from src.users.selectors import user_get_invited_by_token
@@ -307,28 +308,18 @@ def user_send_invitation(*, user: User, invited_by: User):
 
     activation_url = f"{settings.FR_APP_DOMAIN}/activate?token={token}"
 
-    email_send(
+    org_name = user.organization.name if user.organization else "DID Annuaire"
+
+    ctx = {
+        "title": "Invitation",
+        "org_name": org_name,
+        "action_url": activation_url,
+    }
+    html = render_with_layout(inner_template="user_invite.html", context=ctx)
+    send_html_email(
         to=[user.email],
-        subject=f"Invitation - {user.organization.name if user.organization else 'DID Annuaire'}",
-        html=f"""
-            <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
-                <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Bienvenue !</h2>
-                <p>Vous avez été invité à rejoindre <strong>{user.organization.name if user.organization else "DID Annuaire"}</strong>.</p>
-                <p>Cliquez sur le bouton ci-dessous pour activer votre compte :</p>
-                <p style="text-align: center; margin: 20px 0;">
-                    <a href="{activation_url}" 
-                       style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                        Activer mon compte
-                    </a>
-                </p>
-                <p style="font-size: 0.9em; color: #666; text-align: center;">
-                    Ce lien expire dans 7 jours.
-                </p>
-                <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
-                    Ce message est automatique. Merci de ne pas y répondre directement.
-                </p>
-            </div>
-        """,
+        subject=f"[DID Annuaire] Invitation — {org_name}",
+        html=html,
     )
     audit_action_create(
         user=invited_by,
@@ -403,10 +394,16 @@ def user_generate_otp(*, user: User, otp_type: Literal["email", "sms"]) -> str:
     user.save()
 
     if otp_type == "email":
-        email_send(
+        ctx = {
+            "title": "Code de vérification",
+            "product_name": "DID Annuaire",
+            "code": code,
+        }
+        html = render_with_layout(inner_template="otp_verification.html", context=ctx)
+        send_html_email(
             to=[user.email],
-            subject="Code de vérification",
-            html=f"<p>Votre code de vérification est: <strong>{code}</strong></p><p>Valide pendant 10 minutes.</p>",
+            subject="[DID Annuaire] Code de vérification",
+            html=html,
         )
 
     if otp_type == "sms":
@@ -629,21 +626,6 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
     """
     email = email.strip().lower()
 
-    # Cache-based rate limiting (atomic increment)
-    #rl_key = f"users:password_reset:email:{email}"
-    #try:
-    #    attempts = cache.incr(rl_key)
-    #except ValueError:
-        # Key doesn't exist yet — initialize it
-    #    cache.set(rl_key, 1, timeout=3600)  # 1 hour window
-    #    attempts = 1
-
-    #if attempts > 5:
-    #    return {
-    #        "success": True,
-    #        "message": "Too many requests",
-    #    }
-
     # Track per-IP patterns for abuse detection (non-blocking)
     _track_password_reset_by_ip(request=request, email=email)
 
@@ -684,18 +666,21 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
         'updated_at'
     ])
 
-    # Send email (French template, following invitation pattern)
+
     reset_url = f"{settings.FR_APP_DOMAIN}/auth/reset-password?token={token}"
 
-    email_subject = f"[DID Annuaire] Réinitialisation de mot de passe"
     ctx = {
-        "domain": settings.FR_APP_DOMAIN,
+        "title": "Réinitialisation de mot de passe",
         "product_name": "DID Annuaire",
         "name": user.full_name,
-        "action_url": reset_url
+        "action_url": reset_url,
     }
     html = render_with_layout(inner_template="request_password_reset.html", context=ctx)
-    send_html_email(to=[user.email], subject=email_subject, html=html)
+    send_html_email(
+        to=[user.email],
+        subject="[DID Annuaire] Réinitialisation de mot de passe",
+        html=html,
+    )
 
     # Audit log
     audit_action_create(
@@ -728,9 +713,6 @@ def user_reset_password(*, token: str, new_password: str, request=None) -> dict:
     - Password must pass Django validators
     - Token invalidated after success (single-use)
     """
-    from django.contrib.auth.password_validation import validate_password
-    from django.core.exceptions import ValidationError as DjangoValidationError
-
     # Get user by token (returns None if expired or not found)
     user = selectors.user_get_by_reset_token(token=token)
 

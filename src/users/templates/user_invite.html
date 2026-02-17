@@ -1,26 +1,27 @@
-<!-- Content fragment for password reset emails -->
+<!-- Content fragment for user invitation emails -->
 <p>
-  Bonjour {{ name|default:"Utilisateur" }},
+  Bonjour,
 </p>
 
 <p>
-  Vous avez récemment demandé à réinitialiser le mot de passe de votre compte
-  <strong>{{ product_name }}</strong>.
-  Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe.
-  <strong>Ce lien est valable uniquement pendant 1 heure.</strong>
+  Vous avez été invité à rejoindre une organisation sur la plateforme DID Annuaire
+  <strong>{{ org_name|default:"DID Annuaire" }}</strong>.
+</p>
+
+<p>
+  Cliquez sur le bouton ci-dessous pour activer votre compte&nbsp;:
 </p>
 
 <p style="text-align:center;margin:24px 0;">
   <a href="{{ action_url }}"
      style="background:#0b5ed7;color:#ffffff;padding:10px 16px;text-decoration:none;
             border-radius:4px;font-weight:bold;display:inline-block;">
-    Réinitialiser mon mot de passe
+    Activer mon compte
   </a>
 </p>
 
-<p>
-  Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
-  Votre mot de passe restera inchangé.
+<p style="font-size:13px;color:#777;">
+  Ce lien expire dans 7 jours.
 </p>
 
 <table role="presentation" style="margin-top:24px;padding-top:16px;border-top:1px solid #EAEAEC;width:100%;">
