@@ -2,11 +2,11 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
+from common.notifications.email import render_with_layout, send_html_email
 from src.auditaction.models import AuditAction, AuditCategory
 from src.core.exceptions import DomainConflictError
 from src.organizations.models import Organization, OrganizationStatus
 from src.users.models import User, UserStatus, UserRole
-from src.emails.services import email_send
 from src.auditaction.services import audit_action_create
 
 
@@ -102,29 +102,20 @@ def _notify_super_admins_new_org(org: Organization):
     super_admins = User.objects.filter(is_superuser=True, is_active=True)
     emails = [admin.email for admin in super_admins]
 
-    if emails:
-        email_send(
-            to=emails,
-            subject=f"Nouvelle organisation : {org.name} - Action requise",
-            html=f"""
-                <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
-                    <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Nouvelle demande d'inscription</h2>
-                    <p>Une nouvelle organisation a été enregistrée et attend votre validation.</p>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><strong>Organisation :</strong> {org.name}</li>
-                        <li><strong>Type :</strong> {org.get_type_display()}</li>
-                        <li><strong>Pays :</strong> {org.country}</li>
-                        <li><strong>Email :</strong> {org.email}</li>
-                    </ul>
-                    <p style="margin-top: 20px;">
-                        <a href="{settings.FR_APP_DOMAIN}/dashboard/superuser"
-                           style="background-color: #0056b3; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                            Valider dans le panneau d'administration
-                        </a>
-                    </p>
-                    <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
-                        Ce message est automatique. Merci de ne pas y répondre directement.
-                    </p>
-                </div>
-            """,
-        )
+    if not emails:
+        return
+
+    ctx = {
+        "title": "Nouvelle demande d'inscription",
+        "org_name": org.name,
+        "org_type": org.get_type_display(),
+        "org_country": org.country,
+        "org_email": org.email,
+        "admin_url": f"{settings.FR_APP_DOMAIN}/dashboard/superuser",
+    }
+    html = render_with_layout(inner_template="new_organization_pending.html", context=ctx)
+    send_html_email(
+        to=emails,
+        subject=f"[DID Annuaire] Nouvelle organisation : {org.name} — Action requise",
+        html=html,
+    )
