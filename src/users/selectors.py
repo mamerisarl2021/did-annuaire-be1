@@ -122,6 +122,28 @@ def user_get_for_update(*, user_id: uuid.UUID) -> User:
         raise APIError(message="User not found", code="USER_NOT_FOUND", status=404)
 
 
+def user_get_by_email(*, email: str) -> User | None:
+    """Get user by email - returns None if not found"""
+    try:
+        return User.objects.get(email=email.strip().lower())
+    except User.DoesNotExist:
+        return None
+
+
+def user_get_by_reset_token(*, token: str) -> User | None:
+    """
+    Get user by password reset token.
+    Returns None if token not found, expired, or invalid.
+    """
+    try:
+        return User.objects.get(
+            password_reset_token=token,
+            password_reset_token_expires_at__gt=timezone.now()
+        )
+    except User.DoesNotExist:
+        return None
+
+
 def user_get_info(*, user_id: uuid.UUID, requesting_user: User) -> dict:
     """
     Get user info - only org admins or the user themselves can access

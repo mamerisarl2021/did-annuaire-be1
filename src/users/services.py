@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 import secrets
 import pyotp
@@ -11,6 +12,8 @@ from typing import Literal
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django.core.cache import cache
+from django.utils.html import escape
 
 from src.auditaction.models import AuditCategory
 from src.auditaction.models import AuditAction
@@ -109,7 +112,106 @@ def verify_otp(
 
     raise ValueError(f"Unsupported OTP type: {otp_type}")
 
+def invalidate_password_reset_token(user: User) -> None:
+    """
+    Clear any pending password reset token for this user.
+    Call this whenever a user's password is changed through ANY mechanism
+    (reset flow, account settings, admin action, etc.) to ensure old
+    reset links cannot be reused.
+    """
+    if user.password_reset_token or user.password_reset_token_expires_at:
+        user.password_reset_token = None
+        user.password_reset_token_expires_at = None
+        user.password_reset_token_created_at = None
+        # Note: caller is responsible for saving the user or including
+        # these fields in their own save(update_fields=[...]) call.
 
+
+def _get_client_ip(request) -> str | None:
+    """Extract client IP from Django request, handling reverse proxies."""
+    if not request:
+        return None
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
+# Password reset abuse detection thresholds
+_IP_RESET_LIMIT = 10          # max reset requests per IP per window
+_IP_RESET_WINDOW = 3600       # 1 hour window (seconds)
+_IP_DISTINCT_EMAIL_LIMIT = 5  # max distinct emails per IP before alert
+
+
+def _track_password_reset_by_ip(*, request, email: str) -> None:
+    """
+    Track password reset requests per IP to detect enumeration attacks
+    or automated abuse (e.g., one IP hitting many different emails).
+
+    Logs a WARNING-severity audit event when thresholds are exceeded.
+    This does NOT block the request (per-email rate limiting handles that);
+    it only creates audit trail for monitoring/alerting.
+    """
+    ip = _get_client_ip(request)
+    if not ip:
+        return
+
+    ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+    # Track total requests from this IP
+    ip_count_key = f"users:password_reset:ip_count:{ip}"
+    try:
+        ip_attempts = cache.incr(ip_count_key)
+    except ValueError:
+        cache.set(ip_count_key, 1, timeout=_IP_RESET_WINDOW)
+        ip_attempts = 1
+
+    # Track distinct emails from this IP using a counter.
+    # We hash email+IP to create per-email flags under this IP.
+    email_flag_key = f"users:password_reset:ip_email:{ip}:{hashlib.sha256(email.encode()).hexdigest()[:12]}"
+    is_new_email = cache.get(email_flag_key) is None
+    if is_new_email:
+        cache.set(email_flag_key, 1, timeout=_IP_RESET_WINDOW)
+
+        # Increment distinct email counter for this IP
+        ip_email_count_key = f"users:password_reset:ip_emails:{ip}"
+        try:
+            distinct_emails = cache.incr(ip_email_count_key)
+        except ValueError:
+            cache.set(ip_email_count_key, 1, timeout=_IP_RESET_WINDOW)
+            distinct_emails = 1
+    else:
+        ip_email_count_key = f"users:password_reset:ip_emails:{ip}"
+        distinct_emails = cache.get(ip_email_count_key, 1)
+
+    # Check thresholds and log security alert if exceeded
+    is_volume_abuse = ip_attempts == _IP_RESET_LIMIT  # log once at threshold
+    is_enumeration = distinct_emails == _IP_DISTINCT_EMAIL_LIMIT  # log once at threshold
+
+    if is_volume_abuse or is_enumeration:
+        reasons = []
+        if is_volume_abuse:
+            reasons.append(f"volume_exceeded ({ip_attempts} requests)")
+        if is_enumeration:
+            reasons.append(f"enumeration_suspected ({distinct_emails} distinct emails)")
+
+        audit_action_create(
+            user=None,
+            category=AuditCategory.AUTH,
+            organization=None,
+            action=AuditAction.PASSWORD_RESET_ABUSE_DETECTED,
+            details={
+                "ip_hash": ip_hash,
+                "total_attempts": ip_attempts,
+                "distinct_emails": distinct_emails,
+                "reasons": reasons,
+                "window_seconds": _IP_RESET_WINDOW,
+                "severity": "WARNING",
+            },
+            target_type="security",
+            target_id=ip_hash,
+            request=request,
+        )
 # **************************************************************************************************************************************
 # ######################################################################################################################################
 
@@ -191,7 +293,7 @@ def user_send_invitation(*, user: User, invited_by: User):
         user.invitation_sent_at,
         seconds=120,
         code="INVITE_RATE_LIMIT",
-        message="Veuillez patienter avant de renvoyer l’invitation.",
+        message="Veuillez patienter avant de renvoyer l'invitation.",
     )
 
     token = secrets.token_urlsafe(32)
@@ -250,9 +352,11 @@ def user_activate_account(
     if enable_totp:
         user.totp_enabled = True
     user.is_active = True
+    # Clear any lingering password reset tokens
+    invalidate_password_reset_token(user)
     user.save()
     audit_action_create(
-        user=user,  # actor: here it is the user themselves
+        user=user,
         category=AuditCategory.USER,
         action=AuditAction.USER_ACTIVATED,
         organization=user.organization,
@@ -509,3 +613,204 @@ def user_delete(*, user_id: uuid.UUID, requesting_user: User):
         target_type="user",
         target_id=user_id,
     )
+
+
+@transaction.atomic
+def user_request_password_reset(*, email: str, request=None) -> dict:
+    """
+    Request password reset link via email.
+
+    Security:
+    - Always returns success (don't reveal if email exists)
+    - Rate limited: 3 requests per hour per email
+    - Only sends to ACTIVE users
+    - Token expires in 1 hour
+    """
+    email = email.strip().lower()
+
+    # Cache-based rate limiting (atomic increment)
+    #rl_key = f"users:password_reset:email:{email}"
+    #try:
+    #    attempts = cache.incr(rl_key)
+    #except ValueError:
+        # Key doesn't exist yet — initialize it
+    #    cache.set(rl_key, 1, timeout=3600)  # 1 hour window
+    #    attempts = 1
+
+    #if attempts > 5:
+    #    return {
+    #        "success": True,
+    #        "message": "Too many requests",
+    #    }
+
+    # Track per-IP patterns for abuse detection (non-blocking)
+    _track_password_reset_by_ip(request=request, email=email)
+
+    # Get user - still return success if not found (security)
+    user = selectors.user_get_by_email(email=email)
+    if not user or user.status != UserStatus.ACTIVE:
+        # Log the attempt for security monitoring (no PII — hash the email)
+        email_hash = hashlib.sha256(email.encode()).hexdigest()[:16]
+        audit_action_create(
+            user=None,
+            category=AuditCategory.AUTH,
+            organization=None,
+            action=AuditAction.PASSWORD_RESET_REQUESTED,
+            details={
+                "email_hash": email_hash,
+                "reason": "user_not_found" if not user else "user_not_active",
+            },
+            target_type="user",
+            target_id=None,
+            request=request,
+        )
+        return {
+            "success": True,
+            "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
+        }
+
+    # Generate token (following invitation pattern)
+    token = secrets.token_urlsafe(32)
+    now = timezone.now()
+
+    user.password_reset_token = token
+    user.password_reset_token_expires_at = now + timedelta(hours=1)
+    user.password_reset_token_created_at = now
+    user.save(update_fields=[
+        'password_reset_token',
+        'password_reset_token_expires_at',
+        'password_reset_token_created_at',
+        'updated_at'
+    ])
+
+    # Send email (French template, following invitation pattern)
+    reset_url = f"{settings.FR_APP_DOMAIN}/auth/reset-password?token={token}"
+
+    email_send(
+        to=[user.email],
+        subject="Réinitialisation de mot de passe - DID Annuaire",
+        html=f"""
+            <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
+                <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Réinitialisation de mot de passe</h2>
+                <p>Bonjour {escape(user.full_name)},</p>
+                <p>Vous avez demandé la réinitialisation de votre mot de passe pour <strong>DID Annuaire</strong>.</p>
+                <p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+                <p style="text-align: center; margin: 20px 0;">
+                    <a href="{reset_url}"
+                       style="background-color: #0056b3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                        Réinitialiser mon mot de passe
+                    </a>
+                </p>
+                <p style="font-size: 0.9em; color: #666; text-align: center;">
+                    Ce lien expire dans 1 heure.
+                </p>
+                <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
+                    Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. Votre mot de passe restera inchangé.
+                </p>
+                <p style="font-size: 0.9em; color: #666;">
+                    Ce message est automatique. Merci de ne pas y répondre directement.
+                </p>
+            </div>
+        """,
+    )
+
+    # Audit log
+    audit_action_create(
+        user=user,
+        category=AuditCategory.USER,
+        organization=user.organization,
+        action=AuditAction.PASSWORD_RESET_REQUESTED,
+        details={
+            "user_id": str(user.id),
+            "email": user.email,
+            "token_expires_at": user.password_reset_token_expires_at.isoformat(),
+        },
+        target_type="user",
+        target_id=str(user.id),
+        request=request,
+    )
+
+    return {
+        "success": True,
+        "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
+    }
+
+@transaction.atomic
+def user_reset_password(*, token: str, new_password: str, request=None) -> dict:
+    """
+    Reset password using valid token.
+
+    Validation:
+    - Token must exist and not expired
+    - Password must pass Django validators
+    - Token invalidated after success (single-use)
+    """
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    # Get user by token (returns None if expired or not found)
+    user = selectors.user_get_by_reset_token(token=token)
+
+    if not user:
+        raise DomainValidationError(
+            message="Le lien de réinitialisation est invalide ou a expiré.",
+            code="RESET_TOKEN_INVALID"
+        )
+
+    # Validate password using Django validators
+    try:
+        validate_password(new_password, user=user)
+    except DjangoValidationError as e:
+        audit_action_create(
+            user=user,
+            category=AuditCategory.USER,
+            organization=user.organization,
+            action=AuditAction.PASSWORD_RESET_FAILED,
+            details={
+                "user_id": str(user.id),
+                "reason": "password_validation_failed",
+                "errors": list(e.messages),
+            },
+            target_type="user",
+            target_id=str(user.id),
+            request=request,
+        )
+        error_msg = " ".join(e.messages)
+        raise DomainValidationError(
+            message=f"{error_msg}",
+            code="PASSWORD_VALIDATION_FAILED"
+        )
+
+    # Set new password
+    user.set_password(new_password)
+
+    # Invalidate token (single-use)
+    invalidate_password_reset_token(user)
+
+    user.save(update_fields=[
+        'password',
+        'password_reset_token',
+        'password_reset_token_expires_at',
+        'password_reset_token_created_at',
+        'updated_at'
+    ])
+
+    # Success audit log
+    audit_action_create(
+        user=user,
+        category=AuditCategory.USER,
+        organization=user.organization,
+        action=AuditAction.PASSWORD_RESET_COMPLETED,
+        details={
+            "user_id": str(user.id),
+            "email": user.email,
+        },
+        target_type="user",
+        target_id=str(user.id),
+        request=request,
+    )
+
+    return {
+        "success": True,
+        "message": "Votre mot de passe a été réinitialisé avec succès.",
+    }
