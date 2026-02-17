@@ -1,73 +1,16 @@
-from typing import Iterable, Any
 from urllib.parse import urljoin
 
 from django.conf import settings
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 
-from src.emails.services import email_send
+from src.common.notifications.email import org_admin_emails, render_with_layout, send_html_email
 from src.dids.models import PublishRequest
-from src.users.models import User, UserRole
-
-DEFAULT_LAYOUT = "email_default_layout.html"
-
-
-def _render_with_layout(inner_template: str | None, context: dict[str, Any]) -> str:
-    """
-    Enveloppe l'email dans le layout par défaut. Si 'inner_template' est fourni,
-    on le rend d'abord puis on l'injecte dans le layout via {{ content|safe }}.
-    """
-    if inner_template:
-        content_html = render_to_string(inner_template, context)
-        outer_ctx = dict(context)
-        outer_ctx["content"] = content_html
-        return render_to_string(DEFAULT_LAYOUT, outer_ctx)
-
-    # Pas de template interne: on s'attend à ce que 'content' soit dans le contexte
-    return render_to_string(DEFAULT_LAYOUT, context)
-
-
-def _send_html_email(
-    to: Iterable[str],
-    subject: str,
-    html: str,
-    text_fallback: str | None = None,
-    cc: Iterable[str] | None = None,
-    bcc: Iterable[str] | None = None,
-) -> None:
-    text = text_fallback or strip_tags(html)
-
-    email_send(
-        to=list(to),
-        subject=subject,
-        html=html,
-        text=text,
-        cc=list(cc) if cc else None,
-        bcc=list(bcc) if bcc else None,
-    )
-
-
-def _org_admin_emails(org) -> list[str]:
-    """
-    Return emails of ORG_ADMINs in the organization.
-    """
-    qs = (
-        User.objects.filter(organization=org, is_active=True)
-        .filter(role__contains=[UserRole.ORG_ADMIN])  # JSON array membership
-        .exclude(email__isnull=True)
-        .exclude(email="")
-        .values_list("email", flat=True)
-        .distinct()
-    )
-    return list(qs)
-
 
 def send_publish_request_notification(pr: PublishRequest) -> None:
     """
-    Notifie les ORG_ADMIN qu'une demande de publication PROD a été créée.
+    Notify ORG_ADMIN that a publish request to PROD has been created
     """
     org = pr.did.organization
-    recipients = _org_admin_emails(org)
+    recipients = org_admin_emails(org)
     if not recipients:
         return
 
@@ -86,16 +29,13 @@ def send_publish_request_notification(pr: PublishRequest) -> None:
             "/dashboard/publish-requests",
         ),
     }
-    html = _render_with_layout(
-        inner_template="publish_request_content.html",
-        context=ctx,
-    )
-    _send_html_email(to=recipients, subject=subject, html=html)
+    html = render_with_layout(inner_template="publish_request_content.html", context=ctx)
+    send_html_email(to=recipients, subject=subject, html=html)
 
 
 def send_publish_decision_notification(pr: PublishRequest) -> None:
     """
-    Notifie le demandeur que la demande a été approuvée ou rejetée.
+    Notify of publish request decision
     """
     to_email = getattr(pr.requested_by, "email", None)
     if not to_email:
@@ -116,7 +56,5 @@ def send_publish_decision_notification(pr: PublishRequest) -> None:
         "note": pr.note.strip() if pr.note else "",
         "dashboard_url": urljoin(settings.FR_APP_DOMAIN, "/dashboard/publish-requests"),
     }
-    html = _render_with_layout(
-        inner_template="publish_decision_content.html", context=ctx
-    )
-    _send_html_email(to=[to_email], subject=subject, html=html)
+    html = render_with_layout(inner_template="publish_decision_content.html", context=ctx)
+    send_html_email(to=[to_email], subject=subject, html=html)

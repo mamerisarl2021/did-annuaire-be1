@@ -1,0 +1,39 @@
+<!-- Content fragment for user invitation emails -->
+<p>
+  Bonjour,
+</p>
+
+<p>
+  Vous avez été invité à rejoindre une organisation sur la plateforme DID Annuaire
+  <strong>{{ org_name|default:"DID Annuaire" }}</strong>.
+</p>
+
+<p>
+  Cliquez sur le bouton ci-dessous pour activer votre compte&nbsp;:
+</p>
+
+<p style="text-align:center;margin:24px 0;">
+  <a href="{{ action_url }}"
+     style="background:#0b5ed7;color:#ffffff;padding:10px 16px;text-decoration:none;
+            border-radius:4px;font-weight:bold;display:inline-block;">
+    Activer mon compte
+  </a>
+</p>
+
+<p style="font-size:13px;color:#777;">
+  Ce lien expire dans 7 jours.
+</p>
+
+<table role="presentation" style="margin-top:24px;padding-top:16px;border-top:1px solid #EAEAEC;width:100%;">
+  <tr>
+    <td>
+      <p style="font-size:13px;color:#777;">
+        Si vous rencontrez des difficultés avec le bouton ci-dessus,
+        copiez et collez l'URL ci-dessous dans votre navigateur&nbsp;:
+      </p>
+      <p style="font-size:13px;color:#777;word-break:break-all;">
+        {{ action_url }}
+      </p>
+    </td>
+  </tr>
+</table>
