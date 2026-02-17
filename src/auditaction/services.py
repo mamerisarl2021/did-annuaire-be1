@@ -102,6 +102,6 @@ def audit_action_create(
         severity=severity,
         ip_address=ip,
         user_agent=ua,
-        request_id=req_id or None,
+        request_id=req_id or "",
     )
     return entry

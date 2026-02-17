@@ -629,19 +629,19 @@ def user_request_password_reset(*, email: str, request=None) -> dict:
     email = email.strip().lower()
 
     # Cache-based rate limiting (atomic increment)
-    rl_key = f"users:password_reset:email:{email}"
-    try:
-        attempts = cache.incr(rl_key)
-    except ValueError:
+    #rl_key = f"users:password_reset:email:{email}"
+    #try:
+    #    attempts = cache.incr(rl_key)
+    #except ValueError:
         # Key doesn't exist yet — initialize it
-        cache.set(rl_key, 1, timeout=3600)  # 1 hour window
-        attempts = 1
+    #    cache.set(rl_key, 1, timeout=3600)  # 1 hour window
+    #    attempts = 1
 
-    if attempts > 3:
-        return {
-            "success": True,
-            "message": "Si l'adresse email existe, un lien de réinitialisation a été envoyé.",
-        }
+    #if attempts > 5:
+    #    return {
+    #        "success": True,
+    #        "message": "Too many requests",
+    #    }
 
     # Track per-IP patterns for abuse detection (non-blocking)
     _track_password_reset_by_ip(request=request, email=email)
@@ -777,7 +777,7 @@ def user_reset_password(*, token: str, new_password: str, request=None) -> dict:
         )
         error_msg = " ".join(e.messages)
         raise DomainValidationError(
-            message=f"Le mot de passe ne respecte pas les critères de sécurité: {error_msg}",
+            message=f"{error_msg}",
             code="PASSWORD_VALIDATION_FAILED"
         )
 

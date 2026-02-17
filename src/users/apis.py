@@ -23,6 +23,7 @@ from src.users.schemas import (
     UserProfileSchema,
     UserUpdatePayload,
 )
+from .throttlers import PasswordResetRequestThrottle, PasswordResetConfirmThrottle
 
 
 @api_controller("/users", tags=["Users"], auth=JWTAuth())
@@ -283,7 +284,7 @@ class UserController(BaseAPIController):
             message="User deleted successfully", status_code=200
         )
 
-    @route.post("/password/reset-request", auth=None)
+    @route.post("/password/reset-request", auth=None, throttle=[PasswordResetRequestThrottle()])
     def request_password_reset(self, payload: PasswordResetRequestPayload):
         """
         Request password reset link via email.
@@ -301,7 +302,7 @@ class UserController(BaseAPIController):
             status_code=200,
         )
 
-    @route.post("/password/reset-confirm", auth=None)
+    @route.post("/password/reset-confirm", auth=None, throttle=[PasswordResetConfirmThrottle()])
     def reset_password(self, payload: PasswordResetConfirmPayload):
         """
         Reset password using token from email.

@@ -126,7 +126,7 @@ class AuditLog(BaseModel):
     # Métadonnées de la requềte
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    request_id = models.CharField(max_length=64, blank=True, default="")
+    request_id = models.CharField(max_length=64, blank=True)
 
     class Meta:
         db_table = "audit_logs"
