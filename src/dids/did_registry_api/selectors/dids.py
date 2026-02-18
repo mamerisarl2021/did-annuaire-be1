@@ -10,16 +10,6 @@ def get_did_or_404(did_str: str) -> DID:
         DID.objects.select_related("organization", "owner"), did=did_str
     )
 
-def get_did_for_user_or_404(did_str: str, user) -> DID:
-    org_id = getattr(user, "organization_id", None) or getattr(
-        getattr(user, "organization", None), "id", None
-    )
-    return get_object_or_404(
-        DID.objects.select_related("organization", "owner"), 
-        did=did_str,
-        organization_id=org_id
-    )
-
 
 def user_is_owner(user, did_obj: DID) -> bool:
     return getattr(user, "id", None) == getattr(did_obj, "owner_id", None)

@@ -9,7 +9,7 @@ from ninja_jwt.authentication import JWTAuth
 
 from src.dids.did_registry_api.selectors.did_documents import latest_draft, active_prod
 from src.dids.models import Certificate, UploadedPublicKey, DIDDocument, DID
-from src.dids.did_registry_api.selectors.dids import get_did_or_404, get_did_for_user_or_404
+from src.dids.did_registry_api.selectors.dids import get_did_or_404
 from src.dids.did_registry_api.selectors.keys import list_key_versions
 from src.dids.did_registry_api.policies.access import can_manage_did
 from src.dids.did_document_compiler.builders import build_did_document_from_db
@@ -35,9 +35,9 @@ class KeysController:
         Body: { certificate_id: UUID, purposes?: [], key_id?: str (ignored if provided) }
         Backend infers the stable key_id from current verificationMethod.id (latest DRAFT else active PROD).
         """
-        did_obj = get_did_for_user_or_404(did, request.user)
+        # did_obj = get_did_for_user_or_404(did, request.user)
         if not can_manage_did(request.user, did_obj):
-            raise HttpError(403, "Forbidden")
+            raise HttpError(403, "This did belongs to another user")
 
         certificate_id = body.get("certificate_id")
         purposes = body.get("purposes")
