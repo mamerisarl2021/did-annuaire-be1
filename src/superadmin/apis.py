@@ -12,7 +12,7 @@ from src.common.utils import validate_uuid
 from src.dids.publishing.selectors import relpaths_for_did
 from src.dids.publishing.services import remove_published_path
 from src.dids.resolver.services import parse_did_web
-from src.organizations.models import Organization
+from src.organizations.models import Organization, OrganizationStatus
 from src.superadmin import selectors as sa_selectors
 from .schemas import OrgFilterParams, OrgRefusePayload
 from src.superadmin.presenters import (
@@ -59,6 +59,36 @@ class SuperAdminController(BaseAPIController):
 
         return self.create_response(
             message=message, data={"items": data, "pagination": meta}, status_code=200
+        )
+
+    @route.get("/organizations/stats")
+    def get_organizations_stats(self):
+        """
+        Statistiques des organisations par statut
+        Requiert: SUPERUSER
+        """
+        user = self.context.request.auth
+        ensure_superuser(user)
+
+
+        stats = {
+            "all": Organization.objects.count(),
+            "pending": Organization.objects.filter(
+                status=OrganizationStatus.PENDING
+            ).count(),
+            "active": Organization.objects.filter(
+                status=OrganizationStatus.ACTIVE
+            ).count(),
+            "suspended": Organization.objects.filter(
+                status=OrganizationStatus.SUSPENDED
+            ).count(),
+            "refused": Organization.objects.filter(
+                status=OrganizationStatus.REFUSED
+            ).count(),
+        }
+
+        return self.create_response(
+            message="Organizations statistics", data=stats, status_code=200
         )
 
     @route.get("/organizations/{org_id}")
@@ -256,36 +286,6 @@ class SuperAdminController(BaseAPIController):
 
         return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
 
-    @route.get("/organizations/stats")
-    def get_organizations_stats(self):
-        """
-        Statistiques des organisations par statut
-        Requiert: SUPERUSER
-        """
-        user = self.context.request.auth
-        ensure_superuser(user)
-
-        from src.organizations.models import OrganizationStatus
-
-        stats = {
-            "all": Organization.objects.count(),
-            "pending": Organization.objects.filter(
-                status=OrganizationStatus.PENDING
-            ).count(),
-            "active": Organization.objects.filter(
-                status=OrganizationStatus.ACTIVE
-            ).count(),
-            "suspended": Organization.objects.filter(
-                status=OrganizationStatus.SUSPENDED
-            ).count(),
-            "refused": Organization.objects.filter(
-                status=OrganizationStatus.REFUSED
-            ).count(),
-        }
-
-        return self.create_response(
-            message="Organizations statistics", data=stats, status_code=200
-        )
 
     @route.post("/cleanup")
     def cleanup_published_folder(self, request, body: dict = Body(...)):
