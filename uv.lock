@@ -52,30 +52,30 @@ wheels = [
 
 [[package]]
 name = "boto3"
-version = "1.42.50"
+version = "1.42.51"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/41/7a7280875ec000e280b0392478a5d6247bc88e7ecf2ae6ec8f4ddb35b014/boto3-1.42.50.tar.gz", hash = "sha256:38545d7e6e855fefc8a11e899ccbd6d2c9f64671d6648c2acfb1c78c1057a480", size = 112851, upload-time = "2026-02-16T20:42:09.203Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/2d/9a068638984b3a86d583a076bf7e4680b061cf447a589dcce22452170198/boto3-1.42.51.tar.gz", hash = "sha256:a010376cdc2432faa6c3338f04591142a1374da1b7eba94b80c0c7f1b525eff7", size = 112829, upload-time = "2026-02-17T21:05:33.784Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/14/bf4077d843d737bec6f4176e113182a4435a1864e2a819ca07004da8a9ac/boto3-1.42.50-py3-none-any.whl", hash = "sha256:2fdf8f5349b130d62576068a6c47b3eec368a70bc28f16d8cce17c5f7e74fc2e", size = 140604, upload-time = "2026-02-16T20:42:06.652Z" },
+    { url = "https://files.pythonhosted.org/packages/83/0e/2fdbee8be43b013e4e970138d7e2d9fc424f9210d4651efc8e8e13c3a6fa/boto3-1.42.51-py3-none-any.whl", hash = "sha256:c3e75ab1c4df6b1049aecfae56d15f5ff99d68ec6a05f24741bab08ad5d5406e", size = 140604, upload-time = "2026-02-17T21:05:30.879Z" },
 ]
 
 [[package]]
 name = "botocore"
-version = "1.42.50"
+version = "1.42.51"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/93/fd/e63789133b2bf044c8550cd6766ec93628b0ac18a03f2aa0b80171f0697a/botocore-1.42.50.tar.gz", hash = "sha256:de1e128e4898f4e66877bfabbbb03c61f99366f27520442539339e8a74afe3a5", size = 14958074, upload-time = "2026-02-16T20:41:58.814Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/c5/bbe1893555a0cfa35b580df47dbd9512379400e49f918a096ad739cd0872/botocore-1.42.51.tar.gz", hash = "sha256:d7b03905b8066c25dd5bde1b7dc4af15ebdbaa313abbb2543db179b1d5efae3d", size = 14915824, upload-time = "2026-02-17T21:05:19.271Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/aa/b8/b02ad16c5198e652eafdd8bad76aa62ac094afabbe1241b4be1cd4075666/botocore-1.42.50-py3-none-any.whl", hash = "sha256:3ec7004009d1557a881b1d076d54b5768230849fa9ccdebfd409f0571490e691", size = 14631256, upload-time = "2026-02-16T20:41:55.004Z" },
+    { url = "https://files.pythonhosted.org/packages/89/95/16ebc93b4a2e5cab7d12107ab683c29d0acfd02e8e80b59e03d2166c2c86/botocore-1.42.51-py3-none-any.whl", hash = "sha256:216c4c148f37f882c7239fce1d8023acdc664643952ce1d6827c7edc829903d3", size = 14588819, upload-time = "2026-02-17T21:05:16.616Z" },
 ]
 
 [[package]]
@@ -461,11 +461,11 @@ wheels = [
 
 [[package]]
 name = "django-environ"
-version = "0.12.1"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d4/3c/b2de27581c28929e3b33c5797e3d075c93541b4a8499ddc84dfd659d550f/django_environ-0.12.1.tar.gz", hash = "sha256:22859c6e905ab7637fa3348d1787543bb4492f38d761104a3ce0519b7b752845", size = 58257, upload-time = "2026-02-14T01:19:50.733Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/3c/60983e6ec9b24a8d8588eecebfd21123cba980bce0a905807a27692f0860/django_environ-0.13.0.tar.gz", hash = "sha256:6c401e4c219442c2c4588c2116d5292b5484a6f69163ed09cd41f3943bfb645f", size = 63529, upload-time = "2026-02-18T01:08:08.791Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/1c/a6c55b856cb2c5824ee2fe5e27d6f54909ac7c228672b359ecbca99a6b41/django_environ-0.12.1-py2.py3-none-any.whl", hash = "sha256:064ba2d5082f833e6d7fe4def4928bde1eedc0248a417575da7db147aeec1c20", size = 20035, upload-time = "2026-02-14T01:19:48.683Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/00/3767393ece946084e1c6830a33ffb8e39d68642e27ad5ac7d4c8bd5de866/django_environ-0.13.0-py3-none-any.whl", hash = "sha256:37799d14cd78222c6fd8298e48bfe17965ff8e586091ad66a463e52e0e7b799e", size = 20682, upload-time = "2026-02-18T01:08:07.359Z" },
 ]
 
 [[package]]
