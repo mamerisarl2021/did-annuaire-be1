@@ -1,10 +1,8 @@
-from django.db.models import Prefetch, QuerySet, Q
+from django.db.models import Prefetch, QuerySet, Q, Max, Exists, OuterRef
 
+from src.dids.models import DID, DIDDocument, PublishRequest
 from src.organizations.models import Organization
 from src.users.models import User, UserRole
-from django.db.models import Max, Exists, OuterRef, Q, QuerySet
-
-from src.dids.models import DID, DIDDocument
 
 
 def organization_list_all() -> QuerySet[Organization]:
@@ -21,22 +19,17 @@ def organization_list(
         *, status: str = None, search: str = None
 ) -> QuerySet[Organization]:
     """
-    List organisations with optional filters
+    List organisations with optional filters.
 
     Args:
         status: Filter by status (PENDING, ACTIVE, SUSPENDED, REFUSED)
         search: Recherche dans name et slug
-
-    Returns:
-        Organization queryset ordered by descending creation date
     """
     qs = Organization.objects.all()
 
-    # Filtre par statut
     if status:
         qs = qs.filter(status=status)
 
-    # Recherche textuelle (nom ou slug)
     if search:
         search_term = search.strip()
         qs = qs.filter(Q(name__icontains=search_term) | Q(slug__icontains=search_term))
@@ -45,21 +38,17 @@ def organization_list(
 
 
 def organization_list_with_admins(
-        *, status: str = None, search: str = None
+    *, status: str = None, search: str = None
 ) -> QuerySet[Organization]:
     """
-    List organisations ORG_ADMIN prefetched
-
-    Args:
-        status: Filtre by status
-        search: Search in name and slug
+    List organisations with ORG_ADMIN prefetched.
     """
     qs = organization_list(status=status, search=search)
     return qs.prefetch_related(_admin_prefetch())
 
 
 def organization_get_with_admin(*, org_id) -> Organization:
-    """Single organisation avec son ORG_ADMIN prefetched"""
+    """Single organisation avec son ORG_ADMIN prefetched."""
     return Organization.objects.prefetch_related(_admin_prefetch()).get(id=org_id)
 
 
@@ -87,9 +76,6 @@ def did_list_all_with_context(*, q: str | None = None, organization_id: str | No
                               ) -> QuerySet:
     """
     Global queryset for DIDs (superadmin scope), annotated for list views.
-    - q: search in did and document_type (icontains)
-    - organization_id: filter by organization
-    - status: filter by DID.status (DRAFT/ACTIVE/DEACTIVATED)
     """
     prod_active_exists = DIDDocument.objects.filter(
         did_id=OuterRef("id"),
@@ -125,13 +111,7 @@ def users_list_all(*, q: str | None = None, organization_id: str | None = None,
                    status: str | None = None,  # if your User.status is used
 ) -> QuerySet:
     """
-    Superadmin scope: build a filtered queryset for users across all organizations.
-    Filters:
-      - q: icontains on email/first_name/last_name/phone
-      - organization_id: exact match
-      - role: JSON membership (role__contains=[role])
-      - is_active: boolean
-      - status: exact match (if applicable in your model)
+    Superadmin scope: filtered queryset for users across all organizations.
     """
     qs = (
         User.objects.all()
@@ -158,5 +138,52 @@ def users_list_all(*, q: str | None = None, organization_id: str | None = None,
             | Q(last_name__icontains=q)
             | Q(phone__icontains=q)
         )
+
+    return qs
+
+
+# ---------------------------------------------------------------------------
+# Publish requests (superadmin scope — all orgs)
+# ---------------------------------------------------------------------------
+
+def publish_request_list_all(
+    *,
+    organization_id: str | None = None,
+    status: str | None = None,
+    environment: str | None = None,
+    q: str | None = None,
+) -> QuerySet[PublishRequest]:
+    """
+    Read-only selector: all publish requests across every organization.
+
+    Filters:
+        organization_id: restrict to a single org
+        status: PENDING / APPROVED / REJECTED
+        environment: PROD
+        q: search in DID identifier
+    """
+    qs = (
+        PublishRequest.objects.all()
+        .select_related(
+            "did",
+            "did__organization",
+            "requested_by",
+            "decided_by",
+            "did_document",
+        )
+        .order_by("-created_at")
+    )
+
+    if organization_id:
+        qs = qs.filter(did__organization_id=organization_id)
+
+    if status:
+        qs = qs.filter(status=status)
+
+    if environment:
+        qs = qs.filter(environment=environment)
+
+    if q:
+        qs = qs.filter(did__did__icontains=q)
 
     return qs

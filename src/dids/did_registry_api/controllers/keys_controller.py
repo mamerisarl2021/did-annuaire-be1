@@ -35,11 +35,7 @@ class KeysController:
         Body: { certificate_id: UUID, purposes?: [], key_id?: str (ignored if provided) }
         Backend infers the stable key_id from current verificationMethod.id (latest DRAFT else active PROD).
         """
-        did_obj = get_object_or_404(
-        DID.objects.select_related("organization", "owner"), 
-            did=did,
-            organization_id=request.user.organization_id
-        )
+        did_obj = get_did_or_404(did)
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "Non-owner has no write permissions on a DID")
 

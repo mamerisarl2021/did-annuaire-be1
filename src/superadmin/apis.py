@@ -141,62 +141,6 @@ class SuperAdminController(BaseAPIController):
         services.organization_delete(organization_id=org_uuid, deleted_by=user)
         return self.create_response(message="Organization deleted", status_code=200)
 
-    # @route.get("/organizations/users")
-    # def list_users(self, filters: Query[UserFilterParams]):
-    #     """
-    #     Liste TOUS les utilisateurs (toutes organisations)
-    #     Requiert: SUPERUSER
-    #     Supporte: status, role, search + pagination
-    #     """
-    #     current_user = self.context.request.auth
-    #     ensure_superuser(current_user)
-
-    #     qs = user_selectors.user_list(
-    #         status=filters.status, role=filters.role, search=filters.search
-    #     )
-
-    #     paginator = Paginator(default_page_size=10, max_page_size=100)
-    #     items, meta = paginator.paginate_queryset(qs, self.context.request)
-
-    #     data = [user_to_list_dto_superadmin(u) for u in items]
-    #     return self.create_response(
-    #         message="All users fetched",
-    #         data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-    #         status_code=200,
-    #     )
-
-    # @route.get("/organizations/{org_id}/users")
-    # def list_organization_users(self, org_id: str, filters: Query[UserFilterParams]):
-    #     """
-    #     Liste les utilisateurs d'UNE organisation spécifique
-    #     Requiert: SUPERUSER
-    #     Supporte: status, role, search + pagination
-    #     """
-    #     current_user = self.context.request.auth
-    #     ensure_superuser(current_user)
-
-    #     org_uuid = validate_uuid(org_id)
-    #     organization = get_object_or_404(Organization, id=org_uuid)
-
-    #     qs = user_selectors.user_list(
-    #         organization=organization,
-    #         status=filters.status,
-    #         role=filters.role,
-    #         search=filters.search,
-    #     )
-
-    #     paginator = Paginator(default_page_size=10, max_page_size=100)
-    #     items, meta = paginator.paginate_queryset(qs, self.context.request)
-
-    #     data = [user_to_list_dto_superadmin(u) for u in items]
-    #     return self.create_response(
-    #         message=f"Users from {organization.name} fetched",
-    #         data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-    #         status_code=200,
-    #     )
-
-
-
     @route.get("/dids")
     def list_dids(
             self,
@@ -286,6 +230,67 @@ class SuperAdminController(BaseAPIController):
 
         return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
 
+    # -----------------------------------------------------------------------
+    # Publish requests (add this method inside SuperAdminController)
+    # -----------------------------------------------------------------------
+
+    @route.get("/publish-requests")
+    def list_publish_requests(
+            self,
+            request,
+            page: int = 1,
+            page_size: int = 20,
+            organization_name: str | None = None,
+            status: str | None = None,  # PENDING | APPROVED | REJECTED
+            #environment: str | None = None,  # PROD
+            q: str | None = None,  # search in DID identifier
+    ):
+        """
+        Liste toutes les demandes de publication (superadmin scope).
+        Filtrable par organisation, statut, environnement, recherche DID.
+        """
+        user = self.context.request.auth
+        ensure_superuser(user)
+
+        qs = selectors.publish_request_list_all(
+            organization_id=organization_name,
+            status=status,
+            #environment=environment,
+            q=q,
+        )
+
+        paginator = Paginator(default_page_size=20, max_page_size=100)
+        rows, meta = paginator.paginate_queryset(qs, request)
+
+        items = [
+            {
+                "id": str(pr.id),
+                "did": pr.did.did,
+                "organization_id": str(pr.did.organization_id),
+                "organization_name": getattr(pr.did.organization, "name", None),
+                "version": pr.did_document.version,
+                #"environment": pr.environment,
+                "status": pr.status,
+                "requested_by": getattr(pr.requested_by, "email", None),
+                "decided_by": (
+                    getattr(pr.decided_by, "email", None) if pr.decided_by else None
+                ),
+                "decided_at": (
+                    pr.decided_at.isoformat() if pr.decided_at else None
+                ),
+                "note": pr.note or None,
+                "created_at": (
+                    pr.created_at.isoformat() if getattr(pr, "created_at", None) else None
+                ),
+            }
+            for pr in rows
+        ]
+
+        return JsonResponse(
+            {"items": items, "pagination": meta},
+            status=200,
+            content_type="application/json",
+        )
 
     @route.post("/cleanup")
     def cleanup_published_folder(self, request, body: dict = Body(...)):
