@@ -42,6 +42,7 @@ LOCAL_APPS = [
     "src.files.apps.FilesConfig",
     "src.organizations.apps.OrganizationsConfig",
     "src.seeders",
+    "src.superadmin",
     "src.tasks.apps.TasksConfig",
     "src.users.apps.UsersConfig",
 ]

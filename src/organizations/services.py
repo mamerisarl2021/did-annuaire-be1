@@ -52,7 +52,7 @@ def organization_create(
             errors={"admin_email": ["already taken"]},
         )
 
-    # Créer l'organisation
+    # Create Organization
     org = Organization.objects.create(
         name=name,
         slug=slug,
@@ -67,8 +67,8 @@ def organization_create(
         status=OrganizationStatus.PENDING,
     )
 
-    # Créer l'admin (statut PENDING)
-    User.objects.create_user(
+    # Create admin
+    admin = User.objects.create_user(
         email=admin_email,
         first_name=admin_first_name,
         last_name=admin_last_name,
@@ -81,6 +81,9 @@ def organization_create(
 
     # Notifier les super admins
     _notify_super_admins_new_org(org)
+
+    # Notifier l'admin que sa demande est en cours d'examen
+    _notify_admin_pending_review(org=org, admin=admin)
 
     # Audit
     audit_action_create(
@@ -117,5 +120,28 @@ def _notify_super_admins_new_org(org: Organization):
     send_html_email(
         to=emails,
         subject=f"[DID Annuaire] Nouvelle organisation : {org.name} — Action requise",
+        html=html,
+    )
+
+def _notify_admin_pending_review(*, org: Organization, admin: User):
+    """Notifier l'admin que l'organisation est en attente de validation"""
+    if not admin.email:
+        return
+
+    status_url = f"{settings.FR_APP_DOMAIN}/api/organizations/id/{org.id}/status"
+    admin_name = admin.full_name if hasattr(admin, "full_name") and admin.full_name else None
+
+    ctx = {
+        "title": "Demande d'inscription enregistrée",
+        "admin_name": admin_name,
+        "org_name": org.name,
+        "org_type": org.get_type_display(),
+        "org_email": org.email,
+        "status_url": status_url,
+    }
+    html = render_with_layout(inner_template="organization_pending_review.html", context=ctx)
+    send_html_email(
+        to=[admin.email],
+        subject=f"[DID Annuaire] Demande enregistrée — {org.name}",
         html=html,
     )
