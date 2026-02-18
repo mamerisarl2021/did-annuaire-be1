@@ -35,7 +35,11 @@ class KeysController:
         Body: { certificate_id: UUID, purposes?: [], key_id?: str (ignored if provided) }
         Backend infers the stable key_id from current verificationMethod.id (latest DRAFT else active PROD).
         """
-        did_obj = get_did_or_404(did)
+        did_obj = get_object_or_404(
+        DID.objects.select_related("organization", "owner"), 
+            did=did,
+            organization_id=request.user.organization_id
+        )
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "Non-owner has no write permissions on a DID")
 
@@ -48,20 +52,13 @@ class KeysController:
                 "certificate_id is required",
                 path=f"/api/registry/dids/{did}/keys/rotate",
             )
-        try:
-            cert = get_object_or_404(
-                Certificate,
-                pk=certificate_id,
-                organization=did_obj.organization,
-                owner=request.user,
-            )
-        except:
-            return err(
-                request,
-                404,
-                "Certificate not found or access denied",
-                path=f"/api/registry/dids/{did}/keys/rotate",
-            )
+
+        cert = get_object_or_404(
+            Certificate,
+            pk=certificate_id,
+            organization=did_obj.organization,
+            owner=request.user,
+        )
 
         if did_obj.status == DID.DIDStatus.DEACTIVATED:
             return err(
