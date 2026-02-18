@@ -128,7 +128,7 @@ def _notify_admin_pending_review(*, org: Organization, admin: User):
     if not admin.email:
         return
 
-    status_url = f"{settings.FR_APP_DOMAIN}/api/organizations/id/{org.id}/status"
+    status_url = f"{settings.FR_APP_DOMAIN}/auth/register/status?organizationId={org.id}&organizationName={org.name}"
     admin_name = admin.full_name if hasattr(admin, "full_name") and admin.full_name else None
 
     ctx = {

@@ -42,8 +42,14 @@
 
 {% if status == "VALIDATED" %}
 <p>
-  Votre organisation est désormais active. Un email d'invitation
-  sera envoyé à l'administrateur pour activer son compte.
+  Votre organisation est désormais active. Vous pouvez maintenant activer botre compte.
+</p>
+<p style="text-align:center;margin:24px 0;">
+  <a href="{{ action_url }}"
+     style="background:#0b5ed7;color:#ffffff;padding:10px 16px;text-decoration:none;
+            border-radius:4px;font-weight:bold;display:inline-block;">
+    Activer mon compte
+  </a>
 </p>
 {% endif %}
 
