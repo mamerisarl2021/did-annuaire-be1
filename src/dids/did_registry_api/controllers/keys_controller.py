@@ -35,7 +35,7 @@ class KeysController:
         Body: { certificate_id: UUID, purposes?: [], key_id?: str (ignored if provided) }
         Backend infers the stable key_id from current verificationMethod.id (latest DRAFT else active PROD).
         """
-        # did_obj = get_did_for_user_or_404(did, request.user)
+        did_obj = get_object_or_404(DID, did=did)
         if not can_manage_did(request.user, did_obj):
             raise HttpError(403, "This did belongs to another user")
 
