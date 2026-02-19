@@ -1,4 +1,5 @@
-from django.db.models import Prefetch, QuerySet, Q, Max, Exists, OuterRef
+from django.db.models import (Count, Prefetch, QuerySet, Q, Max, Exists, OuterRef)
+from django.db.models.expressions import RawSQL
 
 from src.dids.models import DID, DIDDocument, PublishRequest
 from src.organizations.models import Organization
@@ -187,3 +188,160 @@ def publish_request_list_all(
         qs = qs.filter(did__did__icontains=q)
 
     return qs
+
+# ---------------------------------------------------------------------------
+# Stats — DIDs (superadmin, all orgs)
+# ---------------------------------------------------------------------------
+
+def did_stats_all() -> dict:
+    """
+    Platform-wide DID statistics.
+
+    Returns:
+        total, by_status, by_environment, publish_requests,
+        top_organizations (top 5 by DID count),
+        by_organization (full breakdown per org).
+    """
+    did_qs = DID.objects.all()
+    doc_qs = DIDDocument.objects.all()
+    pr_qs = PublishRequest.objects.all()
+
+    # --- totals ---
+    total = did_qs.count()
+
+    # --- by status ---
+    by_status_rows = did_qs.values("status").annotate(count=Count("id"))
+    by_status = {row["status"].lower(): row["count"] for row in by_status_rows}
+
+    # --- by environment (active docs only for PROD, all for DRAFT) ---
+    prod_count = doc_qs.filter(environment="PROD", is_active=True).count()
+    draft_env_count = doc_qs.filter(environment="DRAFT").count()
+
+    # --- publish requests ---
+    pr_rows = pr_qs.values("status").annotate(count=Count("id"))
+    publish_requests = {row["status"].lower(): row["count"] for row in pr_rows}
+
+    # --- top 5 organizations by DID count ---
+    top_orgs_rows = (
+        did_qs.values("organization_id", "organization__name")
+        .annotate(count=Count("id"))
+        .order_by("-count")[:5]
+    )
+    top_organizations = [
+        {
+            "id": str(row["organization_id"]),
+            "name": row["organization__name"],
+            "count": row["count"],
+        }
+        for row in top_orgs_rows
+    ]
+
+    # --- by_organization (full breakdown) ---
+    org_rows = (
+        did_qs.values("organization_id", "organization__name", "status")
+        .annotate(count=Count("id"))
+        .order_by("organization__name", "status")
+    )
+
+    org_map: dict[str, dict] = {}
+    for row in org_rows:
+        org_id = str(row["organization_id"])
+        if org_id not in org_map:
+            org_map[org_id] = {
+                "id": org_id,
+                "name": row["organization__name"],
+                "total": 0,
+            }
+        org_map[org_id]["total"] += row["count"]
+        org_map[org_id][row["status"].lower()] = row["count"]
+
+    by_organization = sorted(org_map.values(), key=lambda o: o["total"], reverse=True)
+
+    return {
+        "total": total,
+        "by_status": by_status,
+        "by_environment": {
+            "prod": prod_count,
+            "draft": draft_env_count,
+        },
+        "publish_requests": publish_requests,
+        "top_organizations": top_organizations,
+        "by_organization": by_organization,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Stats — Users (superadmin, all orgs)
+# ---------------------------------------------------------------------------
+
+def users_stats_all() -> dict:
+    """
+    Platform-wide user statistics.
+
+    Returns:
+        total, by_status, by_role,
+        top_organizations (top 5 by user count),
+        by_organization (full breakdown per org).
+    """
+    user_qs = User.objects.all()
+
+    # --- total ---
+    total = user_qs.count()
+
+    # --- by status ---
+    status_rows = user_qs.values("status").annotate(count=Count("id"))
+    by_status = {row["status"].lower(): row["count"] for row in status_rows}
+
+    # --- by role (JSON explode) ---
+    role_rows = (
+        user_qs.annotate(role_item=RawSQL("jsonb_array_elements_text(role)", []))
+        .values("role_item")
+        .annotate(count=Count("id"))
+    )
+    by_role = {row["role_item"].lower(): row["count"] for row in role_rows}
+
+    # --- top 5 organizations by user count ---
+    top_orgs_rows = (
+        user_qs.filter(organization__isnull=False)
+        .values("organization_id", "organization__name")
+        .annotate(count=Count("id"))
+        .order_by("-count")[:5]
+    )
+    top_organizations = [
+        {
+            "id": str(row["organization_id"]),
+            "name": row["organization__name"],
+            "count": row["count"],
+        }
+        for row in top_orgs_rows
+    ]
+
+    # --- by_organization (full breakdown) ---
+    org_rows = (
+        user_qs.filter(organization__isnull=False)
+        .values("organization_id", "organization__name", "status")
+        .annotate(count=Count("id"))
+        .order_by("organization__name", "status")
+    )
+
+    org_map: dict[str, dict] = {}
+    for row in org_rows:
+        org_id = str(row["organization_id"])
+        if org_id not in org_map:
+            org_map[org_id] = {
+                "id": org_id,
+                "name": row["organization__name"],
+                "total": 0,
+            }
+        org_map[org_id]["total"] += row["count"]
+        org_map[org_id][row["status"].lower()] = row["count"]
+
+    by_organization = sorted(org_map.values(), key=lambda o: o["total"], reverse=True)
+
+    return {
+        "total": total,
+        "by_status": by_status,
+        "by_role": by_role,
+        "top_organizations": top_organizations,
+        "by_organization": by_organization,
+    }

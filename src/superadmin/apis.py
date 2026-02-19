@@ -230,10 +230,6 @@ class SuperAdminController(BaseAPIController):
 
         return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
 
-    # -----------------------------------------------------------------------
-    # Publish requests (add this method inside SuperAdminController)
-    # -----------------------------------------------------------------------
-
     @route.get("/publish-requests")
     def list_publish_requests(
             self,
@@ -371,3 +367,46 @@ class SuperAdminController(BaseAPIController):
             data={"orbit_watcher_status": status, "orbit_failed_watchers": failed}
         )
 
+# -----------------------------------------------------------------------
+    # DID stats (add this method inside SuperAdminController)
+    # -----------------------------------------------------------------------
+
+    @route.get("/dids/stats")
+    def did_stats(self, request):
+        """
+        Platform-wide DID/DIDDocument/PublishRequest statistics.
+        Includes top 5 orgs by DID count and full per-org breakdown.
+        Requiert: SUPERUSER
+        """
+        user = self.context.request.auth
+        ensure_superuser(user)
+
+        data = selectors.did_stats_all()
+
+        return self.create_response(
+            message="DID statistics",
+            data=data,
+            status_code=200,
+        )
+
+    # -----------------------------------------------------------------------
+    # Users stats (add this method inside SuperAdminController)
+    # -----------------------------------------------------------------------
+
+    @route.get("/users/stats")
+    def users_stats(self, request):
+        """
+        Platform-wide user statistics.
+        Includes top 5 orgs by user count and full per-org breakdown.
+        Requiert: SUPERUSER
+        """
+        user = self.context.request.auth
+        ensure_superuser(user)
+
+        data = selectors.users_stats_all()
+
+        return self.create_response(
+            message="Users statistics",
+            data=data,
+            status_code=200,
+        )
