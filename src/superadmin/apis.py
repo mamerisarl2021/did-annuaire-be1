@@ -169,7 +169,7 @@ class SuperAdminController(BaseAPIController):
                 {
                     "did": d.did,
                     "organization": str(getattr(d.organization, "slug", "")),
-                    "owner": str(getattr(d.owner, "name", "")),
+                    "owner_id": str(getattr(d.owner, "id", "")),
                     "document_type": d.document_type,
                     "status": d.status,
                     "latest_version": d.latest_version or 0,
