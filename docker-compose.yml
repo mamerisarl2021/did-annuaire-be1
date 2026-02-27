@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: did-annuaire-postgres
+    environment:
+      POSTGRES_DB: did-annuaire
+      POSTGRES_USER: did-annuaire
+      POSTGRES_PASSWORD: did-annuaire
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:
