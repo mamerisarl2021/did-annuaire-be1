@@ -334,6 +334,7 @@ dependencies = [
     { name = "pytz" },
     { name = "qrcode", extra = ["pil"] },
     { name = "sentry-sdk", extra = ["django"] },
+    { name = "structlog" },
 ]
 
 [package.dev-dependencies]
@@ -368,6 +369,7 @@ requires-dist = [
     { name = "pytz" },
     { name = "qrcode", extras = ["pil"] },
     { name = "sentry-sdk", extras = ["django"] },
+    { name = "structlog", specifier = ">=25.5.0" },
 ]
 
 [package.metadata.requires-dev]
