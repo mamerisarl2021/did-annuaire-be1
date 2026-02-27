@@ -104,6 +104,7 @@ class RegistryController(BaseAPIController):
         """
         org_id = body.get("organization_id")
         doc_type = body.get("document_type")
+        doc_type = doc_type.strip().replace(" ", "_").lower()
         cert_id = body.get("certificate_id")
         purposes = body.get("purposes")
 
