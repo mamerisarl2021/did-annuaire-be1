@@ -219,6 +219,7 @@ class SuperAdminController(BaseAPIController):
                                                                                          None) else None,
                     "organization_name": getattr(u.organization, "name", None) if getattr(u, "organization",
                                                                                           None) else None,
+                    "functions": getattr(u, "functions", None),                                                                   
                     "roles": list(getattr(u, "role", []) or []),
                     "status": getattr(u, "status", None),
                     "is_active": bool(getattr(u, "is_active", False)),
