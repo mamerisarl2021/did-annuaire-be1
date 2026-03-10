@@ -43,6 +43,8 @@ def user_list(
 
     if not user.is_platform_admin:
         qs = qs.filter(organization=user.organization)
+        # Exclude the requesting user themselves
+        qs = qs.exclude(id=user.id)
 
     if status:
         qs = qs.filter(status=status)

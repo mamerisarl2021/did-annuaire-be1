@@ -73,7 +73,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
-    #    'request_id.middleware.RequestIdMiddleware',
+    #'request_id.middleware.RequestIdMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
