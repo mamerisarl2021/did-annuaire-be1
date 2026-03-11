@@ -28,6 +28,7 @@ dependencies = [
     "pytz",
     "qrcode[pil]",
     "sentry-sdk[django]",
+    "structlog>=25.5.0",
 ]
 
 [dependency-groups]

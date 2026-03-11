@@ -210,6 +210,7 @@ def publish_request_approve(pr_id: uuid.UUID, decided_by: User):
         response_data = {
             "did": pr.did.did,
             "version": pr.did_document.version,
+            "url": url,
         }
 
         # pr.delete()

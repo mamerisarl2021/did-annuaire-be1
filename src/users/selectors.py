@@ -43,6 +43,8 @@ def user_list(
 
     if not user.is_platform_admin:
         qs = qs.filter(organization=user.organization)
+        # Exclude the requesting user themselves
+        qs = qs.exclude(id=user.id)
 
     if status:
         qs = qs.filter(status=status)
@@ -77,6 +79,8 @@ def users_stats_for_actor(*, user) -> dict:
         raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
 
     base_qs = User.objects.all()
+    # Exclude the requesting user themselves
+    base_qs = base_qs.exclude(id=user.id)
 
     if not user.is_platform_admin:
         base_qs = base_qs.filter(organization=user.organization)
@@ -120,6 +124,28 @@ def user_get_for_update(*, user_id: uuid.UUID) -> User:
         return User.objects.select_for_update().get(id=user_id)
     except User.DoesNotExist:
         raise APIError(message="User not found", code="USER_NOT_FOUND", status=404)
+
+
+def user_get_by_email(*, email: str) -> User | None:
+    """Get user by email - returns None if not found"""
+    try:
+        return User.objects.get(email=email.strip().lower())
+    except User.DoesNotExist:
+        return None
+
+
+def user_get_by_reset_token(*, token: str) -> User | None:
+    """
+    Get user by password reset token.
+    Returns None if token not found, expired, or invalid.
+    """
+    try:
+        return User.objects.get(
+            password_reset_token=token,
+            password_reset_token_expires_at__gt=timezone.now()
+        )
+    except User.DoesNotExist:
+        return None
 
 
 def user_get_info(*, user_id: uuid.UUID, requesting_user: User) -> dict:

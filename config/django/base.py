@@ -42,6 +42,7 @@ LOCAL_APPS = [
     "src.files.apps.FilesConfig",
     "src.organizations.apps.OrganizationsConfig",
     "src.seeders",
+    "src.superadmin",
     "src.tasks.apps.TasksConfig",
     "src.users.apps.UsersConfig",
 ]
@@ -72,7 +73,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "orbit.middleware.OrbitMiddleware",
-    #    'request_id.middleware.RequestIdMiddleware',
+    #'request_id.middleware.RequestIdMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -230,7 +231,7 @@ ADMIN_USER_EMAIL = env("ADMIN_USER_EMAIL")
 ADMINS = []
 
 if ADMIN_USER_NAME and ADMIN_USER_EMAIL:
-    ADMINS.append(ADMIN_USER_EMAIL)  # Only add the email string
+    ADMINS.append((ADMIN_USER_NAME, ADMIN_USER_EMAIL))
 
 MANAGERS = ADMINS
 

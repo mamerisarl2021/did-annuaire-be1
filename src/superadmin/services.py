@@ -1,15 +1,65 @@
+import secrets
 from uuid import UUID
 
+from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
 
-from src.emails.services import email_send
-from src.users.models import User, UserRole
-from src.users import services
+from src.common.notifications.email import render_with_layout, send_html_email
+from src.users.models import User, UserRole, UserStatus
 from src.organizations.models import Organization, OrganizationStatus
 from src.auditaction.services import audit_action_create
 from src.auditaction.models import AuditCategory, AuditAction, Severity
 from src.core.exceptions import DomainConflictError
+
+
+def _notify_org_admin_decision(
+    *,
+    org: Organization,
+    status: str,
+    reason: str = "",
+    action_url: str = "",
+) -> None:
+    """
+    Send a validation/refusal decision email to the org's admin.
+    Uses a single dynamic template for both outcomes.
+
+    Args:
+        org: The organization
+        status: "VALIDATED" or "REFUSED"
+        reason: Refusal reason (only for REFUSED)
+        action_url: Account activation link (only for VALIDATED)
+    """
+    admin = (
+        org.users.filter(role__contains=[UserRole.ORG_ADMIN])
+        .order_by("created_at", "id")
+        .first()
+    )
+    if not admin:
+        return
+
+    status_labels = {
+        "VALIDATED": "validée",
+        "REFUSED": "refusée",
+    }
+    label = status_labels.get(status, status.lower())
+
+    ctx = {
+        "title": f"Inscription {label} — {org.name}",
+        "org_name": org.name,
+        "status": status,
+        "reason": reason,
+        "action_url": action_url,
+        "contact_email": getattr(settings, "SUPPORT_EMAIL", ""),
+    }
+    html = render_with_layout(
+        inner_template="organization_validate_decision.html", context=ctx
+    )
+    send_html_email(
+        to=[admin.email],
+        subject=f"[DID Annuaire] Inscription {label} — {org.name}",
+        html=html,
+    )
 
 
 @transaction.atomic
@@ -28,37 +78,41 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
     org.validated_by = validated_by
     org.save(update_fields=["status", "validated_at", "validated_by"])
 
-    # Send invitation to admin
+    # Prepare invitation for admin
     admin = (
         org.users.filter(role__contains=[UserRole.ORG_ADMIN])
         .order_by("created_at", "id")
         .first()
     )
-    if admin:
-        # Send after the transaction commits
-        def _send():
-            try:
-                services.user_send_invitation(user=admin, invited_by=validated_by)
-            except Exception as e:
-                # add audit/log here
-                audit_action_create(
-                    user=validated_by,
-                    action=AuditAction.EMAIL_SEND_FAILED,
-                    details={
-                        "organization_id": str(org.id),
-                        "admin_id": str(admin.id),
-                        "error": str(e),
-                    },
-                    category=AuditCategory.ORGANIZATION,
-                    organization=org,
-                    target_type="organization",
-                    target_id=org.id,
-                    severity=Severity.ERROR,
-                )
 
-        transaction.on_commit(_send)
+    action_url = ""
+    if admin:
+        # Generate invitation token (same logic as user_send_invitation)
+        token = secrets.token_urlsafe(32)
+        admin.invitation_token = token
+        admin.invitation_sent_at = timezone.now()
+        admin.invited_by = validated_by
+        admin.status = UserStatus.INVITED
+        admin.save(update_fields=[
+            "invitation_token",
+            "invitation_sent_at",
+            "invited_by",
+            "status",
+            "updated_at",
+        ])
+
+        action_url = f"{settings.FR_APP_DOMAIN}/activate?token={token}"
+
+        audit_action_create(
+            user=validated_by,
+            category=AuditCategory.USER,
+            organization=org,
+            action=AuditAction.USER_INVITED,
+            details={"user_id": str(admin.id), "email": admin.email},
+            target_type="user",
+            target_id=str(admin.id),
+        )
     else:
-        # audit that no admin was found
         audit_action_create(
             user=validated_by,
             action=AuditAction.ADMIN_NOT_FOUND,
@@ -72,6 +126,9 @@ def organization_validate(*, organization_id: UUID, validated_by: User) -> Organ
             target_id=org.id,
             severity=Severity.INFO,
         )
+
+    # Send decision email (includes activation link if admin exists)
+    _notify_org_admin_decision(org=org, status="VALIDATED", action_url=action_url)
 
     audit_action_create(
         user=validated_by,
@@ -104,25 +161,8 @@ def organization_refuse(
     org.refusal_reason = reason
     org.save()
 
-    # Notifier l'admin
-    admin = org.users.filter(role=UserRole.ORG_ADMIN).first()
-    if admin:
-        email_send(
-            to=[admin.email],
-            subject=f"Inscription refusée - {org.name}",
-            html=f"""
-                <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
-                    <h2 style="color: #d9534f; border-bottom: 2px solid #d9534f; padding-bottom: 10px;">Demande d'inscription refusée</h2>
-                    <p>Votre demande d'inscription pour <strong>{org.name}</strong> a malheureusement été examinée et <strong>refusée</strong>.</p>
-                    <p><strong>Raison du refus :</strong><br>{reason}</p>
-                    <p>Nous vous invitons à corriger les points mentionnés ci-dessus et à soumettre une nouvelle demande lorsque cela sera possible.</p>
-                    <p>Pour toute question ou clarification, n'hésitez pas à <a href="mailto:support@example.com" style="color: #0056b3; text-decoration: underline;">nous contacter</a>.</p>
-                    <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
-                        Ce message est automatique. Merci de ne pas y répondre directement.
-                    </p>
-                </div>
-            """,
-        )
+    # Notify admin of refusal
+    _notify_org_admin_decision(org=org, status="REFUSED", reason=reason)
 
     # Audit
     audit_action_create(

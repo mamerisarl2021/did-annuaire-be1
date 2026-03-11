@@ -12,7 +12,7 @@ from src.common.utils import validate_uuid
 from src.dids.publishing.selectors import relpaths_for_did
 from src.dids.publishing.services import remove_published_path
 from src.dids.resolver.services import parse_did_web
-from src.organizations.models import Organization
+from src.organizations.models import Organization, OrganizationStatus
 from src.superadmin import selectors as sa_selectors
 from .schemas import OrgFilterParams, OrgRefusePayload
 from src.superadmin.presenters import (
@@ -59,6 +59,36 @@ class SuperAdminController(BaseAPIController):
 
         return self.create_response(
             message=message, data={"items": data, "pagination": meta}, status_code=200
+        )
+
+    @route.get("/organizations/stats")
+    def get_organizations_stats(self):
+        """
+        Statistiques des organisations par statut
+        Requiert: SUPERUSER
+        """
+        user = self.context.request.auth
+        ensure_superuser(user)
+
+
+        stats = {
+            "all": Organization.objects.count(),
+            "pending": Organization.objects.filter(
+                status=OrganizationStatus.PENDING
+            ).count(),
+            "active": Organization.objects.filter(
+                status=OrganizationStatus.ACTIVE
+            ).count(),
+            "suspended": Organization.objects.filter(
+                status=OrganizationStatus.SUSPENDED
+            ).count(),
+            "refused": Organization.objects.filter(
+                status=OrganizationStatus.REFUSED
+            ).count(),
+        }
+
+        return self.create_response(
+            message="Organizations statistics", data=stats, status_code=200
         )
 
     @route.get("/organizations/{org_id}")
@@ -111,62 +141,6 @@ class SuperAdminController(BaseAPIController):
         services.organization_delete(organization_id=org_uuid, deleted_by=user)
         return self.create_response(message="Organization deleted", status_code=200)
 
-    # @route.get("/organizations/users")
-    # def list_users(self, filters: Query[UserFilterParams]):
-    #     """
-    #     Liste TOUS les utilisateurs (toutes organisations)
-    #     Requiert: SUPERUSER
-    #     Supporte: status, role, search + pagination
-    #     """
-    #     current_user = self.context.request.auth
-    #     ensure_superuser(current_user)
-
-    #     qs = user_selectors.user_list(
-    #         status=filters.status, role=filters.role, search=filters.search
-    #     )
-
-    #     paginator = Paginator(default_page_size=10, max_page_size=100)
-    #     items, meta = paginator.paginate_queryset(qs, self.context.request)
-
-    #     data = [user_to_list_dto_superadmin(u) for u in items]
-    #     return self.create_response(
-    #         message="All users fetched",
-    #         data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-    #         status_code=200,
-    #     )
-
-    # @route.get("/organizations/{org_id}/users")
-    # def list_organization_users(self, org_id: str, filters: Query[UserFilterParams]):
-    #     """
-    #     Liste les utilisateurs d'UNE organisation spécifique
-    #     Requiert: SUPERUSER
-    #     Supporte: status, role, search + pagination
-    #     """
-    #     current_user = self.context.request.auth
-    #     ensure_superuser(current_user)
-
-    #     org_uuid = validate_uuid(org_id)
-    #     organization = get_object_or_404(Organization, id=org_uuid)
-
-    #     qs = user_selectors.user_list(
-    #         organization=organization,
-    #         status=filters.status,
-    #         role=filters.role,
-    #         search=filters.search,
-    #     )
-
-    #     paginator = Paginator(default_page_size=10, max_page_size=100)
-    #     items, meta = paginator.paginate_queryset(qs, self.context.request)
-
-    #     data = [user_to_list_dto_superadmin(u) for u in items]
-    #     return self.create_response(
-    #         message=f"Users from {organization.name} fetched",
-    #         data={"items": data, "pagination": meta},  # ← FORMAT AVEC PAGINATION
-    #         status_code=200,
-    #     )
-
-
-
     @route.get("/dids")
     def list_dids(
             self,
@@ -195,7 +169,7 @@ class SuperAdminController(BaseAPIController):
                 {
                     "did": d.did,
                     "organization": str(getattr(d.organization, "slug", "")),
-                    "owner": str(getattr(d.owner, "name", "")),
+                    "owner_id": str(getattr(d.owner, "id", "")),
                     "document_type": d.document_type,
                     "status": d.status,
                     "latest_version": d.latest_version or 0,
@@ -228,6 +202,8 @@ class SuperAdminController(BaseAPIController):
             is_active=is_active,
             status=status,
         )
+        # Exclude the requesting user themselves (added in selector for stats consistency, but good to double-check here as well)
+        qs = qs.exclude(id=user.id)
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
         rows, meta = paginator.paginate_queryset(qs, request)
@@ -245,6 +221,7 @@ class SuperAdminController(BaseAPIController):
                                                                                          None) else None,
                     "organization_name": getattr(u.organization, "name", None) if getattr(u, "organization",
                                                                                           None) else None,
+                    "functions": getattr(u, "functions", None),                                                                   
                     "roles": list(getattr(u, "role", []) or []),
                     "status": getattr(u, "status", None),
                     "is_active": bool(getattr(u, "is_active", False)),
@@ -256,35 +233,62 @@ class SuperAdminController(BaseAPIController):
 
         return JsonResponse({"items": items, "pagination": meta}, status=200, content_type="application/json")
 
-    @route.get("/organizations/stats")
-    def get_organizations_stats(self):
+    @route.get("/publish-requests")
+    def list_publish_requests(
+            self,
+            request,
+            page: int = 1,
+            page_size: int = 20,
+            organization_name: str | None = None,
+            status: str | None = None,  # PENDING | APPROVED | REJECTED
+            #environment: str | None = None,  # PROD
+            q: str | None = None,  # search in DID identifier
+    ):
         """
-        Statistiques des organisations par statut
-        Requiert: SUPERUSER
+        Liste toutes les demandes de publication (superadmin scope).
+        Filtrable par organisation, statut, environnement, recherche DID.
         """
         user = self.context.request.auth
         ensure_superuser(user)
 
-        from src.organizations.models import OrganizationStatus
+        qs = selectors.publish_request_list_all(
+            organization_id=organization_name,
+            status=status,
+            #environment=environment,
+            q=q,
+        )
 
-        stats = {
-            "all": Organization.objects.count(),
-            "pending": Organization.objects.filter(
-                status=OrganizationStatus.PENDING
-            ).count(),
-            "active": Organization.objects.filter(
-                status=OrganizationStatus.ACTIVE
-            ).count(),
-            "suspended": Organization.objects.filter(
-                status=OrganizationStatus.SUSPENDED
-            ).count(),
-            "refused": Organization.objects.filter(
-                status=OrganizationStatus.REFUSED
-            ).count(),
-        }
+        paginator = Paginator(default_page_size=20, max_page_size=100)
+        rows, meta = paginator.paginate_queryset(qs, request)
 
-        return self.create_response(
-            message="Organizations statistics", data=stats, status_code=200
+        items = [
+            {
+                "id": str(pr.id),
+                "did": pr.did.did,
+                "organization_id": str(pr.did.organization_id),
+                "organization_name": getattr(pr.did.organization, "name", None),
+                "version": pr.did_document.version,
+                #"environment": pr.environment,
+                "status": pr.status,
+                "requested_by": getattr(pr.requested_by, "email", None),
+                "decided_by": (
+                    getattr(pr.decided_by, "email", None) if pr.decided_by else None
+                ),
+                "decided_at": (
+                    pr.decided_at.isoformat() if pr.decided_at else None
+                ),
+                "note": pr.note or None,
+                "created_at": (
+                    pr.created_at.isoformat() if getattr(pr, "created_at", None) else None
+                ),
+            }
+            for pr in rows
+        ]
+
+        return JsonResponse(
+            {"items": items, "pagination": meta},
+            status=200,
+            content_type="application/json",
         )
 
     @route.post("/cleanup")
@@ -366,3 +370,46 @@ class SuperAdminController(BaseAPIController):
             data={"orbit_watcher_status": status, "orbit_failed_watchers": failed}
         )
 
+# -----------------------------------------------------------------------
+    # DID stats (add this method inside SuperAdminController)
+    # -----------------------------------------------------------------------
+
+    @route.get("/dids/stats")
+    def did_stats(self, request):
+        """
+        Platform-wide DID/DIDDocument/PublishRequest statistics.
+        Includes top 5 orgs by DID count and full per-org breakdown.
+        Requiert: SUPERUSER
+        """
+        user = self.context.request.auth
+        ensure_superuser(user)
+
+        data = selectors.did_stats_all()
+
+        return self.create_response(
+            message="DID statistics",
+            data=data,
+            status_code=200,
+        )
+
+    # -----------------------------------------------------------------------
+    # Users stats (add this method inside SuperAdminController)
+    # -----------------------------------------------------------------------
+
+    @route.get("/users/stats")
+    def users_stats(self, request):
+        """
+        Platform-wide user statistics.
+        Includes top 5 orgs by user count and full per-org breakdown.
+        Requiert: SUPERUSER
+        """
+        user = self.context.request.auth
+        ensure_superuser(user)
+
+        data = selectors.users_stats_all()
+
+        return self.create_response(
+            message="Users statistics",
+            data=data,
+            status_code=200,
+        )

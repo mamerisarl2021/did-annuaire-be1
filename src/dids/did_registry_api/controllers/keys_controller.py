@@ -37,7 +37,7 @@ class KeysController:
         """
         did_obj = get_did_or_404(did)
         if not can_manage_did(request.user, did_obj):
-            raise HttpError(403, "Forbidden")
+            raise HttpError(403, "Non-owner has no write permissions on a DID")
 
         certificate_id = body.get("certificate_id")
         purposes = body.get("purposes")

@@ -104,6 +104,7 @@ class RegistryController(BaseAPIController):
         """
         org_id = body.get("organization_id")
         doc_type = body.get("document_type")
+        doc_type = doc_type.strip().replace(" ", "_").lower()
         cert_id = body.get("certificate_id")
         purposes = body.get("purposes")
 
@@ -202,10 +203,17 @@ class RegistryController(BaseAPIController):
         )
 
     @route.get("/dids")
-    def list_dids_org(self, request):
+    def list_dids_org(
+        self,
+        request,
+        status: str | None = None,        # DRAFT | ACTIVE | DEACTIVATED
+        environment: str | None = None,    # PROD | DRAFT
+        q: str | None = None,
+    ):
         """
         Lists all DIDs for the caller's organization (ORG scope).
         Pagination via ?page=1&page_size=20.
+        Filters via ?status=ACTIVE&environment=PROD&q=did:web:...
         """
         user = request.user
         org_id = getattr(user, "organization_id", None) or getattr(
@@ -227,7 +235,12 @@ class RegistryController(BaseAPIController):
             is_active=True,
         )
 
-        qs = dids_for_org_with_state(org_id).annotate(
+        qs = dids_for_org_with_state(
+            org_id,
+            status=status,
+            environment=environment,
+            q=q,
+        ).annotate(
             is_published=Exists(prod_active_exists),
             latest_version=Max("documents__version"),
             latest_public_key_version=Subquery(latest_pk_qs.values("version")[:1]),
@@ -400,7 +413,7 @@ class RegistryController(BaseAPIController):
                 # notify admins only on first creation; defer until commit
                 transaction.on_commit(lambda: send_publish_request_notification(pr))
             else:
-                # Optional: if there’s a newer DRAFT, keep the pending request pointing to it
+                # Optional: if there's a newer DRAFT, keep the pending request pointing to it
                 if pr.did_document_id != doc.id:
                     pr.did_document = doc
                     pr.save(update_fields=["did_document"])
@@ -571,7 +584,6 @@ class RegistryController(BaseAPIController):
         except Exception:
             lim = 10
         lim = max(1, min(lim, 100))
-    
+
         items = selectors.random_prod_dids(limit=lim)
         return JsonResponse({"items": items, "count": len(items)}, status=200)
-        

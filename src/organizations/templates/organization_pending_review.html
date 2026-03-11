@@ -1,0 +1,50 @@
+<!-- Content fragment for organization creation pending review notification -->
+<p>
+  Bonjour {{ admin_name|default:"Administrateur" }},
+</p>
+
+<p>
+  Votre demande d'inscription pour l'organisation
+  <strong>{{ org_name }}</strong> a bien été enregistrée.
+</p>
+
+<p>
+  Votre dossier est actuellement <strong>en cours d'examen</strong> par notre équipe.
+  Vous recevrez un email dès qu'une décision aura été prise.
+</p>
+
+<table role="presentation" style="width:100%;margin:16px 0;background:#F4F4F7;border-radius:4px;" cellpadding="12" cellspacing="0">
+  <tr>
+    <td>
+      <strong>Organisation :</strong> {{ org_name }}<br>
+      <strong>Type :</strong> {{ org_type }}<br>
+      <strong>Email :</strong> {{ org_email }}
+    </td>
+  </tr>
+</table>
+
+<p>
+  Vous pouvez suivre l'état de votre demande à tout moment en cliquant sur le bouton ci-dessous :
+</p>
+
+<p style="text-align:center;margin:24px 0;">
+  <a href="{{ status_url }}"
+     style="background:#0b5ed7;color:#ffffff;padding:10px 16px;text-decoration:none;
+            border-radius:4px;font-weight:bold;display:inline-block;">
+    Suivre l'état de ma demande
+  </a>
+</p>
+
+<table role="presentation" style="margin-top:24px;padding-top:16px;border-top:1px solid #EAEAEC;width:100%;">
+  <tr>
+    <td>
+      <p style="font-size:13px;color:#777;">
+        Si vous rencontrez des difficultés avec le bouton ci-dessus,
+        copiez et collez l'URL ci-dessous dans votre navigateur&nbsp;:
+      </p>
+      <p style="font-size:13px;color:#777;word-break:break-all;">
+        {{ status_url }}
+      </p>
+    </td>
+  </tr>
+</table>

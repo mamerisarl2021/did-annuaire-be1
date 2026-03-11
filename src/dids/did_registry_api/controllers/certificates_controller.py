@@ -70,9 +70,8 @@ class CertificatesController:
             return err(
                 request,
                 409,
-                "CERT_FINGERPRINT_TAKEN_BY_ANOTHER_ORG",
+                "Certificate fingerprint exists for another organization",
                 path="/api/registry/certificates",
-                extra={"fingerprint": fingerprint},
             )
 
         # Rewind uploaded file pointer before saving to FileField
