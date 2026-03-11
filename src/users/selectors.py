@@ -79,6 +79,8 @@ def users_stats_for_actor(*, user) -> dict:
         raise APIError(message="Permission denied", code="FORBIDDEN", status=403)
 
     base_qs = User.objects.all()
+    # Exclude the requesting user themselves
+    base_qs = base_qs.exclude(id=user.id)
 
     if not user.is_platform_admin:
         base_qs = base_qs.filter(organization=user.organization)

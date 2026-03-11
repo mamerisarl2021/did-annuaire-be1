@@ -274,7 +274,7 @@ def did_stats_all() -> dict:
 # Stats — Users (superadmin, all orgs)
 # ---------------------------------------------------------------------------
 
-def users_stats_all() -> dict:
+def users_stats_all(*, user: User) -> dict:
     """
     Platform-wide user statistics.
 
@@ -284,6 +284,8 @@ def users_stats_all() -> dict:
         by_organization (full breakdown per org).
     """
     user_qs = User.objects.all()
+    # exclude the requesting user themselves
+    user_qs = user_qs.exclude(id=user.id)
 
     # --- total ---
     total = user_qs.count()

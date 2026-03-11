@@ -202,6 +202,8 @@ class SuperAdminController(BaseAPIController):
             is_active=is_active,
             status=status,
         )
+        # Exclude the requesting user themselves (added in selector for stats consistency, but good to double-check here as well)
+        qs = qs.exclude(id=user.id)
 
         paginator = Paginator(default_page_size=20, max_page_size=100)
         rows, meta = paginator.paginate_queryset(qs, request)
